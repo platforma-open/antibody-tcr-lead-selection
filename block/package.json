@@ -1,0 +1,46 @@
+{
+  "name": "@platforma-open/milaboratories.top-antibodies",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "rm -rf block-pack/* && block-tools pack"
+  },
+  "files": [
+    "index.d.ts",
+    "index.js"
+  ],
+  "dependencies": {
+    "@platforma-open/milaboratories.top-antibodies.workflow": "workspace:*",
+    "@platforma-open/milaboratories.top-antibodies.model": "workspace:*",
+    "@platforma-open/milaboratories.top-antibodies.ui": "workspace:*"
+  },
+  "block": {
+    "components": {
+      "workflow": "@platforma-open/milaboratories.top-antibodies.workflow/dist/tengo/tpl/main.plj.gz",
+      "model": "@platforma-open/milaboratories.top-antibodies.model/dist/model.json",
+      "ui": "@platforma-open/milaboratories.top-antibodies.ui/dist"
+    },
+    "meta": {
+      "title": "Top Antibodies",
+      "logo": "file:../logos/block-logo.png",
+      "url": "https://github.com/milaboratory/platforma-top-antibodies",
+      "docs": "https://github.com/milaboratory/platforma-top-antibodies/docs",
+      "support": "mailto:support@milaboratories.com",
+      "description": "Block for top antibody selection based on precalculated scores.",
+      "longDescription": "file:../docs/description.md",
+      "changelog": "file:../CHANGELOG.md",
+      "tags": [
+        "airr",
+        "downstream"
+      ],
+      "organization": {
+        "name": "MiLaboratories Inc",
+        "url": "https://milaboratories.com/",
+        "logo": "file:../logos/organization-logo.png"
+      }
+    }
+  },
+  "devDependencies": {
+    "@platforma-sdk/block-tools": "catalog:"
+  },
+  "packageManager": "pnpm@9.12.0"
+}
