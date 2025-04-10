@@ -9,7 +9,6 @@ export type BlockArgs = {
   frequencyScore?: number;
   enrichmentScore?: number;
   liabilitiesScore: string[];
-  // dataType?: string;
   title?: string;
 };
 
