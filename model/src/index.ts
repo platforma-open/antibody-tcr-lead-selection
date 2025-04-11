@@ -90,6 +90,55 @@ export const model = BlockModel.create()
 
   .output('scoresTable', (ctx) => {
     if (ctx.args.inputAnchor === undefined) return undefined;
+    const inputSpec = ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor);
+    // Old MiXCR versions
+    let clonotypingRunId = inputSpec?.domain?.['pl7.app/vdj/clonotypingRunId'];
+    // New MiXCR versions
+    if (clonotypingRunId === undefined) {
+      clonotypingRunId = inputSpec?.axesSpec[1]?.domain?.['pl7.app/vdj/clonotypingRunId'];
+    }
+    if (clonotypingRunId === undefined) return undefined;
+    const pCols = ctx.resultPool.getAnchoredPColumns(
+      { main: ctx.args.inputAnchor },
+      [
+        // first column condition will take any PCol satisfying below specs that have TWO axes
+        {
+          axes: [{
+            domain: {
+              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
+            },
+          }, {}],
+          annotations: {
+            'pl7.app/vdj/isScore': 'true',
+          },
+        },
+        // second column condition (OR logic) will take any PCol satisfying below specs that have ONE axes
+        {
+          axes: [{
+            domain: {
+              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
+            },
+          }],
+          annotations: {
+            'pl7.app/vdj/isScore': 'true',
+          },
+        },
+      ],
+    );
+
+    if (pCols === undefined) return undefined;
+
+    const scoresTable = createPlDataTable(
+      ctx,
+      pCols,
+      ctx.uiState.tableState,
+    );
+
+    return { scoresTable, count: pCols.length };
+  })
+
+  .output('test', (ctx) => {
+    if (ctx.args.inputAnchor === undefined) return undefined;
     const inputAnchorDomain = ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor)?.domain;
     if (inputAnchorDomain === undefined) return undefined;
     const pCols = ctx.resultPool.getAnchoredPColumns(
@@ -121,14 +170,7 @@ export const model = BlockModel.create()
     );
 
     if (pCols === undefined) return undefined;
-
-    const scoresTable = createPlDataTable(
-      ctx,
-      pCols,
-      ctx.uiState.tableState,
-    );
-
-    return { scoresTable, count: pCols.length };
+    return pCols;
   })
 
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)
