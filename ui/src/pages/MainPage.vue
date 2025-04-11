@@ -19,12 +19,9 @@ import { computed, ref, watch } from 'vue';
 const app = useApp();
 
 const theModel = ref<number>(0);
-const filtersToBeSet = ref<PTableRecordSingleValueFilterV2[]>([]);
-const filterColumnValue = ref('');
 
 watch(theModel, (newValue) => {
   if (app.model.outputs.filterColumn) {
-    filterColumnValue.value = 'Is here. Hurray!';
     const filters = [
       {
         type: 'bySingleColumnV2',
@@ -35,16 +32,13 @@ watch(theModel, (newValue) => {
         },
       } satisfies PTableRecordSingleValueFilterV2,
     ];
-    filtersToBeSet.value = filters;
 
-    if (!app.model.ui.tableState.pTableParams) {
-      filterColumnValue.value = 'pTableParams is missing';
-      app.model.ui.tableState.pTableParams = { filters };
+    if (!app.model.ui.filterModel?.filters) {
+      app.model.ui.filterModel = { filters };
     }
-    app.model.ui.tableState.pTableParams.filters = filters;
+    app.model.ui.filterModel.filters = filters;
   } else {
-    filterColumnValue.value = 'not set!';
-    if (app.model.ui.tableState.pTableParams) app.model.ui.tableState.pTableParams.filters = [];
+    app.model.ui.filterModel = { filters: [] };
   }
 });
 
@@ -123,8 +117,6 @@ const liabilitiesOptions = [
         </template>
       </PlDropdownMulti>
 
-      {{ filtersToBeSet ? "No Filter yet" : filtersToBeSet }}
-      {{ filterColumnValue }}
       <!-- <PlDropdownMulti
         v-model="theModel"
         label="The filter I always dreamed about"
@@ -133,7 +125,7 @@ const liabilitiesOptions = [
           { value: 'b', label: 'b' }
         ]"
       >
-      <template #tooltip> Restrict the analysis to certain LChain sequences. </template> 
+      <template #tooltip> Restrict the analysis to certain LChain sequences. </template>
     </PlDropdownMulti> -->
     </PlSlideModal>
   </PlBlockPage>

@@ -1,4 +1,4 @@
-import type { InferOutputsType, PlDataTableState, PlRef } from '@platforma-sdk/model';
+import type { InferOutputsType, PlDataTableState, PlRef, PlTableFiltersModel } from '@platforma-sdk/model';
 import { BlockModel, createPlDataTable } from '@platforma-sdk/model';
 
 export type BlockArgs = {
@@ -15,6 +15,7 @@ export type BlockArgs = {
 export type UiState = {
   title?: string;
   tableState: PlDataTableState;
+  filterModel?: PlTableFiltersModel;
   settingsOpen: boolean;
   // graphStateUMAP: GraphMakerState;
 };
@@ -132,6 +133,7 @@ export const model = BlockModel.create()
       ctx,
       pCols,
       ctx.uiState.tableState,
+      { filters: ctx.uiState.filterModel?.filters ?? [] },
     );
 
     return { scoresTable, count: pCols.length };
