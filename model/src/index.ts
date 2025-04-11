@@ -59,6 +59,35 @@ export const model = BlockModel.create()
     return ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor);
   })
 
+  .output('filterColumn', (ctx) => {
+    if (ctx.args.inputAnchor === undefined)
+      return undefined;
+    const inputAnchorDomain = ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor)?.domain;
+    if (inputAnchorDomain === undefined) return undefined;
+
+    const pCols = ctx.resultPool.getAnchoredPColumns(
+      { main: ctx.args.inputAnchor },
+      [
+        // second column condition (OR logic) will take any PCol satisfying below specs that have ONE axis
+        {
+          axes: [{
+            domain: {
+              'pl7.app/vdj/clonotypingRunId': inputAnchorDomain['pl7.app/vdj/clonotypingRunId'],
+            },
+          }, {}],
+          annotations: {
+            'pl7.app/vdj/isScore': 'true',
+          },
+          name: 'pl7.app/vdj/enrichment',
+        },
+      ],
+    );
+
+    if (pCols === undefined || pCols.length === 0) return undefined;
+
+    return pCols[0];
+  })
+
   .output('scoresTable', (ctx) => {
     if (ctx.args.inputAnchor === undefined) return undefined;
     const inputAnchorDomain = ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor)?.domain;
@@ -77,7 +106,7 @@ export const model = BlockModel.create()
             'pl7.app/vdj/isScore': 'true',
           },
         },
-        // second column condition (OR logic) will take any PCol satisfying below specs that have ONE axes
+        // second column condition (OR logic) will take any PCol satisfying below specs that have ONE axis
         {
           axes: [{
             domain: {

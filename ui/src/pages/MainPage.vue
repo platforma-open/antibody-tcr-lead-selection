@@ -12,10 +12,41 @@ import { PlBlockPage,
   PlAgDataTable } from '@platforma-sdk/ui-vue';
 import type { PlRef } from '@platforma-sdk/model';
 import { plRefsEqual } from '@platforma-sdk/model';
+import type { PTableRecordSingleValueFilterV2 } from '@platforma-sdk/model';
 import { useApp } from '../app';
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 
 const app = useApp();
+
+const theModel = ref<number>(0);
+const filtersToBeSet = ref<PTableRecordSingleValueFilterV2[]>([]);
+const filterColumnValue = ref('');
+
+watch(theModel, (newValue) => {
+  if (app.model.outputs.filterColumn) {
+    filterColumnValue.value = 'Is here. Hurray!';
+    const filters = [
+      {
+        type: 'bySingleColumnV2',
+        column: { type: 'column', id: app.model.outputs.filterColumn.id },
+        predicate: {
+          operator: 'GreaterOrEqual',
+          reference: newValue,
+        },
+      } satisfies PTableRecordSingleValueFilterV2,
+    ];
+    filtersToBeSet.value = filters;
+
+    if (!app.model.ui.tableState.pTableParams) {
+      filterColumnValue.value = 'pTableParams is missing';
+      app.model.ui.tableState.pTableParams = { filters };
+    }
+    app.model.ui.tableState.pTableParams.filters = filters;
+  } else {
+    filterColumnValue.value = 'not set!';
+    if (app.model.ui.tableState.pTableParams) app.model.ui.tableState.pTableParams.filters = [];
+  }
+});
 
 function setAnchorColumn(ref: PlRef | undefined) {
   app.model.args.inputAnchor = ref;
@@ -79,7 +110,7 @@ const liabilitiesOptions = [
         </template>
       </PlNumberField>
       <PlNumberField
-        v-model="app.model.args.enrichmentScore"
+        v-model="theModel"
         label="Enrichment threshold" :minValue="0" :step="0.1"
       >
         <template #tooltip>
@@ -91,6 +122,19 @@ const liabilitiesOptions = [
           Select liabilities scores for filtering.
         </template>
       </PlDropdownMulti>
+
+      {{ filtersToBeSet ? "No Filter yet" : filtersToBeSet }}
+      {{ filterColumnValue }}
+      <!-- <PlDropdownMulti
+        v-model="theModel"
+        label="The filter I always dreamed about"
+        :options="[
+          { value: 'a', label: 'a' },
+          { value: 'b', label: 'b' }
+        ]"
+      >
+      <template #tooltip> Restrict the analysis to certain LChain sequences. </template> 
+    </PlDropdownMulti> -->
     </PlSlideModal>
   </PlBlockPage>
 </template>
