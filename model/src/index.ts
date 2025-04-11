@@ -66,6 +66,7 @@ export const model = BlockModel.create()
     const pCols = ctx.resultPool.getAnchoredPColumns(
       { main: ctx.args.inputAnchor },
       [
+        // first column condition will take any PCol satisfying below specs that have TWO axes
         {
           axes: [{
             domain: {
@@ -76,6 +77,7 @@ export const model = BlockModel.create()
             'pl7.app/vdj/isScore': 'true',
           },
         },
+        // second column condition (OR logic) will take any PCol satisfying below specs that have ONE axes
         {
           axes: [{
             domain: {
