@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// import type {
-//   PlDataTableSettings } from '@platforma-sdk/ui-vue';
+import type {
+  PlDataTableSettings } from '@platforma-sdk/ui-vue';
 import { PlBlockPage,
   PlAgDataTableToolsPanel,
   PlBtnGhost,
@@ -8,10 +8,12 @@ import { PlBlockPage,
   PlSlideModal,
   PlDropdownRef,
   PlNumberField,
-  PlDropdownMulti } from '@platforma-sdk/ui-vue';
+  PlDropdownMulti,
+  PlAgDataTable } from '@platforma-sdk/ui-vue';
 import type { PlRef } from '@platforma-sdk/model';
 import { plRefsEqual } from '@platforma-sdk/model';
 import { useApp } from '../app';
+import { computed } from 'vue';
 
 const app = useApp();
 
@@ -25,10 +27,10 @@ function setAnchorColumn(ref: PlRef | undefined) {
     : undefined;
 }
 
-// const tableSettings = computed<PlDataTableSettings>(() => ({
-//   sourceType: 'ptable',
-//   pTable: app.model.outputs.clonotypeTable,
-// }));
+const tableSettings = computed<PlDataTableSettings>(() => ({
+  sourceType: 'ptable',
+  pTable: app.model.outputs.scoresTable?.scoresTable,
+}));
 
 const liabilitiesOptions = [
   { text: 'None', value: 'None' },
@@ -53,14 +55,12 @@ const liabilitiesOptions = [
         </template>
       </PlBtnGhost>
     </template>
-    <!--
     <PlAgDataTable
       v-model="app.model.ui.tableState"
       :settings="tableSettings"
       show-columns-panel
       show-export-button
     />
-    -->
     <PlSlideModal v-model="app.model.ui.settingsOpen" :close-on-outside-click="true">
       <template #title>Settings</template>
       <PlDropdownRef

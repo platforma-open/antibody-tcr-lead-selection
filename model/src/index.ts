@@ -1,5 +1,5 @@
 import type { InferOutputsType, PlDataTableState, PlRef } from '@platforma-sdk/model';
-import { BlockModel } from '@platforma-sdk/model';
+import { BlockModel, createPlDataTable } from '@platforma-sdk/model';
 
 export type BlockArgs = {
   name?: string;
@@ -59,14 +59,46 @@ export const model = BlockModel.create()
     return ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor);
   })
 
-// .output('clonotypeTable', (ctx) => {
-//   const pCols = ctx.resultPool.getPColumnByRef(ctx.args.inputAnchor);
-//   if (pCols === undefined) {
-//     return undefined;
-//   }
+  .output('scoresTable', (ctx) => {
+    if (ctx.args.inputAnchor === undefined) return undefined;
+    const inputAnchorDomain = ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor)?.domain;
+    if (inputAnchorDomain === undefined) return undefined;
+    const pCols = ctx.resultPool.getAnchoredPColumns(
+      { main: ctx.args.inputAnchor },
+      [
+        {
+          axes: [{
+            domain: {
+              'pl7.app/vdj/clonotypingRunId': inputAnchorDomain['pl7.app/vdj/clonotypingRunId'],
+            },
+          }, {}],
+          annotations: {
+            'pl7.app/vdj/isScore': 'true',
+          },
+        },
+        {
+          axes: [{
+            domain: {
+              'pl7.app/vdj/clonotypingRunId': inputAnchorDomain['pl7.app/vdj/clonotypingRunId'],
+            },
+          }],
+          annotations: {
+            'pl7.app/vdj/isScore': 'true',
+          },
+        },
+      ],
+    );
 
-//   return createPlDataTable(ctx, pCols, ctx.uiState?.tableState);
-// })
+    if (pCols === undefined) return undefined;
+
+    const scoresTable = createPlDataTable(
+      ctx,
+      pCols,
+      ctx.uiState.tableState,
+    );
+
+    return { scoresTable, count: pCols.length };
+  })
 
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)
 
