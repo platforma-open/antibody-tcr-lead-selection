@@ -242,6 +242,7 @@ export const model = BlockModel.create()
       ctx,
       pCols,
       ctx.uiState.tableState,
+      { filters: ctx.uiState.filterModel?.filters ?? [] },
     );
 
     return { scoresTable, count: pCols.length };
