@@ -26,7 +26,7 @@ watch(() => app.model.args.inputAnchor,
   () => {
     mainFilter = [
       ...isNotNaFilter(
-        app.model.outputs.Cdr3SeqAaColumn,
+        app.model.outputs.Cdr3SeqAaColumn?.id,
       )];
     // Initialize filterModel if it doesn't exist
     if (!app.model.ui.filterModel) {
@@ -36,22 +36,30 @@ watch(() => app.model.args.inputAnchor,
 
 watch(
   () => [app.model.ui.enrichmentScoreThreshold, app.model.ui.frequencyScoreThreshold,
-    app.model.ui.liabilitiesScore,
+    app.model.ui.liabilitiesScore, app.model.ui.condition,
   ],
   () => {
     // Combine filters using spread operators
     const filters = [
       ...GreaterOrEqualFilter(
-        app.model.outputs.enrichmentScoreColumn,
+        app.model.outputs.enrichmentScoreColumn?.id,
         app.model.ui.enrichmentScoreThreshold,
       ),
       ...GreaterOrEqualFilter(
-        app.model.outputs.frequencyScoreColumn,
+        app.model.outputs.frequencyScoreColumn?.id,
         app.model.ui.frequencyScoreThreshold,
       ),
       ...equalStringFilter(
-        app.model.outputs.liabilitiesColumn,
+        app.model.outputs.liabilitiesColumn?.id,
         app.model.ui.liabilitiesScore,
+      ),
+      ...equalStringFilter(
+        {
+          type: 'String',
+          name: 'pl7.app/vdj/condition',
+          domain: {},
+        },
+        app.model.ui.condition,
       ),
     ];
 
@@ -140,16 +148,19 @@ const liabilitiesOptions = [
         </template>
       </PlDropdownMulti>
 
-      <!-- <PlDropdownMulti
-        v-model="theModel"
-        label="The filter I always dreamed about"
+      <PlDropdownMulti
+        v-model="app.model.ui.condition"
+        label="Condition"
         :options="[
-          { value: 'a', label: 'a' },
-          { value: 'b', label: 'b' }
+          { text: 'd0', value: '0' },
+          { text: 'd5', value: '5' },
+          { text: 'd6', value: '6' },
+          { text: 'd12', value: '12' },
+          { text: 'd60', value: '60' },
         ]"
       >
-      <template #tooltip> Restrict the analysis to certain LChain sequences. </template>
-    </PlDropdownMulti> -->
+        <template #tooltip> Restrict the analysis to certain Conditions. </template>
+      </PlDropdownMulti>
     </PlSlideModal>
   </PlBlockPage>
 </template>

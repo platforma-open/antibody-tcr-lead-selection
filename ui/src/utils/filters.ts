@@ -1,3 +1,4 @@
+import type { AxisId } from '@platforma-sdk/model';
 import { type PTableRecordSingleValueFilterV2, type PTableColumnId } from '@platforma-sdk/model';
 // import semver from 'semver';
 
@@ -5,16 +6,16 @@ import { type PTableRecordSingleValueFilterV2, type PTableColumnId } from '@plat
  * Returns a pColumn threshold filter array if conditions are met, otherwise empty array
  */
 export function GreaterOrEqualFilter(
-  pColumn: { id: string; type?: string } | undefined,
+  pColumnId: string | undefined,
   threshold: number | undefined,
 ): PTableRecordSingleValueFilterV2[] {
-  if (!pColumn || threshold === undefined || !threshold) {
+  if (!pColumnId || threshold === undefined || !threshold) {
     return [];
   }
 
   return [{
     type: 'bySingleColumnV2',
-    column: { type: 'column', id: pColumn.id } as PTableColumnId,
+    column: { type: 'column', id: pColumnId } as PTableColumnId,
     predicate: {
       operator: 'GreaterOrEqual',
       reference: threshold,
@@ -26,15 +27,15 @@ export function GreaterOrEqualFilter(
  * Returns a filtered array without rows having NA in given Pcolumn
  */
 export function isNotNaFilter(
-  pColumn: { id: string; type?: string } | undefined,
+  pColumnId: string | undefined,
 ): PTableRecordSingleValueFilterV2[] {
-  if (!pColumn) {
+  if (!pColumnId) {
     return [];
   }
 
   return [{
     type: 'bySingleColumnV2',
-    column: { type: 'column', id: pColumn.id } as PTableColumnId,
+    column: { type: 'column', id: pColumnId } as PTableColumnId,
     predicate: {
       operator: 'Not',
       operand: {
@@ -45,14 +46,20 @@ export function isNotNaFilter(
 }
 
 /**
- * Returns an array filtered by specif pColumn value
+ * Returns an array filtered by specif pColumn value or axis
  */
 export function equalStringFilter(
-  pColumn: { id: string; type?: string } | undefined,
+  pColumnIdOrAxis: string | AxisId | undefined,
   colVals: string[] | undefined,
 ): PTableRecordSingleValueFilterV2[] {
-  if (!pColumn || colVals === undefined || colVals.length === 0) {
+  if (!pColumnIdOrAxis || colVals === undefined || colVals.length === 0) {
     return [];
+  }
+
+  // Determine if the filter is for an axis or a column. AxisId is an object
+  let type: 'axis' | 'column' = 'axis';
+  if (typeof pColumnIdOrAxis === 'string') {
+    type = 'column';
   }
 
   type Operand = {
@@ -69,7 +76,7 @@ export function equalStringFilter(
   }
   return [{
     type: 'bySingleColumnV2',
-    column: { type: 'column', id: pColumn.id } as PTableColumnId,
+    column: { type, id: pColumnIdOrAxis } as PTableColumnId,
     predicate: {
       operator: 'Or',
       operands: operandList },

@@ -38,6 +38,7 @@ export type UiState = {
   frequencyScoreThreshold: number;
   enrichmentScoreThreshold: number;
   liabilitiesScore: string[];
+  condition: string[];
   // graphStateUMAP: GraphMakerState;
 };
 
@@ -55,6 +56,7 @@ export const model = BlockModel.create()
     enrichmentScoreThreshold: 0,
     frequencyScoreThreshold: 0,
     liabilitiesScore: [],
+    condition: [],
     // graphStateUMAP: {
     //   title: 'UMAP',
     //   template: 'dots',
