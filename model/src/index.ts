@@ -1,14 +1,32 @@
-import type { InferOutputsType, PlDataTableState, PlRef, PlTableFiltersModel } from '@platforma-sdk/model';
+import type { InferOutputsType, PColumnSpec, PlDataTableState, PlRef, PlTableFiltersModel } from '@platforma-sdk/model';
 import { BlockModel, createPlDataTable } from '@platforma-sdk/model';
+
+// get clonotypingRunId from multiple MiXCR versions
+function getinfoData(inputSpec: PColumnSpec | undefined):
+{ clonotypingRunId: string; chain: string } | undefined {
+  if (inputSpec === undefined) {
+    return undefined;
+  }
+  // Old MiXCR versions
+  let clonotypingRunId = inputSpec?.domain?.['pl7.app/vdj/clonotypingRunId'];
+  let chain = inputSpec?.domain?.['pl7.app/vdj/chain'];
+  // New MiXCR versions
+  if (clonotypingRunId === undefined) {
+    clonotypingRunId = inputSpec?.axesSpec[1]?.domain?.['pl7.app/vdj/clonotypingRunId'];
+    chain = inputSpec?.axesSpec[1]?.domain?.['pl7.app/vdj/chain'];
+  }
+
+  if (clonotypingRunId === undefined || chain === undefined) {
+    return undefined;
+  }
+  return { clonotypingRunId, chain };
+}
 
 export type BlockArgs = {
   name?: string;
   inputAnchor?: PlRef;
   // clonotypingRunId?: string;
   // nClonotypesCluster?: number;
-  frequencyScore?: number;
-  enrichmentScore?: number;
-  liabilitiesScore: string[];
   title?: string;
 };
 
@@ -19,13 +37,13 @@ export type UiState = {
   settingsOpen: boolean;
   frequencyScoreThreshold: number;
   enrichmentScoreThreshold: number;
+  liabilitiesScore: string[];
   // graphStateUMAP: GraphMakerState;
 };
 
 export const model = BlockModel.create()
 
   .withArgs<BlockArgs>({
-    liabilitiesScore: ['None'],
   })
 
   .withUiState<UiState>({
@@ -36,6 +54,7 @@ export const model = BlockModel.create()
     },
     enrichmentScoreThreshold: 0,
     frequencyScoreThreshold: 0,
+    liabilitiesScore: [],
     // graphStateUMAP: {
     //   title: 'UMAP',
     //   template: 'dots',
@@ -67,9 +86,9 @@ export const model = BlockModel.create()
   .output('enrichmentScoreColumn', (ctx) => {
     if (ctx.args.inputAnchor === undefined)
       return undefined;
-    const inputAnchorDomain = ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor)?.domain;
-    if (inputAnchorDomain === undefined) return undefined;
-
+    const result = getinfoData(ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor));
+    const clonotypingRunId = result?.clonotypingRunId;
+    if (clonotypingRunId === undefined) return undefined;
     const pCols = ctx.resultPool.getAnchoredPColumns(
       { main: ctx.args.inputAnchor },
       [
@@ -77,7 +96,7 @@ export const model = BlockModel.create()
         {
           axes: [{
             domain: {
-              'pl7.app/vdj/clonotypingRunId': inputAnchorDomain['pl7.app/vdj/clonotypingRunId'],
+              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
             },
           }, {}],
           annotations: {
@@ -96,8 +115,9 @@ export const model = BlockModel.create()
   .output('frequencyScoreColumn', (ctx) => {
     if (ctx.args.inputAnchor === undefined)
       return undefined;
-    const inputAnchorDomain = ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor)?.domain;
-    if (inputAnchorDomain === undefined) return undefined;
+    const result = getinfoData(ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor));
+    const clonotypingRunId = result?.clonotypingRunId;
+    if (clonotypingRunId === undefined) return undefined;
 
     const pCols = ctx.resultPool.getAnchoredPColumns(
       { main: ctx.args.inputAnchor },
@@ -106,13 +126,76 @@ export const model = BlockModel.create()
         {
           axes: [{
             domain: {
-              'pl7.app/vdj/clonotypingRunId': inputAnchorDomain['pl7.app/vdj/clonotypingRunId'],
+              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
             },
           }, {}],
           annotations: {
             'pl7.app/vdj/isScore': 'true',
           },
           name: 'pl7.app/vdj/frequency',
+        },
+      ],
+    );
+
+    if (pCols === undefined || pCols.length === 0) return undefined;
+
+    return pCols[0];
+  })
+
+  .output('Cdr3SeqAaColumn', (ctx) => {
+    if (ctx.args.inputAnchor === undefined)
+      return undefined;
+    const result = getinfoData(ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor));
+    const clonotypingRunId = result?.clonotypingRunId;
+    const chain = result?.chain;
+    if (clonotypingRunId === undefined || chain == undefined) return undefined;
+
+    const pCols = ctx.resultPool.getAnchoredPColumns(
+      { main: ctx.args.inputAnchor },
+      [
+        // second column condition (OR logic) will take any PCol satisfying below specs that have ONE axis
+        {
+          axes: [{
+            domain: {
+              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
+              'pl7.app/vdj/chain': chain,
+            },
+          }],
+          domain: {
+            'pl7.app/alphabet': 'aminoacid',
+            'pl7.app/vdj/feature': 'CDR3',
+          },
+          name: 'pl7.app/vdj/sequence',
+        },
+      ],
+    );
+
+    if (pCols === undefined || pCols.length === 0) return undefined;
+
+    return pCols[0];
+  })
+
+  .output('liabilitiesColumn', (ctx) => {
+    if (ctx.args.inputAnchor === undefined)
+      return undefined;
+    const result = getinfoData(ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor));
+    const clonotypingRunId = result?.clonotypingRunId;
+    if (clonotypingRunId === undefined) return undefined;
+
+    const pCols = ctx.resultPool.getAnchoredPColumns(
+      { main: ctx.args.inputAnchor },
+      [
+        // second column condition (OR logic) will take any PCol satisfying below specs that have ONE axis
+        {
+          axes: [{
+            domain: {
+              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
+            },
+          }],
+          annotations: {
+            'pl7.app/vdj/isScore': 'true',
+          },
+          name: 'pl7.app/vdj/liabilitiesRisk',
         },
       ],
     );

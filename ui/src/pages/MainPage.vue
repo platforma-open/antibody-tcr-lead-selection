@@ -10,36 +10,58 @@ import { PlBlockPage,
   PlNumberField,
   PlDropdownMulti,
   PlAgDataTable } from '@platforma-sdk/ui-vue';
-import type { PlRef } from '@platforma-sdk/model';
+import type { PlRef, PTableRecordSingleValueFilterV2 } from '@platforma-sdk/model';
 import { plRefsEqual } from '@platforma-sdk/model';
 import { useApp } from '../app';
 import { computed, watch } from 'vue';
-import { getEnrichmentThresholdFilter, getFrequencyThresholdFilter } from '../utils/filters';
+import { GreaterOrEqualFilter, isNotNaFilter, equalStringFilter } from '../utils/filters';
 
 const app = useApp();
 
+// Create base filter with hidden filters
+let mainFilter: PTableRecordSingleValueFilterV2[] = [];
+
+// default filters
+watch(() => app.model.args.inputAnchor,
+  () => {
+    mainFilter = [
+      ...isNotNaFilter(
+        app.model.outputs.Cdr3SeqAaColumn,
+      )];
+    // Initialize filterModel if it doesn't exist
+    if (!app.model.ui.filterModel) {
+      app.model.ui.filterModel = { filters: mainFilter };
+    }
+  });
+
 watch(
-  () => [app.model.ui.enrichmentScoreThreshold, app.model.ui.frequencyScoreThreshold],
+  () => [app.model.ui.enrichmentScoreThreshold, app.model.ui.frequencyScoreThreshold,
+    app.model.ui.liabilitiesScore,
+  ],
   () => {
     // Combine filters using spread operators
     const filters = [
-      ...getEnrichmentThresholdFilter(
+      ...GreaterOrEqualFilter(
         app.model.outputs.enrichmentScoreColumn,
         app.model.ui.enrichmentScoreThreshold,
       ),
-      ...getFrequencyThresholdFilter(
+      ...GreaterOrEqualFilter(
         app.model.outputs.frequencyScoreColumn,
         app.model.ui.frequencyScoreThreshold,
+      ),
+      ...equalStringFilter(
+        app.model.outputs.liabilitiesColumn,
+        app.model.ui.liabilitiesScore,
       ),
     ];
 
     // Initialize filterModel if it doesn't exist
     if (!app.model.ui.filterModel) {
-      app.model.ui.filterModel = { filters: [] };
+      app.model.ui.filterModel = { filters: mainFilter };
     }
 
     // Set filters
-    app.model.ui.filterModel.filters = filters;
+    app.model.ui.filterModel.filters = [...mainFilter, ...filters];
   },
 );
 
@@ -112,7 +134,7 @@ const liabilitiesOptions = [
           Select minimum clonotype enrichment score.
         </template>
       </PlNumberField>
-      <PlDropdownMulti v-model="app.model.args.liabilitiesScore" :options="liabilitiesOptions" label="Liabilities score" >
+      <PlDropdownMulti v-model="app.model.ui.liabilitiesScore" :options="liabilitiesOptions" label="Liabilities score" >
         <template #tooltip>
           Select liabilities scores for filtering.
         </template>
