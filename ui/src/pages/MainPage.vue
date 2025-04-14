@@ -12,53 +12,36 @@ import { PlBlockPage,
   PlAgDataTable } from '@platforma-sdk/ui-vue';
 import type { PlRef } from '@platforma-sdk/model';
 import { plRefsEqual } from '@platforma-sdk/model';
-import type { PTableRecordSingleValueFilterV2 } from '@platforma-sdk/model';
 import { useApp } from '../app';
 import { computed, watch } from 'vue';
+import { getEnrichmentThresholdFilter, getFrequencyThresholdFilter } from '../utils/filters';
 
 const app = useApp();
 
-watch(() => app.model.ui.enrichmentScoreThreshold, (newValue) => {
-  if (app.model.outputs.enrichmentScoreColumn && app.model.ui.enrichmentScoreThreshold !== undefined && newValue) {
-    const currentFilters = app.model.ui.filterModel?.filters ?? [];
+watch(
+  () => [app.model.ui.enrichmentScoreThreshold, app.model.ui.frequencyScoreThreshold],
+  () => {
+    // Combine filters using spread operators
+    const filters = [
+      ...getEnrichmentThresholdFilter(
+        app.model.outputs.enrichmentScoreColumn,
+        app.model.ui.enrichmentScoreThreshold,
+      ),
+      ...getFrequencyThresholdFilter(
+        app.model.outputs.frequencyScoreColumn,
+        app.model.ui.frequencyScoreThreshold,
+      ),
+    ];
 
-    const filtersWithoutPrevValue = currentFilters.filter((filter) => filter.column.id !== app.model.outputs.enrichmentScoreColumn?.id);
-    const finalFilters: PTableRecordSingleValueFilterV2[] = [...filtersWithoutPrevValue, {
-      type: 'bySingleColumnV2',
-      column: { type: 'column', id: app.model.outputs.enrichmentScoreColumn.id },
-      predicate: {
-        operator: 'GreaterOrEqual',
-        reference: newValue,
-      },
-    }];
-
+    // Initialize filterModel if it doesn't exist
     if (!app.model.ui.filterModel) {
       app.model.ui.filterModel = { filters: [] };
     }
-    app.model.ui.filterModel.filters = finalFilters;
-  }
-});
 
-watch(() => app.model.ui.frequencyScoreThreshold, (newValue) => {
-  if (app.model.outputs.frequencyScoreColumn && app.model.ui.frequencyScoreThreshold !== undefined && newValue) {
-    const currentFilters = app.model.ui.filterModel?.filters ?? [];
-
-    const filtersWithoutPrevValue = currentFilters.filter((filter) => filter.column.id !== app.model.outputs.frequencyScoreColumn?.id);
-    const finalFilters: PTableRecordSingleValueFilterV2[] = [...filtersWithoutPrevValue, {
-      type: 'bySingleColumnV2',
-      column: { type: 'column', id: app.model.outputs.frequencyScoreColumn.id },
-      predicate: {
-        operator: 'GreaterOrEqual',
-        reference: newValue,
-      },
-    }];
-
-    if (!app.model.ui.filterModel) {
-      app.model.ui.filterModel = { filters: [] };
-    }
-    app.model.ui.filterModel.filters = finalFilters;
-  }
-});
+    // Set filters
+    app.model.ui.filterModel.filters = filters;
+  },
+);
 
 function setAnchorColumn(ref: PlRef | undefined) {
   app.model.args.inputAnchor = ref;
