@@ -9,3 +9,4 @@ log/
 vite.config.*.timestamp-*
 software/**/*.sw.json
 software/*.tgz
+.vscode

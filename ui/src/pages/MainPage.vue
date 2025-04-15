@@ -18,6 +18,8 @@ import { computed, watch } from 'vue';
 import { GreaterOrEqualFilter, isNotNaFilter, equalStringFilter } from '../utils/filters';
 
 const app = useApp();
+
+// Get all possible values from specific axis
 watch([() => app.model.outputs.scoresPf, () => app.model.outputs.enrichmentScoreColumn], async ([handle, column]) => { // this is PFrameHandle
   if (handle !== undefined && column?.id !== undefined) {
     const focusAxis = column.spec.axesSpec[1];

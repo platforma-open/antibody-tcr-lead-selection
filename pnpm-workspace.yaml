@@ -1,9 +1,10 @@
 packages:
+  - software 
   - workflow
   - model
   - ui
-  - test
   - block
+  - test
 
 catalog:
   "@platforma-sdk/model": ^1.29.12
