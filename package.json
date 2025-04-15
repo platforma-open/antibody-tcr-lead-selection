@@ -1,0 +1,23 @@
+{
+  "name": "@platforma-open/milaboratories.top-antibodies",
+  "version": "1.0.0",
+  "scripts": {
+    "pretty": "prettier --write \"./**/*.{js,jsx,mjs,cjs,ts,tsx,json,vue}\"",
+    "build": "turbo run build",
+    "build:dev": "env PL_PKG_DEV=local turbo run build",
+    "test": "turbo run test --concurrency 1 --env-mode=loose",
+    "mark-stable": "turbo run mark-stable",
+    "watch": "turbo watch build",
+    "changeset": "changeset",
+    "version-packages": "changeset version"
+  },
+  "files": [
+    "index.d.ts",
+    "index.js"
+  ],
+  "devDependencies": {
+    "turbo": "catalog:",
+    "@changesets/cli": "catalog:"
+  },
+  "packageManager": "pnpm@9.12.0"
+}

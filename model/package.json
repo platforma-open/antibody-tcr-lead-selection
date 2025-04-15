@@ -1,0 +1,40 @@
+{
+  "name": "@platforma-open/milaboratories.top-antibodies.model",
+  "version": "1.0.0",
+  "description": "Block model",
+  "type": "module",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsup && vite build && block-tools build-model",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@platforma-sdk/model": "catalog:",
+    "@milaboratories/graph-maker": "catalog:"
+  },
+  "devDependencies": {
+    "@platforma-sdk/block-tools": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "tsup": "catalog:",
+    "@platforma-sdk/eslint-config": "catalog:",
+    "@platforma-sdk/ui-vue": "catalog:"
+  },
+  "tsup": {
+    "entry": [
+      "src/index.ts"
+    ],
+    "splitting": false,
+    "treeshake": true,
+    "clean": true,
+    "format": [
+      "cjs",
+      "esm"
+    ],
+    "dts": true,
+    "minify": false,
+    "sourcemap": true
+  }
+}
