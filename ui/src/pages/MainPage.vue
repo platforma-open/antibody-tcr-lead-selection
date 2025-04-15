@@ -9,7 +9,8 @@ import { PlBlockPage,
   PlDropdownRef,
   PlNumberField,
   PlDropdownMulti,
-  PlAgDataTable } from '@platforma-sdk/ui-vue';
+  PlAgDataTable,
+  listToOptions } from '@platforma-sdk/ui-vue';
 import type { PlRef, PTableRecordSingleValueFilterV2 } from '@platforma-sdk/model';
 import { plRefsEqual } from '@platforma-sdk/model';
 import { useApp } from '../app';
@@ -17,6 +18,20 @@ import { computed, watch } from 'vue';
 import { GreaterOrEqualFilter, isNotNaFilter, equalStringFilter } from '../utils/filters';
 
 const app = useApp();
+watch([() => app.model.outputs.scoresPf, () => app.model.outputs.enrichmentScoreColumn], async ([handle, column]) => { // this is PFrameHandle
+  if (handle !== undefined && column?.id !== undefined) {
+    const focusAxis = column.spec.axesSpec[1];
+    const request = {
+      columnId: column.id,
+      axis: focusAxis,
+      filters: [],
+      limit: 50,
+    };
+
+    const response = await platforma!.pFrameDriver.getUniqueValues(handle, request);
+    app.model.ui.conditionList = listToOptions(Array.from(response.values.data as Iterable<string>));
+  }
+}, { immediate: true });
 
 // Create base filter with hidden filters
 let mainFilter: PTableRecordSingleValueFilterV2[] = [];
@@ -151,13 +166,7 @@ const liabilitiesOptions = [
       <PlDropdownMulti
         v-model="app.model.ui.condition"
         label="Condition"
-        :options="[
-          { text: 'd0', value: '0' },
-          { text: 'd5', value: '5' },
-          { text: 'd6', value: '6' },
-          { text: 'd12', value: '12' },
-          { text: 'd60', value: '60' },
-        ]"
+        :options="app.model.ui.conditionList"
       >
         <template #tooltip> Restrict the analysis to certain Conditions. </template>
       </PlDropdownMulti>

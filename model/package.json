@@ -19,7 +19,8 @@
     "typescript": "catalog:",
     "vite": "catalog:",
     "tsup": "catalog:",
-    "@platforma-sdk/eslint-config": "catalog:"
+    "@platforma-sdk/eslint-config": "catalog:",
+    "@platforma-sdk/ui-vue": "catalog:"
   },
   "tsup": {
     "entry": [
