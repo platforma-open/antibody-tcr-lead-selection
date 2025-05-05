@@ -9,7 +9,8 @@
     "mark-stable": "turbo run mark-stable",
     "watch": "turbo watch build",
     "changeset": "changeset",
-    "version-packages": "changeset version"
+    "version-packages": "changeset version",
+    "update-sdk": "node scripts/update-sdk-packages.js"
   },
   "files": [
     "index.d.ts",
@@ -17,7 +18,17 @@
   ],
   "devDependencies": {
     "turbo": "catalog:",
-    "@changesets/cli": "catalog:"
+    "@changesets/cli": "catalog:",
+    "js-yaml": "catalog:"
+  },
+  "//pnpm": {
+    "overrides": {
+      "@milaboratories/pl-model-common": "file:/Users/poslavskysv/Projects/milab/platforma/platforma-sdk/lib/model/common/package.tgz",
+      "@platforma-sdk/model": "file:/Users/poslavskysv/Projects/milab/platforma/platforma-sdk/sdk/model/package.tgz",
+      "@platforma-sdk/ui-vue": "file:/Users/poslavskysv/Projects/milab/platforma/platforma-sdk/sdk/ui-vue/package.tgz",
+      "@platforma-sdk/workflow-tengo": "file:/Users/poslavskysv/Projects/milab/platforma/platforma-sdk/sdk/workflow-tengo/package.tgz",
+      "@milaboratories/uikit": "file:/Users/poslavskysv/Projects/milab/platforma/platforma-sdk/lib/ui/uikit/package.tgz"
+    }
   },
   "packageManager": "pnpm@9.12.0"
 }

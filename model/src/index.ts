@@ -1,50 +1,138 @@
-import type { InferOutputsType,
-  PColumnSpec, PlDataTableState, PlRef, PlTableFiltersModel } from '@platforma-sdk/model';
-import { BlockModel, createPlDataTable } from '@platforma-sdk/model';
 import type {
-  ListOption } from '@platforma-sdk/ui-vue';
-
-// get clonotypingRunId from multiple MiXCR versions
-function getinfoData(inputSpec: PColumnSpec | undefined):
-{ clonotypingRunId: string; chain: string } | undefined {
-  if (inputSpec === undefined) {
-    return undefined;
-  }
-  // Old MiXCR versions
-  let clonotypingRunId = inputSpec?.domain?.['pl7.app/vdj/clonotypingRunId'];
-  let chain = inputSpec?.domain?.['pl7.app/vdj/chain'];
-  // New MiXCR versions
-  if (clonotypingRunId === undefined) {
-    clonotypingRunId = inputSpec?.axesSpec[1]?.domain?.['pl7.app/vdj/clonotypingRunId'];
-    chain = inputSpec?.axesSpec[1]?.domain?.['pl7.app/vdj/chain'];
-  }
-
-  if (clonotypingRunId === undefined || chain === undefined) {
-    return undefined;
-  }
-  return { clonotypingRunId, chain };
-}
+  DataInfo,
+  InferOutputsType,
+  PColumn,
+  PlDataTableState, PlRef, PlTableFilter, PlTableFiltersModel,
+  PTableColumnId,
+  RenderCtx,
+  TreeNodeAccessor,
+} from '@platforma-sdk/model';
+import { BlockModel, createPlDataTableV2 } from '@platforma-sdk/model';
 
 export type BlockArgs = {
-  name?: string;
   inputAnchor?: PlRef;
-  // clonotypingRunId?: string;
-  // nClonotypesCluster?: number;
-  title?: string;
 };
 
 export type UiState = {
   title?: string;
   tableState: PlDataTableState;
-  filterModel?: PlTableFiltersModel;
-  settingsOpen: boolean;
-  frequencyScoreThreshold: number;
-  enrichmentScoreThreshold: number;
-  liabilitiesScore: string[];
-  condition: string[];
-  conditionList?: ListOption<string>[];
-  // graphStateUMAP: GraphMakerState;
+  filterModel: PlTableFiltersModel;
 };
+
+type Column = PColumn<DataInfo<TreeNodeAccessor> | TreeNodeAccessor>;
+
+type PlTableFiltersDefault = {
+  column: PTableColumnId;
+  default: PlTableFilter;
+};
+
+type Columns = {
+  props: Column[];
+  scores: Column[];
+  links: Column[];
+  defaultFilters: PlTableFiltersDefault[];
+};
+
+function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefined {
+  const anchor = ctx.args.inputAnchor;
+  if (anchor === undefined)
+    return undefined;
+
+  const anchorSpec = ctx.resultPool.getPColumnSpecByRef(anchor);
+  if (anchorSpec === undefined)
+    return undefined;
+
+  // all clone properties
+  const props = ctx.resultPool.getAnchoredPColumns(
+    { main: anchor },
+    [
+      {
+        axes: [{ anchor: 'main', idx: 1 }],
+      },
+    ]) ?? [];
+
+  // linker columns
+  const links = ctx.resultPool.getAnchoredPColumns(
+    { main: anchor },
+    [
+      {
+        axes: [{}, { anchor: 'main', idx: 1 }],
+        annotations: { 'pl7.app/isLinkerColumn': 'true' },
+      },
+    ],
+  ) ?? [];
+
+  const linkProps: Column[] = [];
+  for (const link of links ?? []) {
+    linkProps.push(...ctx.resultPool.getAnchoredPColumns(
+      { linker: link.spec },
+      [
+        {
+          axes: [{ anchor: 'linker', idx: 0 }],
+        },
+      ],
+    ) ?? []);
+  }
+
+  // score columns
+  const cloneScores = props?.filter((p) => p.spec.annotations?.['pl7.app/vdj/isScore'] === 'true');
+
+  // links score columns
+  const linkScores = linkProps?.filter((p) => p.spec.annotations?.['pl7.app/vdj/isScore'] === 'true');
+
+  // @TODO: remove this hack once the bug with excessive labels is fixed
+  for (const arr of [props, links, linkProps]) {
+    for (const c of arr) {
+      if (c.spec.annotations) {
+        const label = c.spec.annotations['pl7.app/label'] ?? '';
+        c.spec.annotations['pl7.app/label'] = label.split('/')[0] ?? label;
+      }
+    }
+  }
+
+  // make clonotype key visible by default
+  for (const arr of [props, links, linkProps]) {
+    for (const c of arr) {
+      if (c.spec.annotations) {
+        const cloneKeyAxis = c.spec.axesSpec.find((s) => s.name === anchorSpec.axesSpec[1].name);
+        if (cloneKeyAxis !== undefined) {
+          if (cloneKeyAxis.annotations) {
+            cloneKeyAxis.annotations['pl7.app/table/visibility'] = 'default';
+          }
+        }
+      }
+    }
+  }
+
+  // calculate default filters
+  const scores = [...cloneScores, ...linkScores];
+  const defaultFilters: PlTableFiltersDefault[] = [];
+
+  for (const score of cloneScores) {
+    const value = score.spec.annotations?.['pl7.app/vdj/score/default'];
+
+    if (value !== undefined) {
+      const type = score.spec.valueType === 'String' ? 'string_equals' : 'number_greaterThan';
+      defaultFilters.push({
+        column: {
+          type: 'column',
+          id: score.id,
+        },
+        default: {
+          type: type,
+          reference: value as never,
+        },
+      });
+    }
+  }
+
+  return {
+    props: [...links, ...props, ...linkProps],
+    links: links,
+    scores: scores,
+    defaultFilters: defaultFilters,
+  };
+}
 
 export const model = BlockModel.create()
 
@@ -53,18 +141,10 @@ export const model = BlockModel.create()
 
   .withUiState<UiState>({
     title: 'Top Antibodies',
-    settingsOpen: true,
     tableState: {
       gridState: {},
     },
-    enrichmentScoreThreshold: 0,
-    frequencyScoreThreshold: 0,
-    liabilitiesScore: [],
-    condition: [],
-    // graphStateUMAP: {
-    //   title: 'UMAP',
-    //   template: 'dots',
-    // },
+    filterModel: {},
   })
 
   .output('inputOptions', (ctx) =>
@@ -83,379 +163,36 @@ export const model = BlockModel.create()
     }]),
   )
 
-  .output('anchorSpecs', (ctx) => {
-    if (ctx.args.inputAnchor === undefined)
-      return undefined;
-    return ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor);
+  .output('scoreColumns', (ctx) => {
+    return getColumns(ctx)?.scores;
   })
 
-  .output('enrichmentScoreColumn', (ctx) => {
-    if (ctx.args.inputAnchor === undefined)
-      return undefined;
-    const result = getinfoData(ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor));
-    const clonotypingRunId = result?.clonotypingRunId;
-    if (clonotypingRunId === undefined) return undefined;
-    const pCols = ctx.resultPool.getAnchoredPColumns(
-      { main: ctx.args.inputAnchor },
-      [
-        // second column condition (OR logic) will take any PCol satisfying below specs that have ONE axis
-        {
-          axes: [{
-            domain: {
-              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-            },
-          }, {}],
-          annotations: {
-            'pl7.app/vdj/isScore': 'true',
-          },
-          name: 'pl7.app/vdj/enrichment',
-        },
-      ],
-    );
-
-    if (pCols === undefined || pCols.length === 0) return undefined;
-
-    return pCols[0];
+  .output('defaultFilters', (ctx) => {
+    return getColumns(ctx)?.defaultFilters;
   })
 
-  .output('frequencyScoreColumn', (ctx) => {
-    if (ctx.args.inputAnchor === undefined)
-      return undefined;
-    const result = getinfoData(ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor));
-    const clonotypingRunId = result?.clonotypingRunId;
-    if (clonotypingRunId === undefined) return undefined;
-
-    const pCols = ctx.resultPool.getAnchoredPColumns(
-      { main: ctx.args.inputAnchor },
-      [
-        // second column condition (OR logic) will take any PCol satisfying below specs that have ONE axis
-        {
-          axes: [{
-            domain: {
-              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-            },
-          }, {}],
-          annotations: {
-            'pl7.app/vdj/isScore': 'true',
-          },
-          name: 'pl7.app/vdj/frequency',
-        },
-      ],
-    );
-
-    if (pCols === undefined || pCols.length === 0) return undefined;
-
-    return pCols[0];
+  .output('__TEMP__OUTPUT__', (ctx) => {
+    return getColumns(ctx);
   })
 
-  .output('Cdr3SeqAaColumn', (ctx) => {
-    if (ctx.args.inputAnchor === undefined)
+  .output('table', (ctx) => {
+    const columns = getColumns(ctx);
+    if (columns === undefined)
       return undefined;
-    const result = getinfoData(ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor));
-    const clonotypingRunId = result?.clonotypingRunId;
-    const chain = result?.chain;
-    if (clonotypingRunId === undefined || chain == undefined) return undefined;
 
-    const pCols = ctx.resultPool.getAnchoredPColumns(
-      { main: ctx.args.inputAnchor },
-      [
-        // second column condition (OR logic) will take any PCol satisfying below specs that have ONE axis
-        {
-          axes: [{
-            domain: {
-              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-              'pl7.app/vdj/chain': chain,
-            },
-          }],
-          domain: {
-            'pl7.app/alphabet': 'aminoacid',
-            'pl7.app/vdj/feature': 'CDR3',
-          },
-          name: 'pl7.app/vdj/sequence',
-        },
-      ],
-    );
-
-    if (pCols === undefined || pCols.length === 0) return undefined;
-
-    return pCols[0];
-  })
-
-  .output('liabilitiesColumn', (ctx) => {
-    if (ctx.args.inputAnchor === undefined)
-      return undefined;
-    const result = getinfoData(ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor));
-    const clonotypingRunId = result?.clonotypingRunId;
-    if (clonotypingRunId === undefined) return undefined;
-
-    const pCols = ctx.resultPool.getAnchoredPColumns(
-      { main: ctx.args.inputAnchor },
-      [
-        // second column condition (OR logic) will take any PCol satisfying below specs that have ONE axis
-        {
-          axes: [{
-            domain: {
-              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-            },
-          }],
-          annotations: {
-            'pl7.app/vdj/isScore': 'true',
-          },
-          name: 'pl7.app/vdj/liabilitiesRisk',
-        },
-      ],
-    );
-
-    if (pCols === undefined || pCols.length === 0) return undefined;
-
-    return pCols[0];
-  })
-
-  .output('scoresTable', (ctx) => {
-    if (ctx.args.inputAnchor === undefined) return undefined;
-    const inputSpec = ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor);
-    // Old MiXCR versions
-    let clonotypingRunId = inputSpec?.domain?.['pl7.app/vdj/clonotypingRunId'];
-    let chain = inputSpec?.domain?.['pl7.app/vdj/chain'];
-    // New MiXCR versions
-    if (clonotypingRunId === undefined) {
-      clonotypingRunId = inputSpec?.axesSpec[1]?.domain?.['pl7.app/vdj/clonotypingRunId'];
-      chain = inputSpec?.axesSpec[1]?.domain?.['pl7.app/vdj/chain'];
-    }
-    if (clonotypingRunId === undefined) return undefined;
-    const pCols = ctx.resultPool.getAnchoredPColumns(
-      { main: ctx.args.inputAnchor },
-      [
-        // first column condition will take any PCol satisfying below specs that have TWO axes
-        {
-          axes: [{
-            domain: {
-              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-            },
-          }, {}],
-          annotations: {
-            'pl7.app/vdj/isScore': 'true',
-          },
-        },
-        // second column condition (OR logic) will take any PCol satisfying below specs that have ONE axes
-        {
-          axes: [{
-            domain: {
-              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-            },
-          }],
-          annotations: {
-            'pl7.app/vdj/isScore': 'true',
-          },
-        },
-        // CDR3 aa sequence bulk data new MiXCR
-        {
-          annotationPatterns: {
-            'pl7.app/label': 'CDR3 aa',
-          },
-          axes: [{
-            domain: {
-              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-              'pl7.app/vdj/chain': chain ?? '',
-            },
-          }],
-        },
-        // CDR3 aa sequence bulk data old MiXCR
-        {
-          annotationPatterns: {
-            'pl7.app/label': 'CDR3 aa',
-          },
-          domain: {
-            'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-            'pl7.app/vdj/chain': chain ?? '',
-          },
-        },
-        // @TODO: Look only for the chains on which we ran clustering
-        // CDR3 aa sequence sc data new MiXCR
-        {
-          annotationPatterns: {
-            'pl7.app/label': 'CDR3 aa Primary',
-          },
-          axes: [{
-            domain: {
-              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-              'pl7.app/vdj/receptor': inputSpec?.domain?.['pl7.app/vdj/receptor'] ?? '',
-            },
-          }],
-        },
-        // CDR3 aa sequence sc data old MiXCR
-        {
-          annotationPatterns: {
-            'pl7.app/label': 'CDR3 aa Primary',
-          },
-          domain: {
-            'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-            'pl7.app/vdj/receptor': inputSpec?.domain?.['pl7.app/vdj/receptor'] ?? '',
-          },
-        },
-        // scFc new version (length Pcolumns are empty)
-        // {
-        //   annotationPatterns: {
-        //     'pl7.app/label': 'CDR3 aa',
-        //   },
-        //   domain: {
-        //     'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-        //   },
-        //   axes: [{
-        //     domain: {
-        //       'pl7.app/vdj/receptor': inputSpec?.axesSpec[1]?.domain?.['pl7.app/vdj/receptor'] ?? '',
-        //     },
-        //   }],
-        // },
-      ],
-    );
-
-    if (pCols === undefined) return undefined;
-
-    // Check and modify pColumn to solve compatibility issues between MiXCR versions and packages
-    // @TODO: Remove when new version specs get consensuated
-    for (const p of pCols) {
-      const runIdtemp = p.spec?.domain?.['pl7.app/vdj/clonotypingRunId'];
-      const chaintemp = p.spec?.domain?.['pl7.app/vdj/chain'];
-      if (p.spec?.axesSpec?.[0].domain) {
-        if (runIdtemp) {
-          p.spec.axesSpec[0].domain['pl7.app/vdj/clonotypingRunId'] = runIdtemp;
-        }
-        if (chaintemp) {
-          p.spec.axesSpec[0].domain['pl7.app/vdj/chain'] = chaintemp;
-        }
-      }
-    }
-
-    const scoresTable = createPlDataTable(
+    return createPlDataTableV2(
       ctx,
-      pCols,
+      columns.props,
+      // if there are links, we need need to pick one of the links to show all axes in the table
+      (spec) => columns.links?.length > 0 ? spec.axesSpec.length == 2 : true,
       ctx.uiState.tableState,
-      { filters: ctx.uiState.filterModel?.filters ?? [] },
+      ctx.uiState.filterModel,
     );
-
-    return { scoresTable, count: pCols.length };
-  })
-
-  .output('scoresPf', (ctx) => {
-    if (ctx.args.inputAnchor === undefined) return undefined;
-    const inputSpec = ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor);
-    // Old MiXCR versions
-    let clonotypingRunId = inputSpec?.domain?.['pl7.app/vdj/clonotypingRunId'];
-    let chain = inputSpec?.domain?.['pl7.app/vdj/chain'];
-    // New MiXCR versions
-    if (clonotypingRunId === undefined) {
-      clonotypingRunId = inputSpec?.axesSpec[1]?.domain?.['pl7.app/vdj/clonotypingRunId'];
-      chain = inputSpec?.axesSpec[1]?.domain?.['pl7.app/vdj/chain'];
-    }
-    if (clonotypingRunId === undefined) return undefined;
-    const pCols = ctx.resultPool.getAnchoredPColumns(
-      { main: ctx.args.inputAnchor },
-      [
-        // first column condition will take any PCol satisfying below specs that have TWO axes
-        {
-          axes: [{
-            domain: {
-              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-            },
-          }, {}],
-          annotations: {
-            'pl7.app/vdj/isScore': 'true',
-          },
-        },
-        // second column condition (OR logic) will take any PCol satisfying below specs that have ONE axes
-        {
-          axes: [{
-            domain: {
-              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-            },
-          }],
-          annotations: {
-            'pl7.app/vdj/isScore': 'true',
-          },
-        },
-        // CDR3 aa sequence bulk data new MiXCR
-        {
-          annotationPatterns: {
-            'pl7.app/label': 'CDR3 aa',
-          },
-          axes: [{
-            domain: {
-              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-              'pl7.app/vdj/chain': chain ?? '',
-            },
-          }],
-        },
-        // CDR3 aa sequence bulk data old MiXCR
-        {
-          annotationPatterns: {
-            'pl7.app/label': 'CDR3 aa',
-          },
-          domain: {
-            'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-            'pl7.app/vdj/chain': chain ?? '',
-          },
-        },
-        // @TODO: Look only for the chains on which we ran clustering
-        // CDR3 aa sequence sc data new MiXCR
-        {
-          annotationPatterns: {
-            'pl7.app/label': 'CDR3 aa Primary',
-          },
-          axes: [{
-            domain: {
-              'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-              'pl7.app/vdj/receptor': inputSpec?.domain?.['pl7.app/vdj/receptor'] ?? '',
-            },
-          }],
-        },
-        // CDR3 aa sequence sc data old MiXCR
-        {
-          annotationPatterns: {
-            'pl7.app/label': 'CDR3 aa Primary',
-          },
-          domain: {
-            'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-            'pl7.app/vdj/receptor': inputSpec?.domain?.['pl7.app/vdj/receptor'] ?? '',
-          },
-        },
-        // scFc new version (length Pcolumns are empty)
-        // {
-        //   annotationPatterns: {
-        //     'pl7.app/label': 'CDR3 aa',
-        //   },
-        //   domain: {
-        //     'pl7.app/vdj/clonotypingRunId': clonotypingRunId,
-        //   },
-        //   axes: [{
-        //     domain: {
-        //       'pl7.app/vdj/receptor': inputSpec?.axesSpec[1]?.domain?.['pl7.app/vdj/receptor'] ?? '',
-        //     },
-        //   }],
-        // },
-      ],
-    );
-
-    if (pCols === undefined) return undefined;
-
-    // Check and modify pColumn to solve compatibility issues between MiXCR versions and packages
-    // @TODO: Remove when new version specs get consensuated
-    for (const p of pCols) {
-      const runIdtemp = p.spec?.domain?.['pl7.app/vdj/clonotypingRunId'];
-      const chaintemp = p.spec?.domain?.['pl7.app/vdj/chain'];
-      if (p.spec?.axesSpec?.[0].domain) {
-        if (runIdtemp) {
-          p.spec.axesSpec[0].domain['pl7.app/vdj/clonotypingRunId'] = runIdtemp;
-        }
-        if (chaintemp) {
-          p.spec.axesSpec[0].domain['pl7.app/vdj/chain'] = chaintemp;
-        }
-      }
-    }
-    return ctx.createPFrame(pCols);
   })
 
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)
+
+  .title((ctx) => ctx.uiState.title ?? 'Top Antibodies')
 
   .sections((_ctx) => ([
     { type: 'link', href: '/', label: 'Main' },
