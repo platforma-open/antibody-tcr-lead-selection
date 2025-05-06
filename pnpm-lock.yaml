@@ -171,6 +171,9 @@ importers:
       vite:
         specifier: 'catalog:'
         version: 6.2.3(@types/node@22.9.0)(yaml@2.7.0)
+      vitest:
+        specifier: 'catalog:'
+        version: 2.1.9(@types/node@22.9.0)
       vue-tsc:
         specifier: 'catalog:'
         version: 2.2.8(typescript@5.5.4)
@@ -11379,8 +11382,8 @@ snapshots:
   vite@5.4.11(@types/node@22.9.0):
     dependencies:
       esbuild: 0.21.5
-      postcss: 8.4.48
-      rollup: 4.25.0
+      postcss: 8.5.3
+      rollup: 4.37.0
     optionalDependencies:
       '@types/node': 22.9.0
       fsevents: 2.3.3
