@@ -52,26 +52,38 @@ function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefined {
     ]) ?? [];
 
   // linker columns
-  const links = ctx.resultPool.getAnchoredPColumns(
-    { main: anchor },
-    [
-      {
-        axes: [{}, { anchor: 'main', idx: 1 }],
-        annotations: { 'pl7.app/isLinkerColumn': 'true' },
-      },
-    ],
-  ) ?? [];
-
+  const links: Column[] = [];
   const linkProps: Column[] = [];
-  for (const link of links ?? []) {
-    linkProps.push(...ctx.resultPool.getAnchoredPColumns(
-      { linker: link.spec },
+  for (const idx of [0, 1]) {
+    let axesToMatch;
+    if (idx === 0) {
+      axesToMatch = [{}, { anchor: 'main', idx: 1 }];
+    } else {
+      axesToMatch = [{ anchor: 'main', idx: 1 }, {}];
+    }
+
+    const l = ctx.resultPool.getAnchoredPColumns(
+      { main: anchor },
       [
         {
-          axes: [{ anchor: 'linker', idx: 0 }],
+          axes: axesToMatch,
+          annotations: { 'pl7.app/isLinkerColumn': 'true' },
         },
       ],
-    ) ?? []);
+    ) ?? [];
+
+    links.push(...l);
+
+    for (const link of l) {
+      linkProps.push(...ctx.resultPool.getAnchoredPColumns(
+        { linker: link.spec },
+        [
+          {
+            axes: [{ anchor: 'linker', idx: idx }],
+          },
+        ],
+      ) ?? []);
+    }
   }
 
   // score columns
