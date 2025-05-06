@@ -1,14 +1,24 @@
 <script lang="ts" setup>
-import { PlSlideModal } from '@platforma-sdk/ui-vue';
+import { PlSlideModal, PlCheckbox } from '@platforma-sdk/ui-vue';
 import Aioli from '@biowasm/aioli';
 import { useCssModule } from 'vue';
 const isOpen = defineModel<boolean>({ required: true, default: false });
 import { ref, onMounted, computed } from 'vue';
 import { parseBiowasmAlignment } from '../utils/alignment';
-import { highlightAlignment } from '../utils/colors';
+import type { ResidueType } from '../utils/colors';
+import { highlightAlignment, residueType, residueTypeLabels, residueTypeColorMap } from '../utils/colors';
+
 const output = ref('');
 
 const style = useCssModule();
+
+const enabledTypes = ref<readonly ResidueType[]>(residueType);
+
+const toggleType = (type: ResidueType) => {
+  enabledTypes.value = enabledTypes.value.includes(type)
+    ? enabledTypes.value.filter((t) => t !== type)
+    : [...enabledTypes.value, type];
+};
 
 const computedOutput = computed(() => {
   const parsedAlignment = parseBiowasmAlignment(output.value);
@@ -20,7 +30,10 @@ const computedOutput = computed(() => {
 
   return parsedAlignment.map((alignmentItem, index) => {
     const sequenceHtml = highlightedSequences[index].map((highlight) => {
-      return `<span style="color: ${highlight.color}">${highlight.residue}</span>`;
+      if (enabledTypes.value.includes(highlight.color)) {
+        return `<span style="color: ${residueTypeColorMap[highlight.color]}">${highlight.residue}</span>`;
+      }
+      return `<span>${highlight.residue}</span>`;
     }).join('');
     return `<span class="${style.header}">${alignmentItem.name}</span><span class="${style.sequence}">${sequenceHtml}</span>`;
   }).join('\n');
@@ -64,6 +77,17 @@ onMounted(async () => {
     <div>
       <div :class="$style.output" v-html="computedOutput" />
     </div>
+    <div>
+      <PlCheckbox
+        v-for="type in residueType"
+        :key="type"
+        :model-value="enabledTypes.includes(type)"
+        @update:model-value="toggleType(type)"
+      >
+        <span :class="[$style.colorSample]" :style="{ backgroundColor: residueTypeColorMap[type] }" />
+        {{ residueTypeLabels[type] }}
+      </PlCheckbox>
+    </div>
   </PlSlideModal>
 </template>
 
@@ -89,5 +113,14 @@ onMounted(async () => {
     padding: 0 2px;
     display: inline-block;
   }
+}
+
+.colorSample {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  border: 1px solid #ccc;
+  margin-right: 8px;
+  vertical-align: middle;
 }
 </style>

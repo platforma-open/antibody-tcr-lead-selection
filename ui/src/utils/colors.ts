@@ -1,18 +1,45 @@
-type ResidueColor =
-  | 'blue' // Hydrophobic
-  | 'red' // Positive charge
-  | 'magenta' // Negative charge
-  | 'green' // Polar
-  | 'pink' // Cysteine
-  | 'orange' // Glycine
-  | 'yellow' // Proline
-  | 'cyan' // Aromatic
-  | 'black'; // Unconserved or not matching any threshold
+export const residueType = [
+  'hydrophobic',
+  'positive_charge',
+  'negative_charge',
+  'polar',
+  'cysteine_specific',
+  'glycine',
+  'proline',
+  'aromatic',
+  'unconserved_or_default',
+] as const;
+
+export type ResidueType = typeof residueType[number];
+
+export const residueTypeLabels: Record<ResidueType, string> = {
+  hydrophobic: 'Hydrophobic',
+  positive_charge: 'Positive Charge',
+  negative_charge: 'Negative Charge',
+  polar: 'Polar',
+  cysteine_specific: 'Cysteine (Specific)',
+  glycine: 'Glycine',
+  proline: 'Proline',
+  aromatic: 'Aromatic',
+  unconserved_or_default: 'Unconserved / Default',
+};
+
+export const residueTypeColorMap: Record<ResidueType, string> = {
+  hydrophobic: '#0000FF',
+  positive_charge: '#FF0000',
+  negative_charge: '#FF0000', // Note: Same as positive_charge in the provided CSS
+  polar: '#00FF00',
+  cysteine_specific: '#FF00FF',
+  glycine: '#FFA500',
+  proline: '#FFEA00',
+  aromatic: '#0000FF', // Note: Same as hydrophobic in the provided CSS
+  unconserved_or_default: '#000000',
+};
 
 interface HighlightedResidue {
   residue: string;
   position: number;
-  color: ResidueColor;
+  color: ResidueType;
 }
 
 function getColumnCounts(column: string[]): Record<string, number> {
@@ -25,9 +52,65 @@ function getColumnCounts(column: string[]): Record<string, number> {
   return counts;
 }
 
-function getColorForResidue(residue: string, column: string[]): ResidueColor {
+/*
+Clustal X Default Colouring Rules (adapted for this implementation):
+
+The table below gives these criteria as clauses: {>X%,xx,y}, where X is the threshold percentage presence for any of the xx (or y) residue types.
+For example, K or R is coloured red if the column includes more than 60% K or R (combined), or more than 80% of either K or R or Q (individually).
+
+The coloring logic below is based on the Clustal X default coloring scheme.
+Thresholds refer to the percentage of residues in a column belonging to a specified group.
+
+- Hydrophobic (blue):
+  - Residues: A, C, I, L, M, F, W, V
+    - Condition: >60% in group WLVIMAFCYHP (W, L, V, I, M, A, F, C, Y, H, P)
+  - Residue: C (also covered by the above, but sometimes listed separately)
+    - Condition: >60% in group WLVIMAFCYHP
+
+- Positive charge (red):
+  - Residues: K, R
+    - Conditions: >60% in group KR (K, R) OR >85% in group {K, R, Q}
+
+- Negative charge (magenta):
+  - Residue: E
+    - Conditions: >60% in group KR OR >50% in group QE (Q, E) OR >50% in group ED (E, D) OR >85% in group {E, Q, D}
+  - Residue: D
+    - Conditions: >60% in group KR OR >85% in group DEN (D, E, N) OR >50% in group ED (E, D)
+
+- Polar (green):
+  - Residue: N
+    - Conditions: >50% in group {N} OR >85% in group DEN (D, E, N)
+  - Residue: Q
+    - Conditions: >60% in group KR OR >50% in group QE (Q, E) OR >85% in group {Q, T, K, R}
+  - Residues: S, T
+    - Conditions: >60% in group WLVIMAFCYHP OR >50% in group ST (S, T) OR >85% in group ST (S, T)
+
+- Cysteines (pink):
+  - Residue: C
+    - Condition: >85% in group {C}
+
+- Glycines (orange):
+  - Residue: G
+    - Condition: If residue is G (effectively >0% in group {G})
+
+- Prolines (yellow):
+  - Residue: P
+    - Condition: If residue is P (effectively >0% in group {P})
+
+- Aromatic (cyan):
+  - Residues: H, Y
+    - Conditions: >60% in group WLVIMAFCYHP OR >85% in group WYA (W, Y, A, C, P, Q, F, H, I, L, M, V)
+
+- Gap / Unconserved (black):
+  - Residue: - (gap) or any other residue not matching above criteria.
+    - Condition: Always 'black' for gaps. For other residues, if no other rule applies.
+
+Note: Residue groups mentioned (e.g., WLVIMAFCYHP, KR) are defined as constants within the function.
+The percentages are strict inequalities (e.g., >60% means count/total > 0.6).
+*/
+function getTypeForResidue(residue: string, column: string[]): ResidueType {
   residue = residue.toUpperCase();
-  if (residue === '-') return 'black';
+  if (residue === '-') return 'unconserved_or_default';
 
   const total = column.filter((r) => r !== '-').length;
   const counts = getColumnCounts(column);
@@ -41,53 +124,51 @@ function getColorForResidue(residue: string, column: string[]): ResidueColor {
   const ED = ['E', 'D'];
   const EQD = ['E', 'Q', 'D'];
   const DEN = ['D', 'E', 'N'];
+  const ND = ['N', 'D'];
   const ST = ['S', 'T'];
   const QT = ['Q', 'T'];
   const WYA = ['W', 'Y', 'A', 'C', 'P', 'Q', 'F', 'H', 'I', 'L', 'M', 'V'];
 
   if (['A', 'C', 'I', 'L', 'M', 'F', 'W', 'V'].includes(residue) && percent(WLVIMAFCYHP) > 0.6)
-    return 'blue';
+    return 'hydrophobic';
 
-  if (residue === 'C' && percent(WLVIMAFCYHP) > 0.6)
-    return 'blue';
-
-  if (['K', 'R'].includes(residue) && (percent(KR) > 0.6 || percent([...KR, 'Q']) > 0.85))
-    return 'red';
+  if (['K', 'R'].includes(residue) && (percent(KR) > 0.6 || percent(['K']) > 0.8 || percent(['R']) > 0.8 || percent(['Q']) > 0.8))
+    return 'positive_charge';
 
   if (residue === 'E' && (
     percent(KR) > 0.6 || percent(QE) > 0.5 || percent(ED) > 0.5 || percent(EQD) > 0.85))
-    return 'magenta';
+    return 'negative_charge';
 
   if (residue === 'D' && (
     percent(KR) > 0.6 || percent(DEN) > 0.85 || percent(ED) > 0.5))
-    return 'magenta';
+    return 'negative_charge';
 
   if (residue === 'N' && (
-    percent(['N']) > 0.5 || percent(DEN) > 0.85))
-    return 'green';
+    percent(['N']) > 0.5 || percent(ND) > 0.85))
+    return 'polar';
 
   if (residue === 'Q' && (
     percent(KR) > 0.6 || percent(QE) > 0.5 || percent([...QT, ...KR]) > 0.85))
-    return 'green';
+    return 'polar';
 
   if (['S', 'T'].includes(residue) && (
-    percent(WLVIMAFCYHP) > 0.6 || percent(ST) > 0.5 || percent(ST) > 0.85))
-    return 'green';
+    percent(WLVIMAFCYHP) > 0.6 || percent(ST) > 0.5 || percent(['S']) > 0.85 || percent(['T']) > 0.85))
+    return 'polar';
 
   if (residue === 'C' && percent(['C']) > 0.85)
-    return 'pink';
+    return 'cysteine_specific';
 
   if (residue === 'G')
-    return 'orange';
+    return 'glycine';
 
   if (residue === 'P')
-    return 'yellow';
+    return 'proline';
 
   if (['H', 'Y'].includes(residue) && (
     percent(WLVIMAFCYHP) > 0.6 || percent(WYA) > 0.85))
-    return 'cyan';
+    return 'aromatic';
 
-  return 'black';
+  return 'unconserved_or_default';
 }
 
 export function highlightAlignment(sequences: string[]): HighlightedResidue[][] {
@@ -98,7 +179,7 @@ export function highlightAlignment(sequences: string[]): HighlightedResidue[][] 
     const column = sequences.map((seq) => seq[i]);
     sequences.forEach((seq, j) => {
       const res = seq[i];
-      const color = getColorForResidue(res, column);
+      const color = getTypeForResidue(res, column);
       result[j].push({ residue: res, position: i, color });
     });
   }
@@ -107,12 +188,12 @@ export function highlightAlignment(sequences: string[]): HighlightedResidue[][] 
 }
 
 // Example usage:
-const sequences = [
-  'GKGDPKKPRG-KMSSYAFFVQTSREEHKKKHPDASVNFSEFSKKCSERWKTMSAKEKGKF',
-  '-----MQDRV-KRPMNAFIVWSRDQRRKMALENPRMRNSEISKQLGYQWKMLTEAEKWPF',
-  'MKKLKKHPDFPKKPLTPYFRFFMEKRAKYAKLHPEMSNLDLTKILSKKYKELPEKKKMKY',
-  '-----MHI---KKPLNAFMLYMKEMRANVVAESTLKESAAINQILGRRWHALSREEQAKY',
-];
+// const sequences = [
+//   'GKGDPKKPRG-KMSSYAFFVQTSREEHKKKHPDASVNFSEFSKKCSERWKTMSAKEKGKF',
+//   '-----MQDRV-KRPMNAFIVWSRDQRRKMALENPRMRNSEISKQLGYQWKMLTEAEKWPF',
+//   'MKKLKKHPDFPKKPLTPYFRFFMEKRAKYAKLHPEMSNLDLTKILSKKYKELPEKKKMKY',
+//   '-----MHI---KKPLNAFMLYMKEMRANVVAESTLKESAAINQILGRRWHALSREEQAKY',
+// ];
 
-const highlighted = highlightAlignment(sequences);
-console.log(highlighted);
+// const highlighted = highlightAlignment(sequences);
+// console.log(highlighted);
