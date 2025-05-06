@@ -19,6 +19,8 @@ catalog:
 
   '@milaboratories/software-pframes-conv': ^2.2.2
   "@platforma-open/milaboratories.runenv-python-3": ^1.1.7
+
+  '@biowasm/aioli': ~3.2.1
   
   "vue": ^3.5.13
   "vue-tsc": ^2.2.8

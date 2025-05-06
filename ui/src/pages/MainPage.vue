@@ -16,6 +16,7 @@ import {
 } from '@platforma-sdk/ui-vue';
 import { computed, ref } from 'vue';
 import { useApp } from '../app';
+import { MultiAlignmentModal } from '../MultiAlignment';
 
 const app = useApp();
 
@@ -60,6 +61,7 @@ const filterColumns = computed<PTableColumnSpec[]>(() => {
           :defaults="app.model.outputs.defaultFilters"
         />
       </PlAgDataTableToolsPanel>
+      <PlBtnGhost @click.stop="app.openMultiAlignment">Multi Alignment</PlBtnGhost>
       <PlBtnGhost @click.stop="() => (settingsOpen = true)">
         Settings
         <template #append>
@@ -84,5 +86,6 @@ const filterColumns = computed<PTableColumnSpec[]>(() => {
         @update:model-value="setAnchorColumn"
       />
     </PlSlideModal>
+    <MultiAlignmentModal v-model="app.multiAlignmentOpen" />
   </PlBlockPage>
 </template>
