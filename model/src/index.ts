@@ -57,8 +57,10 @@ function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefined {
   for (const idx of [0, 1]) {
     let axesToMatch;
     if (idx === 0) {
+      // clonotypeKey in second axis
       axesToMatch = [{}, { anchor: 'main', idx: 1 }];
     } else {
+      // clonotypeKey in first axis
       axesToMatch = [{ anchor: 'main', idx: 1 }, {}];
     }
 
@@ -208,6 +210,9 @@ export const model = BlockModel.create()
 
   .sections((_ctx) => ([
     { type: 'link', href: '/', label: 'Main' },
+    { type: 'link', href: '/umap', label: 'Clonotype UMAP' },
+    { type: 'link', href: '/spectratype', label: 'CDR3 Spectratype' },
+    { type: 'link', href: '/usage', label: 'V/J gene usage' },
   ]))
 
   .done();
