@@ -15,9 +15,9 @@ import {
   PlSlideModal,
   PlTableFilters,
 } from '@platforma-sdk/ui-vue';
-import { computed, ref } from 'vue';
+import { computed, reactive, ref } from 'vue';
 import { useApp } from '../app';
-import { MultiAlignmentModal } from '../MultiAlignment';
+import { Alignment, MultiAlignmentModal } from '../MultiAlignment';
 
 const app = useApp();
 
@@ -39,7 +39,11 @@ const tableSettings = computed<PlAgDataTableSettings>(() => ({
 }));
 
 const columns = ref<PTableColumnSpec[]>([]);
-const selectedRows = ref<PTableRowKey[]>([]);
+const data = reactive<{
+  selectedRows: PTableRowKey[];
+}>({
+  selectedRows: [],
+});
 
 const filterColumns = computed<PTableColumnSpec[]>(() => {
   return app.model.outputs.scoreColumns?.map((c) => ({
@@ -73,8 +77,8 @@ const filterColumns = computed<PTableColumnSpec[]>(() => {
     </template>
     <PlAgDataTableV2
       v-model="app.model.ui.tableState"
+      v-model:selected-rows="data.selectedRows"
       :settings="tableSettings"
-      :selected-rows="selectedRows"
       show-columns-panel
       show-export-button
       @columns-changed="(newColumns) => (columns = newColumns)"
@@ -89,6 +93,15 @@ const filterColumns = computed<PTableColumnSpec[]>(() => {
         @update:model-value="setAnchorColumn"
       />
     </PlSlideModal>
-    <MultiAlignmentModal v-model="app.multiAlignmentOpen" />
+    <MultiAlignmentModal v-model="app.multiAlignmentOpen">
+      <Alignment
+        v-if="app.model.outputs.alignmentLabelOptions"
+        v-model="app.model.ui.alignmentTableState"
+        :label-options="app.model.outputs.alignmentLabelOptions"
+        :table-columns="columns"
+        :selected-rows="data.selectedRows"
+        :table="app.model.outputs.alignmentTable"
+      />
+    </MultiAlignmentModal>
   </PlBlockPage>
 </template>

@@ -74,6 +74,7 @@ onMounted(async () => {
 <template>
   <PlSlideModal v-model="isOpen" width="80%" :close-on-outside-click="false">
     <template #title>Multi Alignment</template>
+    <slot/>
     <div>
       <div :class="$style.output" v-html="computedOutput" />
     </div>
