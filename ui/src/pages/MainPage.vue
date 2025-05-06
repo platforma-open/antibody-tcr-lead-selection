@@ -33,10 +33,12 @@ function setAnchorColumn(ref: PlRef | undefined) {
     : '');
 }
 
-const tableSettings = computed<PlAgDataTableSettings>(() => ({
-  sourceType: 'ptable',
-  model: app.model.outputs.table,
-}));
+const tableSettings = computed<PlAgDataTableSettings>(() => (app.model.outputs.table
+  ? {
+      sourceType: 'ptable',
+      model: app.model.outputs.table,
+    }
+  : undefined));
 
 const columns = ref<PTableColumnSpec[]>([]);
 const data = reactive<{
