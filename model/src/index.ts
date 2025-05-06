@@ -189,6 +189,12 @@ export const model = BlockModel.create()
     return getColumns(ctx);
   })
 
+// .output('alignmentLabelOptions', (ctx) => {
+//   return ctx.resultPool.getCanonicalOptions(
+//     // what should be here? argumants are the same as for `ctx.resultPool.getAnchoredPColumns`
+//   );
+// })
+
   .output('table', (ctx) => {
     const columns = getColumns(ctx);
     if (columns === undefined)

@@ -3,6 +3,7 @@ import type { PlRef, PTableColumnSpec } from '@platforma-sdk/model';
 import { plRefsEqual } from '@platforma-sdk/model';
 import type {
   PlAgDataTableSettings,
+  PTableRowKey,
 } from '@platforma-sdk/ui-vue';
 import {
   PlAgDataTableToolsPanel,
@@ -38,6 +39,7 @@ const tableSettings = computed<PlAgDataTableSettings>(() => ({
 }));
 
 const columns = ref<PTableColumnSpec[]>([]);
+const selectedRows = ref<PTableRowKey[]>([]);
 
 const filterColumns = computed<PTableColumnSpec[]>(() => {
   return app.model.outputs.scoreColumns?.map((c) => ({
@@ -72,6 +74,7 @@ const filterColumns = computed<PTableColumnSpec[]>(() => {
     <PlAgDataTableV2
       v-model="app.model.ui.tableState"
       :settings="tableSettings"
+      :selected-rows="selectedRows"
       show-columns-panel
       show-export-button
       @columns-changed="(newColumns) => (columns = newColumns)"
