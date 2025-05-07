@@ -16,7 +16,12 @@ import type {
   SUniversalPColumnId,
   TreeNodeAccessor,
 } from '@platforma-sdk/model';
-import { BlockModel, createPlDataTableV2, isLabelColumn } from '@platforma-sdk/model';
+import {
+  BlockModel,
+  createPFrameForGraphs,
+  createPlDataTableV2,
+  isLabelColumn,
+} from '@platforma-sdk/model';
 
 export type ListOption<T> = {
   label: string;
@@ -26,6 +31,10 @@ export type ListOption<T> = {
 export type AlignmentModel = {
   label?: PObjectId;
   filterColumn?: PColumn<PColumnValues>;
+};
+
+export type AlignmentV2Model = {
+  label?: PObjectId;
 };
 
 export type BlockArgs = {
@@ -39,6 +48,7 @@ export type UiState = {
   tableState: PlDataTableState;
   filterModel: PlTableFiltersModel;
   alignmentTableState: AlignmentModel;
+  alignmentModel: AlignmentV2Model;
 };
 
 type Column = PColumn<DataInfo<TreeNodeAccessor> | TreeNodeAccessor | PColumnValues>;
@@ -239,6 +249,7 @@ export const model = BlockModel.create()
     },
     filterModel: {},
     alignmentTableState: {},
+    alignmentModel: {},
   })
 
   .output('inputOptions', (ctx) =>
@@ -292,19 +303,13 @@ export const model = BlockModel.create()
     return anchor;
   })
 
-// .output('alignmentLabelOptions', (ctx) => {
-//   return ctx.resultPool.getCanonicalOptions(
-//     // what should be here? argumants are the same as for `ctx.resultPool.getAnchoredPColumns`
-//   );
-// })
+  .output('pf', (ctx) => {
+    const columns = getColumns(ctx);
+    if (!columns) return undefined;
 
-// .output('pf', (ctx) => {
-//   const columns = getColumns(ctx);
-//   if (columns === undefined)
-//     return undefined;
-
-//   return createPFrameForGraphs(ctx, columns.props);
-// })
+    // @ts-expect-error todo fix
+    return createPFrameForGraphs(ctx, columns.props);
+  })
 
   .output('table', (ctx) => {
     const columns = getColumns(ctx);

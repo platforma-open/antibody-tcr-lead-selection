@@ -1,6 +1,13 @@
 <script setup lang="ts">
-import type { PlRef, PTableColumnSpec } from '@platforma-sdk/model';
-import { plRefsEqual } from '@platforma-sdk/model';
+import type {
+  PColumnSpec,
+  PlRef,
+  PTableColumnSpec,
+} from '@platforma-sdk/model';
+import {
+  isLabelColumn,
+  plRefsEqual,
+} from '@platforma-sdk/model';
 import type {
   PlAgDataTableSettings,
   PTableRowKey,
@@ -19,7 +26,7 @@ import {
 } from '@platforma-sdk/ui-vue';
 import { computed, reactive, ref } from 'vue';
 import { useApp } from '../app';
-import { Alignment, MultiAlignmentModal } from '../MultiAlignment';
+import { AlignmentDataProvider, MultiAlignmentModal } from '../MultiAlignment';
 
 const app = useApp();
 
@@ -57,6 +64,23 @@ const filterColumns = computed<PTableColumnSpec[]>(() => {
   })) ?? [];
 });
 
+const isLabelColumnOption = (column: PColumnSpec) => {
+  return isLabelColumn(column) && column.axesSpec[0].annotations?.['pl7.app/label'] === 'Clonotype key';
+};
+
+const isSequenceColumn = (column: PColumnSpec) => {
+  if (!(column.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'))
+    return false;
+
+  const isBulkSequence = (column: PColumnSpec) =>
+    column.domain?.['pl7.app/alphabet'] === 'aminoacid';
+  const isSingleCellSequence = (column: PColumnSpec) =>
+    column.domain?.['pl7.app/vdj/scClonotypeChain/index'] === 'primary'
+    && column.axesSpec.length >= 1
+    && column.axesSpec[1].name === 'pl7.app/vdj/scClonotypeKey';
+
+  return isBulkSequence(column) || isSingleCellSequence(column);
+};
 </script>
 
 <template>
@@ -111,15 +135,15 @@ const filterColumns = computed<PTableColumnSpec[]>(() => {
         </template>
       </PlNumberField>
     </PlSlideModal>
-    <MultiAlignmentModal v-model="app.multiAlignmentOpen" :sequenceRows="app.sequenceRows">
-      <Alignment
-        v-if="app.model.outputs.alignmentLabelOptions"
-        v-model="app.model.ui.alignmentTableState"
-        v-model:sequence-rows="app.sequenceRows"
-        :label-options="app.model.outputs.alignmentLabelOptions"
+    <MultiAlignmentModal v-model="app.multiAlignmentOpen" :labels-to-records="app.labelsToRecords">
+      <AlignmentDataProvider
+        v-model="app.model.ui.alignmentModel"
+        v-model:labels-to-records="app.labelsToRecords"
+        :label-column-option-predicate="isLabelColumnOption"
+        :sequence-column-predicate="isSequenceColumn"
         :table-columns="columns"
         :selected-rows="data.selectedRows"
-        :table="app.model.outputs.alignmentTable"
+        :pframe="app.model.outputs.pf"
       />
     </MultiAlignmentModal>
   </PlBlockPage>
