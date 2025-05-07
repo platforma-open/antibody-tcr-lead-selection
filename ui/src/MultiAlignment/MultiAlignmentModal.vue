@@ -98,11 +98,12 @@ const isDisabled = computed(() => {
   overflow: auto;
   max-width: 100%;
   padding: 24px 0;
+  display: grid;
+  grid-template-columns: fit-content(20px) 1fr;
 }
 
 .header {
   color: #000;
-  min-width: 100px;
   display: inline-block;
 }
 
