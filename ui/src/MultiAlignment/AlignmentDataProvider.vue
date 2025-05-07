@@ -167,7 +167,7 @@ watch(
         continue;
       }
 
-      result.push({ label, sequence: sequence.join(''), key: JSON.stringify(key) });
+      result.push({ label, sequence: sequence.join(''), key: label });
     }
 
     sequenceRows.value = result;
