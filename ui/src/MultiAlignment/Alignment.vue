@@ -3,6 +3,8 @@ import {
   isSequenceColumn,
   type AlignmentModel,
 } from '@platforma-open/milaboratories.top-antibodies.model';
+import type {
+  PTableShape } from '@platforma-sdk/model';
 import {
   getRawPlatformaInstance,
   isPTableAbsent,
@@ -13,7 +15,6 @@ import {
   type PColumnValuesEntry,
   type PObjectId,
   type PTableHandle,
-  type PTableShape,
   type PTableColumnSpec,
   pTableValue,
 } from '@platforma-sdk/model';
@@ -63,11 +64,11 @@ watchEffect(() => {
 });
 
 const driver = getRawPlatformaInstance().pFrameDriver;
-const labelsToRecords = ref<Record<string, string> | undefined>();
+const labelsToRecords = ref<[string, string][] | undefined>();
 watch(
   () => props.table,
   async (table) => {
-    const result: Record<string, string> = {};
+    const result: [string, string][] = [['Label', 'Sequence']];
 
     if (table) {
       const specs = await driver.getSpec(table);
@@ -85,8 +86,9 @@ watch(
         }
       }
 
+      const shape = await driver.getShape(table);
       const data = await driver.getData(table, [...labelColumns, ...sequenceColumns]);
-      for (let iRow = 0; iRow < data.length; iRow++) {
+      for (let iRow = 0; iRow < shape.rows; iRow++) {
         const label = pTableValue(data[0], iRow, { na: '', absent: '' });
         const sequence = [];
         for (let iCol = 1; iCol < data.length; iCol++) {
@@ -98,7 +100,7 @@ watch(
           continue;
         }
 
-        result[label] = sequence.join('');
+        result.push([label, sequence.join('')]);
       }
     }
 
