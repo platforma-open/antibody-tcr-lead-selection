@@ -1,10 +1,74 @@
 // light block with no workflow
 wf := import("@platforma-sdk/workflow-tengo:workflow")
+exec := import("@platforma-sdk/workflow-tengo:exec")
+xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
+sampledColsConv := import(":sampled-cols-conv")
+
+
+wf.prepare(func(args){
+	// We need a table with cluster ID (optional) | clonotype id | selected ranking columns
+
+	bundleBuilder := wf.createPBundleBuilder()
+	bundleBuilder.ignoreMissingDomains() // to make query work for both bulk and single cell data
+	bundleBuilder.addAnchor("main", args.inputAnchor) 
+	
+	for col in args.rankingOrder {
+		bundleBuilder.addSingle(col)
+	}
+
+	bundleBuilder.addMulti({
+		axes: [{ anchor: "main", idx: 1 }],
+		partialAxesMatch: true,
+		annotations: { "pl7.app/isLinkerColumn": "true" }
+		},
+		"linker")
+
+	return {
+		columns: bundleBuilder.build()
+	}
+})
 
 wf.body(func(args) {
 
+	columns := args.columns
+	datasetSpec := columns.getSpec(args.inputAnchor)
+	topClonotypes := args.topClonotypes
+	
+
+	clonoTable := columns.xsvTableBuilder()
+	clonoTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
+	
+	for i, col in args.rankingOrder {
+		clonoTable.add(col, {header: "Col" + string(i)})
+	}
+
+	// Columns gotten by query require .key
+	linkerAxisSpec := {}
+	for i, col in columns.getColumns("linker") {
+		if datasetSpec.axesSpec[1].name == col.spec.axesSpec[1].name {
+			clonoTable.add(col.key, {header: "linker." + string(i)})
+			clonoTable.setAxisHeader(col.spec.axesSpec[0].name, "cluster_" + string(i))
+			linkerAxisSpec[col.spec.annotations["pl7.app/label"]] = col.spec.axesSpec[0]
+		} else if datasetSpec.axesSpec[1].name == col.spec.axesSpec[0].name {
+			clonoTable.add(col.key, {header: "linker." + string(i)})
+			clonoTable.setAxisHeader(col.spec.axesSpec[1].name, "cluster_" + string(i))
+			linkerAxisSpec[col.spec.annotations["pl7.app/label"]] = col.spec.axesSpec[1]
+		}
+		
+	}
+
+	clonoTable = clonoTable.build("tsv")
+
+	
+	sampledColsParams := sampledColsConv.getColumns(datasetSpec, linkerAxisSpec)
+	enrichmentPf := xsv.importFile(clonoTable, "tsv", sampledColsParams)
+
+	// we need to output all filtered data axis
+
 	return {
-		outputs: {},
+		outputs: {
+			testCmd:testCmd
+		},
 		exports: {}
 	}
 })
