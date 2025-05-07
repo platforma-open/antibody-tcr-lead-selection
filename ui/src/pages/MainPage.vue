@@ -99,21 +99,19 @@ const filterColumns = computed<PTableColumnSpec[]>(() => {
         clearable
         @update:model-value="setAnchorColumn"
       />
-      <PlRow>
-        <PlNumberField
-          v-model="app.model.args.topClonotypes"
-          label="Top clonotypes" :minValue="2" :step="1"
-        >
-          <template #tooltip>
-            TO CHANGE: Provide a desired number of top clonotypes to be selected by ranking of filtering columns and in house scoring script.
-          </template>
-        </PlNumberField>
-        <PlDropdownMulti v-model="app.model.args.rankingOrder" :options="app.model.outputs.rankingOptions" label="Sorting columns" >
-          <template #tooltip>
-            Order aware selection. Columns for sequential priority sorting of clonotypes.
-          </template>
-        </PlDropdownMulti>
-    </PlRow>
+      <PlDropdownMulti v-model="app.model.args.rankingOrder" :options="app.model.outputs.rankingOptions" label="Sorting columns" >
+        <template #tooltip>
+          Order aware selection. Columns for sequential priority sorting of clonotypes.
+        </template>
+      </PlDropdownMulti>
+      <PlNumberField
+        v-model="app.model.args.topClonotypes"
+        label="Top clonotypes" :minValue="2" :step="1"
+      >
+        <template #tooltip>
+          TO CHANGE: Provide a desired number of top clonotypes to be selected by ranking of filtering columns and in house scoring script.
+        </template>
+      </PlNumberField>
     </PlSlideModal>
     <MultiAlignmentModal v-model="app.multiAlignmentOpen">
       <Alignment
