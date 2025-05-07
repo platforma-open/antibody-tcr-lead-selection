@@ -34,9 +34,10 @@ import {
   ref,
   watch,
 } from 'vue';
+import type { SequenceRow } from '../types';
 
 const model = defineModel<AlignmentV2Model>({ default: {} });
-const labelsToRecords = defineModel<[string, string][] | undefined>('labels-to-records');
+const sequenceRows = defineModel<SequenceRow[] | undefined>('sequence-rows');
 
 const props = defineProps<{
   labelColumnOptionPredicate: (column: PColumnSpec) => boolean;
@@ -79,7 +80,7 @@ watch(
   async ([pframe, filterColumn, labelColumnId]) => {
     if (!pframe) {
       labelColumnOptions.value = undefined;
-      labelsToRecords.value = [];
+      sequenceRows.value = undefined;
       return;
     }
 
@@ -95,7 +96,7 @@ watch(
       || !labelColumnId
       || !columns.find((c) => c.columnId === labelColumnId)
       || sequenceColumns.length === 0) {
-      labelsToRecords.value = [];
+      sequenceRows.value = undefined;
       return;
     }
 
@@ -132,7 +133,7 @@ watch(
     } satisfies CalculateTableDataRequest<PObjectId>;
     const table = await driver.calculateTableData(pframe, JSON.parse(JSON.stringify(def)));
 
-    const result: [string, string][] = [];
+    const result: SequenceRow[] = [];
     const labelColumnIndices = [];
     const sequenceColumnIndices = [];
     for (let i = 0; i < table.length; i++) {
@@ -147,12 +148,14 @@ watch(
       }
     }
     if (labelColumnIndices.length === 0 || sequenceColumnIndices.length === 0) {
-      labelsToRecords.value = [];
+      sequenceRows.value = undefined;
       throw new Error('No label or sequence columns found');
     }
 
     const rowCount = table[0].data.data.length;
+    console.log('>>>', table[0].data.data);
     for (let iRow = 0; iRow < rowCount; iRow++) {
+      const key = table[0].data.data[iRow];
       const label = pTableValue(table[labelColumnIndices[0]].data, iRow, { na: '', absent: '' });
       const sequence = [];
       for (const iCol of sequenceColumnIndices) {
@@ -164,10 +167,10 @@ watch(
         continue;
       }
 
-      result.push([label, sequence.join('')]);
+      result.push({ label, sequence: sequence.join(''), key: JSON.stringify(key) });
     }
 
-    labelsToRecords.value = result;
+    sequenceRows.value = result;
   },
   { immediate: true },
 );

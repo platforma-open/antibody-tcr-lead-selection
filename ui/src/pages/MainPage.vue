@@ -135,10 +135,10 @@ const isSequenceColumn = (column: PColumnSpec) => {
         </template>
       </PlNumberField>
     </PlSlideModal>
-    <MultiAlignmentModal v-model="app.multiAlignmentOpen" :labels-to-records="app.labelsToRecords">
+    <MultiAlignmentModal v-model="app.multiAlignmentOpen" :sequence-rows="app.sequenceRows">
       <AlignmentDataProvider
         v-model="app.model.ui.alignmentModel"
-        v-model:labels-to-records="app.labelsToRecords"
+        v-model:sequence-rows="app.sequenceRows"
         :label-column-option-predicate="isLabelColumnOption"
         :sequence-column-predicate="isSequenceColumn"
         :table-columns="columns"

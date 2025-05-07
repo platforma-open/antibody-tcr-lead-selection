@@ -66,9 +66,7 @@ const isDisabled = computed(() => {
     <template #title>Multi Alignment</template>
     <slot/>
     <PlBtnPrimary :disabled="isDisabled" @click="runAlignment">Run Alignment {{ props.sequenceRows?.length }}</PlBtnPrimary>
-    <div>
-      <div :class="[$style.output]" v-html="computedOutput" />
-    </div>
+    <div :class="[$style.output]" v-html="computedOutput" />
     <div>
       <PlCheckbox v-model="showChemicalProperties">Show chemical properties</PlCheckbox>
       <div
