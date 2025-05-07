@@ -23,24 +23,72 @@ def validate_column_format(df):
         return False
     
     # Check for Col* columns
-    col_columns = [col for col in df.columns if re.match(r'^Col\d+$', col)]
+    col_columns = sorted([col for col in df.columns if re.match(r'^Col\d+$', col)],
+                        key=lambda x: int(x[3:]))
     print("Found Col* columns:", col_columns)
     
     if not col_columns:
         print("Error: Input CSV must contain at least one column starting with 'Col' followed by a number (e.g., Col0, Col1, etc.).")
         return False
     
-    return True
+    return col_columns
 
 
-def rank_rows(df):
-    # Get all Col* columns and sort them by their number
-    col_columns = sorted([col for col in df.columns if re.match(r'^Col\d+$', col)],
-                        key=lambda x: int(x[3:]))
+def rank_rows(df, col_columns):
+    # Check if there's a cluster column
+    cluster_columns = [col for col in df.columns if re.match(r'^cluster_\d+$', col)]
     
-    # Sort the dataframe by each Col* column in order of priority
-    # Use ascending=False to get highest values first
-    return df.sort_values(by=col_columns, ascending=False)
+    if not cluster_columns:
+        # If no cluster column, rank as before
+        return df.sort_values(by=col_columns, ascending=False)
+    
+    # Use the first cluster column found
+    cluster_col = cluster_columns[0]
+    
+    # Get group sizes for ordering
+    group_sizes = df[cluster_col].value_counts()
+    
+    # Sort groups by size (descending)
+    sorted_groups = group_sizes.index.tolist()
+    
+    # Rank within each group
+    ranked_dfs = []
+    for group in sorted_groups:
+        group_df = df[df[cluster_col] == group].copy()
+        ranked_group = group_df.sort_values(by=col_columns, ascending=False)
+        ranked_dfs.append(ranked_group)
+    
+    # Combine all ranked groups
+    return pd.concat(ranked_dfs)
+
+
+def select_top_n(df, n, cluster_columns):
+    if not cluster_columns:
+        # If no cluster column, just take top N
+        return df.head(n)
+    
+    # Use the first cluster column found
+    cluster_col = cluster_columns[0]
+    
+    # Get unique groups
+    groups = df[cluster_col].unique()
+    num_groups = len(groups)
+    
+    # Calculate how many rows to take from each group
+    rows_per_group = n // num_groups
+    extra_rows = n % num_groups
+    
+    # Select rows
+    selected_rows = []
+    for i in range(rows_per_group + (1 if extra_rows > 0 else 0)):
+        for group in groups:
+            if len(selected_rows) >= n:
+                break
+            group_df = df[df[cluster_col] == group]
+            if i < len(group_df):
+                selected_rows.append(group_df.iloc[i])
+    
+    return pd.DataFrame(selected_rows)
 
 
 def main():
@@ -56,8 +104,9 @@ def main():
             print(f"Error reading file: {e}")
             return
 
-    # Validate column format
-    if not validate_column_format(df):
+    # Validate column format and get col columns
+    col_columns = validate_column_format(df)
+    if not col_columns:
         return
 
     # Validate N
@@ -68,23 +117,38 @@ def main():
         print(f"Error: N ({args.n}) is greater than the number of rows in the table ({len(df)}).")
         return
 
-    # Rank rows and get top N
-    ranked_df = rank_rows(df)
-    top_n = ranked_df.head(args.n)
+    # Check for cluster columns
+    cluster_columns = [col for col in df.columns if re.match(r'^cluster_\d+$', col)]
+    
+    # Rank rows
+    ranked_df = rank_rows(df, col_columns)
+    
+    # Select top N rows
+    top_n = select_top_n(ranked_df, args.n, cluster_columns)
+
+    # Add cluster_size column if cluster column exists
+    if cluster_columns:
+        cluster_col = cluster_columns[0]
+        group_sizes = df[cluster_col].value_counts()
+        top_n['cluster_size'] = top_n[cluster_col].map(group_sizes)
 
     # Output full data to csv
     top_n.to_csv(args.out, index=False)
 
-    # Create and output simplified version with just axes values and top columns
-    simplified_df = pd.DataFrame({
-        'clonotypeKey': top_n['clonotypeKey'],
-        'top': 1
-    })
-    linkerAxis = [c for c in top_n.columns if c.startswith('cluster')]
-    if len(linkerAxis) != 0:
-        for li in linkerAxis:
-            simplified_df[li] = top_n[li]
-
+    # Create and output simplified version
+    if cluster_columns:
+        cluster_col = cluster_columns[0]
+        simplified_df = pd.DataFrame({
+            cluster_col: top_n[cluster_col],
+            'clonotypeKey': top_n['clonotypeKey'],
+            'top': 1
+        })
+    else:
+        simplified_df = pd.DataFrame({
+            'clonotypeKey': top_n['clonotypeKey'],
+            'top': 1
+        })
+    
     # Create output filename for simplified version
     base, ext = os.path.splitext(args.out)
     simplified_out = f"{base}_top{ext}"
