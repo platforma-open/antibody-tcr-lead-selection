@@ -75,12 +75,16 @@ def main():
     # Output full data to csv
     top_n.to_csv(args.out, index=False)
 
-    # Create and output simplified version with just clonotypeKey and top columns
+    # Create and output simplified version with just axes values and top columns
     simplified_df = pd.DataFrame({
         'clonotypeKey': top_n['clonotypeKey'],
         'top': 1
     })
-    
+    linkerAxis = [c for c in top_n.columns if c.startswith('cluster')]
+    if len(linkerAxis) != 0:
+        for li in linkerAxis:
+            simplified_df[li] = top_n[li]
+
     # Create output filename for simplified version
     base, ext = os.path.splitext(args.out)
     simplified_out = f"{base}_top{ext}"

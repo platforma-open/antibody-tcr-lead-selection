@@ -9,11 +9,11 @@ getColumns := func(datasetSpec, linkerAxisSpec) {
 
   if len(linkerAxisSpec) > 0 {
     for key, val in linkerAxisSpec {
-      axes.push([
-      {
-        "column": key,
-        "spec": val
-      }])
+      axes = axes + [
+        {
+          "column": key,
+          "spec": val
+        }]
     }
     
   }

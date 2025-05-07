@@ -144,7 +144,7 @@ function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefined {
   const scores = [...cloneScores, ...linkScores];
   const defaultFilters: PlTableFiltersDefault[] = [];
 
-  for (const score of cloneScores) {
+  for (const score of scores) {
     const value = score.spec.annotations?.['pl7.app/vdj/score/default'];
 
     if (value !== undefined) {
@@ -256,7 +256,7 @@ export const model = BlockModel.create()
         { name: 'pl7.app/vdj/scClonotypeKey' },
       ],
       annotations: { 'pl7.app/isAnchor': 'true' },
-    }]),
+    }], { refsWithEnrichments: true }),
   )
 
   .output('scoreColumns', (ctx) => {
@@ -276,7 +276,7 @@ export const model = BlockModel.create()
     if (anchor === undefined)
       return undefined;
 
-    return ctx.resultPool.getCanonicalOptions({ main: anchor },
+    const allowedOptions = ctx.resultPool.getCanonicalOptions({ main: anchor },
       [
         {
           axes: [{ anchor: 'main', idx: 1 }],
@@ -284,6 +284,45 @@ export const model = BlockModel.create()
         },
       ],
     );
+
+    if (allowedOptions === undefined)
+      return undefined;
+
+    // linker columns
+    for (const idx of [0, 1]) {
+      let axesToMatch;
+      if (idx === 0) {
+        // clonotypeKey in second axis
+        axesToMatch = [{}, { anchor: 'main', idx: 1 }];
+      } else {
+        // clonotypeKey in first axis
+        axesToMatch = [{ anchor: 'main', idx: 1 }, {}];
+      }
+
+      const l = ctx.resultPool.getAnchoredPColumns(
+        { main: anchor },
+        [
+          {
+            axes: axesToMatch,
+            annotations: { 'pl7.app/isLinkerColumn': 'true' },
+          },
+        ],
+      ) ?? [];
+
+      for (const link of l) {
+        allowedOptions.push(...ctx.resultPool.getCanonicalOptions(
+          { linker: link.spec },
+          [
+            {
+              axes: [{ anchor: 'linker', idx: idx }],
+              type: ['Int', 'Long', 'Double', 'Float'],
+            },
+          ],
+        ) ?? []);
+      }
+    }
+
+    return allowedOptions;
   })
 
   .output('test', (ctx) => {
