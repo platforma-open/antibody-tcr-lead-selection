@@ -14,6 +14,10 @@ import {
   PlMaskIcon24,
   PlSlideModal,
   PlTableFilters,
+  PlNumberField,
+  PlRow,
+  PlDropdownMulti,
+  listToOptions,
 } from '@platforma-sdk/ui-vue';
 import { computed, reactive, ref } from 'vue';
 import { useApp } from '../app';
@@ -54,6 +58,7 @@ const filterColumns = computed<PTableColumnSpec[]>(() => {
     id: c.id,
   })) ?? [];
 });
+
 </script>
 
 <template>
@@ -94,6 +99,19 @@ const filterColumns = computed<PTableColumnSpec[]>(() => {
         clearable
         @update:model-value="setAnchorColumn"
       />
+      <PlDropdownMulti v-model="app.model.args.rankingOrder" :options="app.model.outputs.rankingOptions" label="Sorting columns" >
+        <template #tooltip>
+          Order aware selection. Columns for sequential priority sorting of clonotypes.
+        </template>
+      </PlDropdownMulti>
+      <PlNumberField
+        v-model="app.model.args.topClonotypes"
+        label="Top clonotypes" :minValue="2" :step="1"
+      >
+        <template #tooltip>
+          TO CHANGE: Provide a desired number of top clonotypes to be selected by ranking of filtering columns and in house scoring script.
+        </template>
+      </PlNumberField>
     </PlSlideModal>
     <MultiAlignmentModal v-model="app.multiAlignmentOpen">
       <Alignment

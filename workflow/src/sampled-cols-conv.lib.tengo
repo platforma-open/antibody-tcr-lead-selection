@@ -1,0 +1,46 @@
+ll := import("@platforma-sdk/workflow-tengo:ll")
+
+getColumns := func(datasetSpec, linkerAxisSpec) {
+  axes := [
+      {
+        "column": "clonotypeKey",
+        "spec": datasetSpec.axesSpec[1]
+      }]
+
+  if len(linkerAxisSpec) > 0 {
+    for key, val in linkerAxisSpec {
+      axes.push([
+      {
+        "column": key,
+        "spec": val
+      }])
+    }
+    
+  }
+  return {
+    "axes": axes,
+    "columns": [
+      {
+        "column": "top",
+        "id": "link",
+        "allowNA": false,
+        "spec": {
+          "name": "pl7.app/vdj/link",
+          "valueType": "Int",
+          "domain": {},
+          "annotations": {
+            "pl7.app/isLinkerColumn": "true",
+            "pl7.app/label": "Linker column",
+            "pl7.app/table/visibility": "optional"
+          }
+        }
+      }
+    ],
+    "storageFormat": "Binary",
+    "partitionKeyLength": 0
+  }
+}
+
+export ll.toStrict({
+	getColumns: getColumns
+})

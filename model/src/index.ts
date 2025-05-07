@@ -13,6 +13,7 @@ import type {
   PTableSorting,
   PUniversalColumnSpec,
   RenderCtx,
+  SUniversalPColumnId,
   TreeNodeAccessor,
 } from '@platforma-sdk/model';
 import { BlockModel, createPlDataTableV2, isLabelColumn } from '@platforma-sdk/model';
@@ -29,6 +30,8 @@ export type AlignmentModel = {
 
 export type BlockArgs = {
   inputAnchor?: PlRef;
+  topClonotypes?: number;
+  rankingOrder: SUniversalPColumnId[];
 };
 
 export type UiState = {
@@ -228,6 +231,7 @@ function createAlignmentTableDef(
 export const model = BlockModel.create()
 
   .withArgs<BlockArgs>({
+    rankingOrder: [],
   })
 
   .withUiState<UiState>({
@@ -267,18 +271,67 @@ export const model = BlockModel.create()
     return getColumns(ctx);
   })
 
+  .output('rankingOptions', (ctx) => {
+    const anchor = ctx.args.inputAnchor;
+    if (anchor === undefined)
+      return undefined;
+
+    return ctx.resultPool.getCanonicalOptions({ main: anchor },
+      [
+        {
+          axes: [{ anchor: 'main', idx: 1 }],
+          type: ['Int', 'Long', 'Long', 'Float'],
+        },
+      ],
+    );
+  })
+
+  .output('test', (ctx) => {
+    const anchor = ctx.args.inputAnchor;
+    if (anchor === undefined)
+      return undefined;
+
+    return anchor;
+  })
+
+// .output('alignmentLabelOptions', (ctx) => {
+//   return ctx.resultPool.getCanonicalOptions(
+//     // what should be here? argumants are the same as for `ctx.resultPool.getAnchoredPColumns`
+//   );
+// })
+
+// .output('pf', (ctx) => {
+//   const columns = getColumns(ctx);
+//   if (columns === undefined)
+//     return undefined;
+
+//   return createPFrameForGraphs(ctx, columns.props);
+// })
+
   .output('table', (ctx) => {
     const columns = getColumns(ctx);
     if (columns === undefined)
       return undefined;
 
+    const Xtemp = ctx.outputs?.resolve('sampledColumns')?.getPColumns();
+    const cols: Column[] = [];
+    if (ctx.args.topClonotypes === undefined) {
+      cols.push(...columns.props);
+    } else if (Xtemp === undefined) {
+      return undefined;
+    } else
+      cols.push(...columns.props, ...Xtemp);
+
     return createPlDataTableV2(
       ctx,
-      columns.props,
+      cols,
       // if there are links, we need need to pick one of the links to show all axes in the table
       (spec) => columns.links?.length > 0 ? spec.axesSpec.length == 2 : true,
       ctx.uiState.tableState,
-      ctx.uiState.filterModel,
+      {
+        filters: ctx.uiState.filterModel.filters,
+        coreJoinType: 'inner',
+      },
     );
   })
 
