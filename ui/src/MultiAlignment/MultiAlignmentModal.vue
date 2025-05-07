@@ -2,7 +2,7 @@
 import { PlSlideModal, PlCheckbox, PlBtnPrimary } from '@platforma-sdk/ui-vue';
 import { useCssModule } from 'vue';
 const isOpen = defineModel<boolean>({ required: true, default: false });
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { parseBiowasmAlignment } from '../utils/alignment';
 import type { ResidueType } from '../utils/colors';
 import { highlightAlignment, residueType, residueTypeLabels, residueTypeColorMap } from '../utils/colors';
