@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { PlSlideModal, PlCheckbox } from '@platforma-sdk/ui-vue';
+import { PlSlideModal, PlCheckbox, PlBtnPrimary } from '@platforma-sdk/ui-vue';
 import { useCssModule } from 'vue';
 const isOpen = defineModel<boolean>({ required: true, default: false });
 import { ref, computed, watch } from 'vue';
@@ -9,7 +9,7 @@ import { highlightAlignment, residueType, residueTypeLabels, residueTypeColorMap
 import { exec } from './exec';
 
 const props = defineProps<{
-  labelsToRecords: Record<string, string> | undefined;
+  labelsToRecords: [string, string][] | undefined;
 }>();
 
 const output = ref('');
@@ -56,19 +56,23 @@ const computedOutput = computed(() => {
 // MHIKKPLNAFMLYMKEMRANVVAESTLKESAAINQILGRRWHALSREEQA
 // KYYELARKERQLHMQLYPGWSARDNYGKKKKRKREK`;
 
-watch(() => props.labelsToRecords, (newLabelsToRecords) => {
-  console.log('labelsToRecords', newLabelsToRecords);
-  exec(newLabelsToRecords).then((result) => {
+const runAlignment = () => {
+  exec(props.labelsToRecords).then((result) => {
     output.value = result;
   });
-}, { deep: true, immediate: true });
+};
+
+const isDisabled = computed(() => {
+  const a = props.labelsToRecords ?? [];
+  return a.length === 0 || a.length > 100;
+});
 </script>
 
 <template>
   <PlSlideModal v-model="isOpen" width="80%" :close-on-outside-click="false">
     <template #title>Multi Alignment</template>
     <slot/>
-    <span>Labels to records:</span>
+    <PlBtnPrimary :disabled="isDisabled" @click="runAlignment">Run Alignment {{ props.labelsToRecords?.length }}</PlBtnPrimary>
     <div>
       <div :class="[$style.output, 'pl-scrollable']" v-html="computedOutput" />
     </div>

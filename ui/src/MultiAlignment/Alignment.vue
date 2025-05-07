@@ -3,8 +3,6 @@ import {
   isSequenceColumn,
   type AlignmentModel,
 } from '@platforma-open/milaboratories.top-antibodies.model';
-import type {
-  PTableShape } from '@platforma-sdk/model';
 import {
   getRawPlatformaInstance,
   isPTableAbsent,
@@ -24,12 +22,12 @@ import {
   type PTableRowKey,
 } from '@platforma-sdk/ui-vue';
 import {
-  ref,
   watch,
   watchEffect,
 } from 'vue';
 
 const model = defineModel<AlignmentModel>({ default: {} });
+const labelsToRecords = defineModel<[string, string][] | undefined>('labels-to-records');
 
 const props = defineProps<{
   labelOptions: readonly ListOption<PObjectId>[];
@@ -64,11 +62,11 @@ watchEffect(() => {
 });
 
 const driver = getRawPlatformaInstance().pFrameDriver;
-const labelsToRecords = ref<[string, string][] | undefined>();
+
 watch(
   () => props.table,
   async (table) => {
-    const result: [string, string][] = [['Label', 'Sequence']];
+    const result: [string, string][] = [];
 
     if (table) {
       const specs = await driver.getSpec(table);
@@ -116,6 +114,5 @@ watch(
       v-model="model.label"
       :options="props.labelOptions"
     />
-    <p>Labels to records: {{ labelsToRecords }}</p>
   </div>
 </template>
