@@ -34,7 +34,7 @@ getColumns := func(datasetSpec) {
         }
       }],
     "storageFormat": "Binary",
-    "partitionKeyLength": 1
+    "partitionKeyLength": 0
   }
 }
 
