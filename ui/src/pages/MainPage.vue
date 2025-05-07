@@ -15,9 +15,7 @@ import {
   PlSlideModal,
   PlTableFilters,
   PlNumberField,
-  PlRow,
   PlDropdownMulti,
-  listToOptions,
 } from '@platforma-sdk/ui-vue';
 import { computed, reactive, ref } from 'vue';
 import { useApp } from '../app';
@@ -113,11 +111,11 @@ const filterColumns = computed<PTableColumnSpec[]>(() => {
         </template>
       </PlNumberField>
     </PlSlideModal>
-    <MultiAlignmentModal v-model="app.multiAlignmentOpen" :labels-to-records="app.labelsToRecords">
+    <MultiAlignmentModal v-model="app.multiAlignmentOpen" :sequenceRows="app.sequenceRows">
       <Alignment
         v-if="app.model.outputs.alignmentLabelOptions"
         v-model="app.model.ui.alignmentTableState"
-        v-model:labels-to-records="app.labelsToRecords"
+        v-model:sequence-rows="app.sequenceRows"
         :label-options="app.model.outputs.alignmentLabelOptions"
         :table-columns="columns"
         :selected-rows="data.selectedRows"

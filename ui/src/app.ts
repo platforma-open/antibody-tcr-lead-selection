@@ -5,6 +5,7 @@ import umapPage from './pages/umapPage.vue';
 import spectraPage from './pages/spectraPage.vue';
 import usagePage from './pages/usagePage.vue';
 import { ref } from 'vue';
+import type { SequenceRow } from './types';
 
 export const sdkPlugin = defineApp(model, () => {
   const multiAlignmentOpen = ref(false);
@@ -13,7 +14,7 @@ export const sdkPlugin = defineApp(model, () => {
     multiAlignmentOpen.value = true;
   };
 
-  const labelsToRecords = ref<[string, string][] | undefined>(undefined);
+  const sequenceRows = ref<SequenceRow[] | undefined>(undefined);
 
   return {
     routes: {
@@ -24,7 +25,7 @@ export const sdkPlugin = defineApp(model, () => {
     },
     multiAlignmentOpen,
     openMultiAlignment,
-    labelsToRecords,
+    sequenceRows,
   };
 });
 

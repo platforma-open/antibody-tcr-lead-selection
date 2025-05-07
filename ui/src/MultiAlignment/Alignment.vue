@@ -25,9 +25,10 @@ import {
   watch,
   watchEffect,
 } from 'vue';
+import type { SequenceRow } from '../types';
 
 const model = defineModel<AlignmentModel>({ default: {} });
-const labelsToRecords = defineModel<[string, string][] | undefined>('labels-to-records');
+const sequenceRows = defineModel<SequenceRow[] | undefined>('sequence-rows');
 
 const props = defineProps<{
   labelOptions: readonly ListOption<PObjectId>[];
@@ -53,8 +54,8 @@ watchEffect(() => {
       },
       data: props.selectedRows
         .filter((r): r is PColumnKey => !r.some((v) => isPTableAbsent(v) || v === PTableNA))
-        .map((r) => ({
-          key: r,
+        .map((key) => ({
+          key,
           val: 1,
         } satisfies PColumnValuesEntry)),
     } satisfies PColumn<PColumnValues>;
@@ -66,15 +67,19 @@ const driver = getRawPlatformaInstance().pFrameDriver;
 watch(
   () => props.table,
   async (table) => {
-    const result: [string, string][] = [];
+    const result: SequenceRow[] = [];
 
     if (table) {
       const specs = await driver.getSpec(table);
       const labelColumns = [];
       const sequenceColumns = [];
+      const a = [];
       for (let i = 0; i < specs.length; i++) {
         const spec = specs[i];
-        if (spec.type === 'axis') continue;
+        if (spec.type === 'axis') {
+          a.push(i);
+          continue;
+        }
         if (spec.id === FilterColumnId) continue;
         if (isSequenceColumn(spec.spec)) {
           // TODO: properly order for single cell case
@@ -85,12 +90,16 @@ watch(
       }
 
       const shape = await driver.getShape(table);
-      const data = await driver.getData(table, [...labelColumns, ...sequenceColumns]);
+      const data = await driver.getData(table, [...a, ...labelColumns, ...sequenceColumns]);
       for (let iRow = 0; iRow < shape.rows; iRow++) {
-        const label = pTableValue(data[0], iRow, { na: '', absent: '' });
+        const label = pTableValue(data[a.length + 0], iRow, { na: '', absent: '' });
         const sequence = [];
-        for (let iCol = 1; iCol < data.length; iCol++) {
+        for (let iCol = a.length + 1; iCol < data.length; iCol++) {
           sequence.push(pTableValue(data[iCol], iRow, { na: '', absent: '' }));
+        }
+        const key = [];
+        for (let i = 0; i < a.length; i++) {
+          key.push(pTableValue(data[i], iRow, { na: '', absent: '' }));
         }
 
         if (typeof label !== 'string' || label === '' || sequence.some((s) => typeof s !== 'string' || s === '')) {
@@ -98,11 +107,11 @@ watch(
           continue;
         }
 
-        result.push([label, sequence.join('')]);
+        result.push({ label, sequence: sequence.join(''), key: JSON.stringify(key) });
       }
     }
 
-    labelsToRecords.value = result;
+    sequenceRows.value = result;
   },
   { immediate: true },
 );

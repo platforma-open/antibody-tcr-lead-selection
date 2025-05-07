@@ -1,8 +1,8 @@
-export function parseBiowasmAlignment(alignment: string): { name: string; sequence: string }[] {
+export function parseBiowasmAlignment(alignment: string): { header: string; sequence: string }[] {
   const lines = alignment.split('\n').filter((line) => line.trim() !== '');
   const sequences = [];
 
-  let currentSequence: { name: string; sequence: string } | undefined = undefined;
+  let currentSequence: { header: string; sequence: string } | undefined = undefined;
 
   if (lines.length === 0) {
     return [];
@@ -14,7 +14,7 @@ export function parseBiowasmAlignment(alignment: string): { name: string; sequen
         sequences.push(currentSequence);
       }
       currentSequence = {
-        name: line.slice(1),
+        header: line.slice(1),
         sequence: '',
       };
     } else {

@@ -2,68 +2,61 @@
 import { PlSlideModal, PlCheckbox, PlBtnPrimary } from '@platforma-sdk/ui-vue';
 import { useCssModule } from 'vue';
 const isOpen = defineModel<boolean>({ required: true, default: false });
-import { ref, computed, watch } from 'vue';
+import { ref, computed } from 'vue';
 import { parseBiowasmAlignment } from '../utils/alignment';
-import type { ResidueType } from '../utils/colors';
 import { highlightAlignment, residueType, residueTypeLabels, residueTypeColorMap } from '../utils/colors';
 import { exec } from './exec';
+import type { SequenceRow } from '../types';
 
 const props = defineProps<{
-  labelsToRecords: [string, string][] | undefined;
+  sequenceRows: SequenceRow[] | undefined;
 }>();
 
 const output = ref('');
 
 const style = useCssModule();
 
-const enabledTypes = ref<readonly ResidueType[]>(residueType);
-
-const toggleType = (type: ResidueType) => {
-  enabledTypes.value = enabledTypes.value.includes(type)
-    ? enabledTypes.value.filter((t) => t !== type)
-    : [...enabledTypes.value, type];
-};
+const showChemicalProperties = ref(true);
 
 const computedOutput = computed(() => {
   const parsedAlignment = parseBiowasmAlignment(output.value);
+
   if (parsedAlignment.length === 0) {
     return '';
   }
+
   const sequences = parsedAlignment.map((item) => item.sequence);
   const highlightedSequences = highlightAlignment(sequences);
 
-  return parsedAlignment.map((alignmentItem, index) => {
+  const findLabel = (header: string) => {
+    return props.sequenceRows?.find((row) => row.key === header)?.label;
+  };
+
+  const col1 = parsedAlignment.map((alignmentItem) => {
+    return `<span class="${style.header}">${findLabel(alignmentItem.header)}</span>`;
+  }).join('\n');
+
+  const col2 = parsedAlignment.map((alignmentItem, index) => {
     const sequenceHtml = highlightedSequences[index].map((highlight) => {
-      if (enabledTypes.value.includes(highlight.color)) {
+      if (showChemicalProperties.value) {
         return `<span style="color: ${residueTypeColorMap[highlight.color]}">${highlight.residue}</span>`;
       }
       return `<span>${highlight.residue}</span>`;
     }).join('');
-    return `<span class="${style.header}">${alignmentItem.name}</span><span class="${style.sequence}">${sequenceHtml}</span>`;
-  }).join('\n');
+    return `<span class="${style.sequence}">${sequenceHtml}</span>`;
+  }).join('');
+
+  return `<div>${col1}</div><div class="pl-scrollable">${col2}</div>`;
 });
 
-// const data = `>1aab_
-// GKGDPKKPRGKMSSYAFFVQTSREEHKKKHPDASVNFSEFSKKCSERWKT
-// MSAKEKGKFEDMAKADKARYEREMKTYIPPKGE
-// >1j46_A
-// MQDRVKRPMNAFIVWSRDQRRKMALENPRMRNSEISKQLGYQWKMLTEAE
-// KWPFFQEAQKLQAMHREKYPNYKYRPRRKAKMLPK
-// >1k99_A
-// MKKLKKHPDFPKKPLTPYFRFFMEKRAKYAKLHPEMSNLDLTKILSKKYK
-// ELPEKKKMKYIQDFQREKQEFERNLARFREDHPDLIQNAKK
-// >2lef_A
-// MHIKKPLNAFMLYMKEMRANVVAESTLKESAAINQILGRRWHALSREEQA
-// KYYELARKERQLHMQLYPGWSARDNYGKKKKRKREK`;
-
 const runAlignment = () => {
-  exec(props.labelsToRecords).then((result) => {
+  exec(props.sequenceRows).then((result) => {
     output.value = result;
   });
 };
 
 const isDisabled = computed(() => {
-  const a = props.labelsToRecords ?? [];
+  const a = props.sequenceRows ?? [];
   return a.length === 0 || a.length > 100;
 });
 </script>
@@ -72,20 +65,19 @@ const isDisabled = computed(() => {
   <PlSlideModal v-model="isOpen" width="80%" :close-on-outside-click="false">
     <template #title>Multi Alignment</template>
     <slot/>
-    <PlBtnPrimary :disabled="isDisabled" @click="runAlignment">Run Alignment {{ props.labelsToRecords?.length }}</PlBtnPrimary>
+    <PlBtnPrimary :disabled="isDisabled" @click="runAlignment">Run Alignment {{ props.sequenceRows?.length }}</PlBtnPrimary>
     <div>
-      <div :class="[$style.output, 'pl-scrollable']" v-html="computedOutput" />
+      <div :class="[$style.output]" v-html="computedOutput" />
     </div>
     <div>
-      <PlCheckbox
+      <PlCheckbox v-model="showChemicalProperties">Show chemical properties</PlCheckbox>
+      <div
         v-for="type in residueType"
         :key="type"
-        :model-value="enabledTypes.includes(type)"
-        @update:model-value="toggleType(type)"
       >
         <span :class="[$style.colorSample]" :style="{ backgroundColor: residueTypeColorMap[type] }" />
         {{ residueTypeLabels[type] }}
-      </PlCheckbox>
+      </div>
     </div>
   </PlSlideModal>
 </template>
@@ -95,11 +87,25 @@ const isDisabled = computed(() => {
   white-space: pre;
   font-family: monospace;
   outline: 1px solid #ccc;
-  overflow: auto;
-  max-width: 100%;
   padding: 24px 0;
   display: grid;
   grid-template-columns: fit-content(20px) 1fr;
+  > div {
+    padding: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  > div:first-child {
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+  }
+  > div:last-child {
+    border: 1px solid #ccc;
+    border-left: none;
+    overflow: auto;
+    max-width: 100%;
+  }
 }
 
 .header {

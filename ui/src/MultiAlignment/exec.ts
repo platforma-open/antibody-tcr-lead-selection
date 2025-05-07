@@ -1,15 +1,30 @@
 import Aioli from '@biowasm/aioli';
+import type { SequenceRow } from '../types';
 
-export const exec = async (labelsToRecords: [string, string][] | undefined) => {
-  if (!labelsToRecords) {
+// Example data
+// const data = `>1aab_
+// GKGDPKKPRGKMSSYAFFVQTSREEHKKKHPDASVNFSEFSKKCSERWKT
+// MSAKEKGKFEDMAKADKARYEREMKTYIPPKGE
+// >1j46_A
+// MQDRVKRPMNAFIVWSRDQRRKMALENPRMRNSEISKQLGYQWKMLTEAE
+// KWPFFQEAQKLQAMHREKYPNYKYRPRRKAKMLPK
+// >1k99_A
+// MKKLKKHPDFPKKPLTPYFRFFMEKRAKYAKLHPEMSNLDLTKILSKKYK
+// ELPEKKKMKYIQDFQREKQEFERNLARFREDHPDLIQNAKK
+// >2lef_A
+// MHIKKPLNAFMLYMKEMRANVVAESTLKESAAINQILGRRWHALSREEQA
+// KYYELARKERQLHMQLYPGWSARDNYGKKKKRKREK`;
+
+export const exec = async (sequenceRows: SequenceRow[] | undefined) => {
+  if (!sequenceRows) {
     return '';
   }
 
-  if (labelsToRecords.length === 0) {
+  if (sequenceRows.length === 0) {
     return '';
   }
 
-  const data = labelsToRecords.map(([label, record]) => `>${label}\n${record}`).join('\n') + '\n';
+  const data = sequenceRows.map(({ sequence, key }) => `>${key}\n${sequence}`).join('\n') + '\n';
 
   const CLI = await new Aioli(['kalign/3.3.1']);
   // Create sample data (source: https://github.com/TimoLassmann/kalign/blob/master/dev/data/BB11001.tfa)
