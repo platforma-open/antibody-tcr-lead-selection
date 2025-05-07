@@ -16,7 +16,6 @@ import type {
   SUniversalPColumnId,
   TreeNodeAccessor,
 } from '@platforma-sdk/model';
-<<<<<<< HEAD
 import { BlockModel, createPlDataTableV2, isLabelColumn } from '@platforma-sdk/model';
 
 export type ListOption<T> = {
@@ -28,9 +27,6 @@ export type AlignmentModel = {
   label?: PObjectId;
   filterColumn?: PColumn<PColumnValues>;
 };
-=======
-import { BlockModel, createPFrameForGraphs, createPlDataTableV2 } from '@platforma-sdk/model';
->>>>>>> 0a76651 (Non working workflow version and sdk update)
 
 export type BlockArgs = {
   inputAnchor?: PlRef;

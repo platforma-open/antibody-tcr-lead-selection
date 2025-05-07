@@ -1,6 +1,6 @@
 ll := import("@platforma-sdk/workflow-tengo:ll")
 
-getColumns := func(datasetSpec, linkerAxisSpec) {ç
+getColumns := func(datasetSpec, linkerAxisSpec) {
   axes := [
       {
         "column": "clonotypeKey",
@@ -33,8 +33,8 @@ getColumns := func(datasetSpec, linkerAxisSpec) {ç
             "pl7.app/label": "Frequency"
           }
         }
-      },
-      ],
+      }
+    ],
     "storageFormat": "Binary",
     "partitionKeyLength": 0
   }
