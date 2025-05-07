@@ -9,6 +9,7 @@
     "format": "/usr/bin/env emacs --script ./format.el"
   },
   "dependencies": {
+    "@platforma-open/milaboratories.top-antibodies.software": "workspace:*",
     "@platforma-sdk/workflow-tengo": "catalog:"
   },
   "devDependencies": {

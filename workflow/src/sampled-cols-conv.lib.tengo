@@ -31,7 +31,7 @@ getColumns := func(datasetSpec, linkerAxisSpec) {
           "annotations": {
             "pl7.app/isLinkerColumn": "true",
             "pl7.app/label": "Linker column",
-            "pl7.app/table/visibility": "optional",
+            "pl7.app/table/visibility": "optional"
           }
         }
       }
