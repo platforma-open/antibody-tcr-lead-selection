@@ -1,12 +1,16 @@
 <script lang="ts" setup>
 import { PlSlideModal, PlCheckbox } from '@platforma-sdk/ui-vue';
-import Aioli from '@biowasm/aioli';
 import { useCssModule } from 'vue';
 const isOpen = defineModel<boolean>({ required: true, default: false });
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import { parseBiowasmAlignment } from '../utils/alignment';
 import type { ResidueType } from '../utils/colors';
 import { highlightAlignment, residueType, residueTypeLabels, residueTypeColorMap } from '../utils/colors';
+import { exec } from './exec';
+
+const props = defineProps<{
+  labelsToRecords: Record<string, string> | undefined;
+}>();
 
 const output = ref('');
 
@@ -39,44 +43,34 @@ const computedOutput = computed(() => {
   }).join('\n');
 });
 
-const data = `>1aab_
-GKGDPKKPRGKMSSYAFFVQTSREEHKKKHPDASVNFSEFSKKCSERWKT
-MSAKEKGKFEDMAKADKARYEREMKTYIPPKGE
->1j46_A
-MQDRVKRPMNAFIVWSRDQRRKMALENPRMRNSEISKQLGYQWKMLTEAE
-KWPFFQEAQKLQAMHREKYPNYKYRPRRKAKMLPK
->1k99_A
-MKKLKKHPDFPKKPLTPYFRFFMEKRAKYAKLHPEMSNLDLTKILSKKYK
-ELPEKKKMKYIQDFQREKQEFERNLARFREDHPDLIQNAKK
->2lef_A
-MHIKKPLNAFMLYMKEMRANVVAESTLKESAAINQILGRRWHALSREEQA
-KYYELARKERQLHMQLYPGWSARDNYGKKKKRKREK`;
+// const data = `>1aab_
+// GKGDPKKPRGKMSSYAFFVQTSREEHKKKHPDASVNFSEFSKKCSERWKT
+// MSAKEKGKFEDMAKADKARYEREMKTYIPPKGE
+// >1j46_A
+// MQDRVKRPMNAFIVWSRDQRRKMALENPRMRNSEISKQLGYQWKMLTEAE
+// KWPFFQEAQKLQAMHREKYPNYKYRPRRKAKMLPK
+// >1k99_A
+// MKKLKKHPDFPKKPLTPYFRFFMEKRAKYAKLHPEMSNLDLTKILSKKYK
+// ELPEKKKMKYIQDFQREKQEFERNLARFREDHPDLIQNAKK
+// >2lef_A
+// MHIKKPLNAFMLYMKEMRANVVAESTLKESAAINQILGRRWHALSREEQA
+// KYYELARKERQLHMQLYPGWSARDNYGKKKKRKREK`;
 
-const exec = async () => {
-  const CLI = await new Aioli(['kalign/3.3.1']);
-  // Create sample data (source: https://github.com/TimoLassmann/kalign/blob/master/dev/data/BB11001.tfa)
-  await CLI.mount({
-    name: 'input.fa',
-    data,
+watch(() => props.labelsToRecords, (newLabelsToRecords) => {
+  console.log('labelsToRecords', newLabelsToRecords);
+  exec(newLabelsToRecords).then((result) => {
+    output.value = result;
   });
-
-  await CLI.exec('kalign input.fa -f fasta -o result.fasta');
-  const result = await CLI.cat('result.fasta');
-
-  output.value = result;
-};
-
-onMounted(async () => {
-  await exec();
-});
+}, { deep: true, immediate: true });
 </script>
 
 <template>
   <PlSlideModal v-model="isOpen" width="80%" :close-on-outside-click="false">
     <template #title>Multi Alignment</template>
     <slot/>
+    <span>Labels to records:</span>
     <div>
-      <div :class="$style.output" v-html="computedOutput" />
+      <div :class="[$style.output, 'pl-scrollable']" v-html="computedOutput" />
     </div>
     <div>
       <PlCheckbox

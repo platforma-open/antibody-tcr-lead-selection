@@ -13,7 +13,6 @@ import {
   type PColumnValuesEntry,
   type PObjectId,
   type PTableHandle,
-  type PTableShape,
   type PTableColumnSpec,
   pTableValue,
 } from '@platforma-sdk/model';
@@ -23,12 +22,12 @@ import {
   type PTableRowKey,
 } from '@platforma-sdk/ui-vue';
 import {
-  ref,
   watch,
   watchEffect,
 } from 'vue';
 
 const model = defineModel<AlignmentModel>({ default: {} });
+const labelsToRecords = defineModel<Record<string, string> | undefined>('labels-to-records');
 
 const props = defineProps<{
   labelOptions: readonly ListOption<PObjectId>[];
@@ -63,7 +62,7 @@ watchEffect(() => {
 });
 
 const driver = getRawPlatformaInstance().pFrameDriver;
-const labelsToRecords = ref<Record<string, string> | undefined>();
+
 watch(
   () => props.table,
   async (table) => {
@@ -87,6 +86,8 @@ watch(
 
       const data = await driver.getData(table, [...labelColumns, ...sequenceColumns]);
       for (let iRow = 0; iRow < data.length; iRow++) {
+        console.dir(data, { depth: null });
+        console.log('data.length', data.length);
         const label = pTableValue(data[0], iRow, { na: '', absent: '' });
         const sequence = [];
         for (let iCol = 1; iCol < data.length; iCol++) {
@@ -114,6 +115,6 @@ watch(
       v-model="model.label"
       :options="props.labelOptions"
     />
-    <p>Labels to records: {{ labelsToRecords }}</p>
+    <pre style="max-width: 100%; overflow: auto;">{{ labelsToRecords }}</pre>
   </div>
 </template>

@@ -13,6 +13,8 @@ export const sdkPlugin = defineApp(model, () => {
     multiAlignmentOpen.value = true;
   };
 
+  const labelsToRecords = ref<Record<string, string> | undefined>(undefined);
+
   return {
     routes: {
       '/': () => MainPage,
@@ -22,6 +24,7 @@ export const sdkPlugin = defineApp(model, () => {
     },
     multiAlignmentOpen,
     openMultiAlignment,
+    labelsToRecords,
   };
 });
 

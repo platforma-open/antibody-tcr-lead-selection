@@ -59,7 +59,7 @@ const filterColumns = computed<PTableColumnSpec[]>(() => {
 <template>
   <PlBlockPage>
     <template #title>
-      {{ app.model.ui.title }}
+      {{ app.model.ui.title }} / {{ data.selectedRows.length }}
     </template>
     <template #append>
       <PlAgDataTableToolsPanel>
@@ -95,10 +95,11 @@ const filterColumns = computed<PTableColumnSpec[]>(() => {
         @update:model-value="setAnchorColumn"
       />
     </PlSlideModal>
-    <MultiAlignmentModal v-model="app.multiAlignmentOpen">
+    <MultiAlignmentModal v-model="app.multiAlignmentOpen" :labels-to-records="app.labelsToRecords">
       <Alignment
         v-if="app.model.outputs.alignmentLabelOptions"
         v-model="app.model.ui.alignmentTableState"
+        v-model:labels-to-records="app.labelsToRecords"
         :label-options="app.model.outputs.alignmentLabelOptions"
         :table-columns="columns"
         :selected-rows="data.selectedRows"

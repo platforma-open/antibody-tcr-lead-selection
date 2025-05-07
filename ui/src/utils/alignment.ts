@@ -1,8 +1,12 @@
 export function parseBiowasmAlignment(alignment: string): { name: string; sequence: string }[] {
-  const lines = alignment.split('\n');
+  const lines = alignment.split('\n').filter((line) => line.trim() !== '');
   const sequences = [];
 
   let currentSequence: { name: string; sequence: string } | undefined = undefined;
+
+  if (lines.length === 0) {
+    return [];
+  }
 
   for (const line of lines) {
     if (line.startsWith('>')) {
