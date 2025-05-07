@@ -280,7 +280,7 @@ export const model = BlockModel.create()
       [
         {
           axes: [{ anchor: 'main', idx: 1 }],
-          type: ['Int', 'Long', 'Long', 'Float'],
+          type: ['Int', 'Long', 'Double', 'Float'],
         },
       ],
     );
