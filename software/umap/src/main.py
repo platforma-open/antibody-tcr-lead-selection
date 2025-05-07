@@ -125,7 +125,7 @@ def main():
         # index=df_input.index.astype(str),
         columns=[f'UMAP{i+1}' for i in range(args.umap_components)]
     )
-    umap_df.to_csv(args.umap_output, index=False, sep='\t')
+    umap_df.to_csv(args.umap_output, index=True, sep='\t')
     print(f'UMAP embeddings saved to {args.umap_output}')
 
 if __name__ == '__main__':
