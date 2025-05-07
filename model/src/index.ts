@@ -16,8 +16,10 @@ import type {
   RenderCtx,
   SUniversalPColumnId,
   TreeNodeAccessor,
+  PFrameHandle,
 } from '@platforma-sdk/model';
-import { BlockModel, createPlDataTableV2, isLabelColumn } from '@platforma-sdk/model';
+import { BlockModel, createPlDataTableV2, isLabelColumn, isPColumn } from '@platforma-sdk/model';
+import type { GraphMakerState } from '@milaboratories/graph-maker';
 
 export type ListOption<T> = {
   label: string;
@@ -40,6 +42,7 @@ export type UiState = {
   tableState: PlDataTableState;
   filterModel: PlTableFiltersModel;
   alignmentTableState: AlignmentModel;
+  graphStateUMAP: GraphMakerState;
 };
 
 type Column = PColumn<DataInfo<TreeNodeAccessor> | TreeNodeAccessor | PColumnValues>;
@@ -242,6 +245,15 @@ export const model = BlockModel.create()
     },
     filterModel: {},
     alignmentTableState: {},
+    graphStateUMAP: {
+      title: 'UMAP',
+      template: 'dots',
+      layersSettings: {
+        dots: {
+          dotFill: '#99E099',
+        },
+      },
+    },
   })
 
   .output('inputOptions', (ctx) =>
@@ -420,6 +432,22 @@ export const model = BlockModel.create()
     if (!def) return undefined;
 
     return ctx.createPTable(def);
+  })
+
+  .output('UMAPPf', (ctx): PFrameHandle | undefined => {
+    const pCols = ctx.outputs?.resolve('umap')?.getPColumns();
+    if (pCols === undefined) {
+      return undefined;
+    }
+
+    // enriching with upstream data
+    const upstream = ctx.resultPool
+      .getData()
+      .entries.map((v) => v.obj)
+      .filter(isPColumn)
+      .filter((column) => column.id.includes('metadata'));
+
+    return ctx.createPFrame([...pCols, ...upstream]);
   })
 
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)

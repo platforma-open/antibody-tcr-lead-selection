@@ -1,5 +1,5 @@
 {
-  "name": "@platforma-open/milaboratories.top-antibodies.software",
+  "name": "@platforma-open/milaboratories.top-antibodies.sample-clonotypes",
   "version": "1.0.1",
   "scripts": {
     "build": "pl-pkg build",
@@ -18,7 +18,7 @@
   },
   "block-software": {
     "entrypoints": {
-      "sample-clonotypes": {
+      "main": {
         "binary": {
           "artifact": {
             "type": "python",
@@ -32,7 +32,7 @@
           },
           "cmd": [
             "python",
-            "{pkg}/sample_clonotypes.py"
+            "{pkg}/main.py"
           ]
         }
       }
