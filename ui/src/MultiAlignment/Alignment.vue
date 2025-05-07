@@ -3,6 +3,8 @@ import {
   isSequenceColumn,
   type AlignmentModel,
 } from '@platforma-open/milaboratories.top-antibodies.model';
+import type {
+  PTableShape } from '@platforma-sdk/model';
 import {
   getRawPlatformaInstance,
   isPTableAbsent,
@@ -22,12 +24,12 @@ import {
   type PTableRowKey,
 } from '@platforma-sdk/ui-vue';
 import {
+  ref,
   watch,
   watchEffect,
 } from 'vue';
 
 const model = defineModel<AlignmentModel>({ default: {} });
-const labelsToRecords = defineModel<Record<string, string> | undefined>('labels-to-records');
 
 const props = defineProps<{
   labelOptions: readonly ListOption<PObjectId>[];
@@ -62,11 +64,11 @@ watchEffect(() => {
 });
 
 const driver = getRawPlatformaInstance().pFrameDriver;
-
+const labelsToRecords = ref<[string, string][] | undefined>();
 watch(
   () => props.table,
   async (table) => {
-    const result: Record<string, string> = {};
+    const result: [string, string][] = [['Label', 'Sequence']];
 
     if (table) {
       const specs = await driver.getSpec(table);
@@ -84,10 +86,9 @@ watch(
         }
       }
 
+      const shape = await driver.getShape(table);
       const data = await driver.getData(table, [...labelColumns, ...sequenceColumns]);
-      for (let iRow = 0; iRow < data.length; iRow++) {
-        console.dir(data, { depth: null });
-        console.log('data.length', data.length);
+      for (let iRow = 0; iRow < shape.rows; iRow++) {
         const label = pTableValue(data[0], iRow, { na: '', absent: '' });
         const sequence = [];
         for (let iCol = 1; iCol < data.length; iCol++) {
@@ -99,7 +100,7 @@ watch(
           continue;
         }
 
-        result[label] = sequence.join('');
+        result.push([label, sequence.join('')]);
       }
     }
 
@@ -115,6 +116,6 @@ watch(
       v-model="model.label"
       :options="props.labelOptions"
     />
-    <pre style="max-width: 100%; overflow: auto;">{{ labelsToRecords }}</pre>
+    <p>Labels to records: {{ labelsToRecords }}</p>
   </div>
 </template>
