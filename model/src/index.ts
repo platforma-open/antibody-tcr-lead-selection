@@ -187,7 +187,7 @@ export function isSequenceColumn(column: PUniversalColumnSpec): boolean {
 function createAlignmentTableDef(
   columns: Column[],
   label: Column,
-  filterColumn?: PColumn<PColumnValues>,
+  filterColumn: PColumn<PColumnValues>,
 ): PTableDef<PColumn<TreeNodeAccessor | PColumnValues | DataInfo<TreeNodeAccessor>>> | undefined {
   const sequenceColumns = columns.filter((c) => isSequenceColumn(c.spec));
   if (sequenceColumns.length === 0)
@@ -199,12 +199,10 @@ function createAlignmentTableDef(
       primary: {
         type: 'inner',
         entries: [
-          ...(filterColumn && filterColumn.data.length > 0
-            ? [{
-              type: 'column',
-              column: filterColumn,
-            } satisfies ColumnJoinEntry<Column>]
-            : []),
+          {
+            type: 'column',
+            column: filterColumn,
+          } satisfies ColumnJoinEntry<Column>,
           ...sequenceColumns.map((c) => ({
             type: 'column',
             column: c,
@@ -366,7 +364,7 @@ export const model = BlockModel.create()
     if (!label) return undefined;
 
     const filterColumn = ctx.uiState.alignmentTableState.filterColumn;
-
+    if (!filterColumn) return undefined;
     const def = createAlignmentTableDef(columns.props, label, filterColumn);
     if (!def) return undefined;
 
