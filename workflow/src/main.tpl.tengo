@@ -110,7 +110,7 @@ wf.body(func(args) {
 
 	return {
 		outputs: {
-			"sampledColumns": pframes.exportFrame(sampledColumnsPf)
+			"sampledRows": pframes.exportFrame(sampledColumnsPf)
 		},
 		exports: {}
 	}

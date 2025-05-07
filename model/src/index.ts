@@ -1,5 +1,6 @@
 import type {
   ColumnJoinEntry,
+  CreatePlDataTableOps,
   DataInfo,
   InferOutputsType,
   PColumn,
@@ -352,14 +353,26 @@ export const model = BlockModel.create()
     if (columns === undefined)
       return undefined;
 
-    const Xtemp = ctx.outputs?.resolve('sampledColumns')?.getPColumns();
+    const sampledRows = ctx.outputs?.resolve('sampledRows')?.getPColumns();
+    let ops: CreatePlDataTableOps = {
+      filters: ctx.uiState.filterModel.filters,
+    };
     const cols: Column[] = [];
     if (ctx.args.topClonotypes === undefined) {
       cols.push(...columns.props);
-    } else if (Xtemp === undefined) {
+      ops = {
+        filters: ctx.uiState.filterModel.filters,
+      };
+    } else if (sampledRows === undefined) {
       return undefined;
-    } else
-      cols.push(...columns.props, ...Xtemp);
+    } else {
+      cols.push(...columns.props, ...sampledRows);
+      ops = {
+        filters: ctx.uiState.filterModel.filters,
+        // coreColumnPredicate: (spec) => spec.name === 'pl7.app/vdj/sampling-column',
+        // coreJoinType: 'inner',
+      };
+    }
 
     return createPlDataTableV2(
       ctx,
@@ -367,10 +380,7 @@ export const model = BlockModel.create()
       // if there are links, we need need to pick one of the links to show all axes in the table
       (spec) => columns.links?.length > 0 ? spec.axesSpec.length == 2 : true,
       ctx.uiState.tableState,
-      {
-        filters: ctx.uiState.filterModel.filters,
-        coreJoinType: 'inner',
-      },
+      ops,
     );
   })
 

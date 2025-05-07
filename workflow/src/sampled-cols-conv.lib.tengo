@@ -25,12 +25,11 @@ getColumns := func(datasetSpec, linkerAxisSpec) {
         "id": "link",
         "allowNA": false,
         "spec": {
-          "name": "pl7.app/vdj/link",
+          "name": "pl7.app/vdj/sampling-column",
           "valueType": "Int",
           "domain": {},
           "annotations": {
-            "pl7.app/isLinkerColumn": "true",
-            "pl7.app/label": "Linker column",
+            "pl7.app/label": "Sampling column",
             "pl7.app/table/visibility": "optional"
           }
         }

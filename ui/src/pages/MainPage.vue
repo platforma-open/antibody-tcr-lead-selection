@@ -15,9 +15,7 @@ import {
   PlSlideModal,
   PlTableFilters,
   PlNumberField,
-  PlRow,
   PlDropdownMulti,
-  listToOptions,
 } from '@platforma-sdk/ui-vue';
 import { computed, reactive, ref } from 'vue';
 import { useApp } from '../app';
@@ -99,7 +97,7 @@ const filterColumns = computed<PTableColumnSpec[]>(() => {
         clearable
         @update:model-value="setAnchorColumn"
       />
-      <PlDropdownMulti v-model="app.model.args.rankingOrder" :options="app.model.outputs.rankingOptions" label="Sorting columns" >
+      <PlDropdownMulti v-model="app.model.args.rankingOrder" :options="app.model.outputs.rankingOptions" label="Ranking columns" >
         <template #tooltip>
           Order aware selection. Columns for sequential priority sorting of clonotypes.
         </template>
