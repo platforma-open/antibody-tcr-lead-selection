@@ -15,10 +15,10 @@ getColumns := func(datasetSpec) {
         "allowNA": false,
         "spec": {
           "name": "pl7.app/vdj/umap1",
-          "valueType": "Double"
-          },
+          "valueType": "Double",
           "annotations": {
             "pl7.app/label": "UMAP Dim1"
+          }
         }
       },
       {

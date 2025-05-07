@@ -18,7 +18,7 @@ import type {
   TreeNodeAccessor,
   PFrameHandle,
 } from '@platforma-sdk/model';
-import { BlockModel, createPlDataTableV2, isLabelColumn, isPColumn } from '@platforma-sdk/model';
+import { BlockModel, createPlDataTableV2, isLabelColumn, isPColumn, createPFrameForGraphs } from '@platforma-sdk/model';
 import type { GraphMakerState } from '@milaboratories/graph-maker';
 
 export type ListOption<T> = {
@@ -447,7 +447,7 @@ export const model = BlockModel.create()
       .filter(isPColumn)
       .filter((column) => column.id.includes('metadata'));
 
-    return ctx.createPFrame([...pCols, ...upstream]);
+    return createPFrameForGraphs(ctx, [...pCols, ...upstream]);
   })
 
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)
