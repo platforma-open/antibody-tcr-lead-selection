@@ -48,11 +48,11 @@ wf.body(func(args) {
 		if datasetSpec.axesSpec[1].name == col.spec.axesSpec[1].name {
 			clonoTable.add(col.key, {header: "linker." + string(i)})
 			clonoTable.setAxisHeader(col.spec.axesSpec[0].name, "cluster_" + string(i))
-			linkerAxisSpec[col.spec.annotations["pl7.app/label"]] = col.spec.axesSpec[0]
+			linkerAxisSpec["cluster_" + string(i)] = col.spec.axesSpec[0]
 		} else if datasetSpec.axesSpec[1].name == col.spec.axesSpec[0].name {
 			clonoTable.add(col.key, {header: "linker." + string(i)})
 			clonoTable.setAxisHeader(col.spec.axesSpec[1].name, "cluster_" + string(i))
-			linkerAxisSpec[col.spec.annotations["pl7.app/label"]] = col.spec.axesSpec[1]
+			linkerAxisSpec["cluster_" + string(i)] = col.spec.axesSpec[1]
 		}
 		
 	}

@@ -20,17 +20,18 @@ getColumns := func(datasetSpec, linkerAxisSpec) {
   return {
     "axes": axes,
     "columns": [
-      // To BE MODIFIED
       {
         "column": "top",
-        "id": "frequency",
+        "id": "link",
         "allowNA": false,
         "spec": {
-          "name": "pl7.app/vdj/frequency",
-          "valueType": "Double",
+          "name": "pl7.app/vdj/link",
+          "valueType": "Int",
           "domain": {},
           "annotations": {
-            "pl7.app/label": "Frequency"
+            "pl7.app/isLinkerColumn": "true",
+            "pl7.app/label": "Linker column",
+            "pl7.app/table/visibility": "optional",
           }
         }
       }
