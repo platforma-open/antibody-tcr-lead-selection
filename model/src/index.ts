@@ -328,7 +328,10 @@ export const model = BlockModel.create()
       // if there are links, we need need to pick one of the links to show all axes in the table
       (spec) => columns.links?.length > 0 ? spec.axesSpec.length == 2 : true,
       ctx.uiState.tableState,
-      ctx.uiState.filterModel,
+      {
+        filters: ctx.uiState.filterModel.filters,
+        coreJoinType: 'inner',
+      },
     );
   })
 
