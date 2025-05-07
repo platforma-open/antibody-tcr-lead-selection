@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies.software",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "scripts": {
     "build": "pl-pkg build",
     "prepublishOnly": "pl-pkg publish packages",

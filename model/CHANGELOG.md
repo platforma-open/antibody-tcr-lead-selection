@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.2.1
+
+### Patch Changes
+
+- 339a780: Main backbone
+
 ## 1.2.0
 
 ### Minor Changes

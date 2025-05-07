@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.1.2
+
+### Patch Changes
+
+- 339a780: Main backbone
+- Updated dependencies [339a780]
+  - @platforma-open/milaboratories.top-antibodies.model@1.2.1
+
 ## 1.1.1
 
 ### Patch Changes
