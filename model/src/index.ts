@@ -1,11 +1,15 @@
 import type {
   ColumnJoinEntry,
+  CreatePlDataTableOps,
   DataInfo,
   InferOutputsType,
   PColumn,
   PColumnSpec,
   PColumnValues,
-  PlDataTableState, PlRef, PlTableFilter, PlTableFiltersModel,
+  PlDataTableState,
+  PlRef,
+  PlTableFilter,
+  PlTableFiltersModel,
   PObjectId,
   PTableColumnId,
   PTableDef,
@@ -15,13 +19,16 @@ import type {
   RenderCtx,
   SUniversalPColumnId,
   TreeNodeAccessor,
+  PFrameHandle,
 } from '@platforma-sdk/model';
 import {
   BlockModel,
   createPFrameForGraphs,
   createPlDataTableV2,
   isLabelColumn,
+  isPColumn,
 } from '@platforma-sdk/model';
+import type { GraphMakerState } from '@milaboratories/graph-maker';
 
 export type ListOption<T> = {
   label: string;
@@ -48,6 +55,7 @@ export type UiState = {
   tableState: PlDataTableState;
   filterModel: PlTableFiltersModel;
   alignmentTableState: AlignmentModel;
+  graphStateUMAP: GraphMakerState;
   alignmentModel: AlignmentV2Model;
 };
 
@@ -154,7 +162,7 @@ function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefined {
   const scores = [...cloneScores, ...linkScores];
   const defaultFilters: PlTableFiltersDefault[] = [];
 
-  for (const score of cloneScores) {
+  for (const score of scores) {
     const value = score.spec.annotations?.['pl7.app/vdj/score/default'];
 
     if (value !== undefined) {
@@ -249,6 +257,15 @@ export const model = BlockModel.create()
     },
     filterModel: {},
     alignmentTableState: {},
+    graphStateUMAP: {
+      title: 'UMAP',
+      template: 'dots',
+      layersSettings: {
+        dots: {
+          dotFill: '#99E099',
+        },
+      },
+    },
     alignmentModel: {},
   })
 
@@ -265,7 +282,7 @@ export const model = BlockModel.create()
         { name: 'pl7.app/vdj/scClonotypeKey' },
       ],
       annotations: { 'pl7.app/isAnchor': 'true' },
-    }]),
+    }], { refsWithEnrichments: true }),
   )
 
   .output('scoreColumns', (ctx) => {
@@ -285,14 +302,53 @@ export const model = BlockModel.create()
     if (anchor === undefined)
       return undefined;
 
-    return ctx.resultPool.getCanonicalOptions({ main: anchor },
+    const allowedOptions = ctx.resultPool.getCanonicalOptions({ main: anchor },
       [
         {
           axes: [{ anchor: 'main', idx: 1 }],
-          type: ['Int', 'Long', 'Long', 'Float'],
+          type: ['Int', 'Long', 'Double', 'Float'],
         },
       ],
     );
+
+    if (allowedOptions === undefined)
+      return undefined;
+
+    // linker columns
+    for (const idx of [0, 1]) {
+      let axesToMatch;
+      if (idx === 0) {
+        // clonotypeKey in second axis
+        axesToMatch = [{}, { anchor: 'main', idx: 1 }];
+      } else {
+        // clonotypeKey in first axis
+        axesToMatch = [{ anchor: 'main', idx: 1 }, {}];
+      }
+
+      const l = ctx.resultPool.getAnchoredPColumns(
+        { main: anchor },
+        [
+          {
+            axes: axesToMatch,
+            annotations: { 'pl7.app/isLinkerColumn': 'true' },
+          },
+        ],
+      ) ?? [];
+
+      for (const link of l) {
+        allowedOptions.push(...ctx.resultPool.getCanonicalOptions(
+          { linker: link.spec },
+          [
+            {
+              axes: [{ anchor: 'linker', idx: idx }],
+              type: ['Int', 'Long', 'Double', 'Float'],
+            },
+          ],
+        ) ?? []);
+      }
+    }
+
+    return allowedOptions;
   })
 
   .output('test', (ctx) => {
@@ -315,14 +371,26 @@ export const model = BlockModel.create()
     if (columns === undefined)
       return undefined;
 
-    const Xtemp = ctx.outputs?.resolve('sampledColumns')?.getPColumns();
+    const sampledRows = ctx.outputs?.resolve('sampledRows')?.getPColumns();
+    let ops: CreatePlDataTableOps = {
+      filters: ctx.uiState.filterModel.filters,
+    };
     const cols: Column[] = [];
     if (ctx.args.topClonotypes === undefined) {
       cols.push(...columns.props);
-    } else if (Xtemp === undefined) {
+      ops = {
+        filters: ctx.uiState.filterModel.filters,
+      };
+    } else if (sampledRows === undefined) {
       return undefined;
-    } else
-      cols.push(...columns.props, ...Xtemp);
+    } else {
+      cols.push(...columns.props, ...sampledRows);
+      ops = {
+        filters: ctx.uiState.filterModel.filters,
+        // coreColumnPredicate: (spec) => spec.name === 'pl7.app/vdj/sampling-column',
+        // coreJoinType: 'inner',
+      };
+    }
 
     return createPlDataTableV2(
       ctx,
@@ -330,10 +398,7 @@ export const model = BlockModel.create()
       // if there are links, we need need to pick one of the links to show all axes in the table
       (spec) => columns.links?.length > 0 ? spec.axesSpec.length == 2 : true,
       ctx.uiState.tableState,
-      {
-        filters: ctx.uiState.filterModel.filters,
-        coreJoinType: 'inner',
-      },
+      ops,
     );
   })
 
@@ -373,6 +438,22 @@ export const model = BlockModel.create()
     if (!def) return undefined;
 
     return ctx.createPTable(def);
+  })
+
+  .output('UMAPPf', (ctx): PFrameHandle | undefined => {
+    const pCols = ctx.outputs?.resolve('umap')?.getPColumns();
+    if (pCols === undefined) {
+      return undefined;
+    }
+
+    // enriching with upstream data
+    const upstream = ctx.resultPool
+      .getData()
+      .entries.map((v) => v.obj)
+      .filter(isPColumn)
+      .filter((column) => column.id.includes('metadata'));
+
+    return createPFrameForGraphs(ctx, [...pCols, ...upstream]);
   })
 
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)

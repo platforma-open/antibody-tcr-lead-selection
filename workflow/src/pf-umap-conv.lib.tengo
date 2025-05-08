@@ -1,0 +1,43 @@
+ll := import("@platforma-sdk/workflow-tengo:ll")
+
+getColumns := func(datasetSpec) {
+  return {
+    "axes": [
+      {
+        "column": "clonotypeKey",
+        "spec": datasetSpec.axesSpec[1]
+      }
+      ],
+    "columns": [
+      {
+        "column": "UMAP1",
+        "id": "umap1",
+        "allowNA": false,
+        "spec": {
+          "name": "pl7.app/vdj/umap1",
+          "valueType": "Double",
+          "annotations": {
+            "pl7.app/label": "UMAP Dim1"
+          }
+        }
+      },
+      {
+        "column": "UMAP2",
+        "id": "umap2",
+        "allowNA": false,
+        "spec": {
+          "name": "pl7.app/vdj/umap2",
+          "valueType": "Double",
+          "annotations": {
+            "pl7.app/label": "UMAP Dim2"
+          }
+        }
+      }],
+    "storageFormat": "Binary",
+    "partitionKeyLength": 0
+  }
+}
+
+export ll.toStrict({
+	getColumns: getColumns
+})

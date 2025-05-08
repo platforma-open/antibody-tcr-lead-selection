@@ -5,7 +5,8 @@ assets:= import("@platforma-sdk/workflow-tengo:assets")
 xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
 pframes := import("@platforma-sdk/workflow-tengo:pframes")
 sampledColsConv := import(":sampled-cols-conv")
-
+slices := import("@platforma-sdk/workflow-tengo:slices")
+umapConv := import(":pf-umap-conv")
 
 wf.prepare(func(args){
 	// We need a table with cluster ID (optional) | clonotype id | selected ranking columns
@@ -18,12 +19,21 @@ wf.prepare(func(args){
 		bundleBuilder.addSingle(col)
 	}
 
+	// Add linker column
 	bundleBuilder.addMulti({
 		axes: [{ anchor: "main", idx: 1 }],
 		partialAxesMatch: true,
 		annotations: { "pl7.app/isLinkerColumn": "true" }
 		},
 		"linker")
+
+	// Add full aa sequence column
+	bundleBuilder.addSingle({
+		axes: [{ anchor: "main", idx: 1 }],
+		annotations: { "pl7.app/vdj/isAssemblingFeature": "true" },
+		domain: {"pl7.app/alphabet": "aminoacid"}
+		},
+		"aaSequence")
 
 	return {
 		columns: bundleBuilder.build()
@@ -32,16 +42,28 @@ wf.prepare(func(args){
 
 wf.body(func(args) {
 
+	// Input arguments
 	columns := args.columns
 	datasetSpec := columns.getSpec(args.inputAnchor)
 	topClonotypes := args.topClonotypes
 	
-
+	////////// Clonotype Filtering //////////
+	// Build clonotype table
 	clonoTable := columns.xsvTableBuilder()
 	clonoTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
-	
 	for i, col in args.rankingOrder {
 		clonoTable.add(col, {header: "Col" + string(i)})
+		// If column does not have main anchor axis we have to include theirs
+		colsSpec := columns.getSpec(col)
+		axesNames := slices.map(colsSpec.axesSpec, func (a) { return a.name})
+		if !slices.hasElement(axesNames, datasetSpec.axesSpec[1].name) {
+			for na, ax in colsSpec.axesSpec {
+				if ax.name != datasetSpec.axesSpec[1].name {
+					clonoTable.setAxisHeader(ax.name, "cluster_" + string(i) + string(na))
+				}
+				
+			}
+		}	
 	}
 
 	// Columns gotten by query require .key
@@ -56,13 +78,12 @@ wf.body(func(args) {
 			clonoTable.setAxisHeader(col.spec.axesSpec[1].name, "cluster_" + string(i))
 			linkerAxisSpec["cluster_" + string(i)] = col.spec.axesSpec[1]
 		}
-		
 	}
-
 	clonoTable = clonoTable.build("csv")
 
+	// Run sampling script
 	sampleClones := exec.builder().
-		software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.software:sample-clonotypes")).
+		software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.sample-clonotypes:main")).
 		addFile("filteredClonotypes.csv", clonoTable).
 		arg("--csv").arg("filteredClonotypes.csv").
 		arg("--n").arg(string(topClonotypes)).
@@ -73,14 +94,37 @@ wf.body(func(args) {
 		cache(24 * 60 * 60 * 1000).
 		run()
 	
+	// Store outputs
 	sampledColsParams := sampledColsConv.getColumns(datasetSpec, linkerAxisSpec)
 	sampledColumnsPf := xsv.importFile(sampleClones.getFile("sampledClonotypes_top.csv"), "csv", sampledColsParams)
+	
 
-	// we need to output all filtered data axis
+	////////// UMAP //////////
+	// Generate input TSV with Clonotype ID and aa sequence
+	umapTable := columns.xsvTableBuilder()
+	umapTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
+	umapTable.add("aaSequence", {header: "aaSequence"})
+	umapTable = umapTable.build("tsv")
+
+	// UMAP script should go here
+	umapClones := exec.builder().
+		software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.umap:main")).
+		addFile("sequences.tsv", umapTable).
+		arg("-i").arg("sequences.tsv").
+		arg("-u").arg("umap.tsv").
+		saveFile("umap.tsv").
+		printErrStreamToStdout().
+		saveStdoutContent().
+		cache(24 * 60 * 60 * 1000).
+		run()
+
+
+	umapPf := xsv.importFile(umapClones.getFile("umap.tsv"), "tsv", umapConv.getColumns(datasetSpec))
 
 	return {
 		outputs: {
-			"sampledColumns": pframes.exportFrame(sampledColumnsPf)
+			"sampledRows": pframes.exportFrame(sampledColumnsPf),
+			"umap": pframes.exportFrame(umapPf)
 		},
 		exports: {}
 	}

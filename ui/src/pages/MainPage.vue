@@ -121,7 +121,7 @@ const isSequenceColumn = (column: PColumnSpec) => {
         clearable
         @update:model-value="setAnchorColumn"
       />
-      <PlDropdownMulti v-model="app.model.args.rankingOrder" :options="app.model.outputs.rankingOptions" label="Sorting columns" >
+      <PlDropdownMulti v-model="app.model.args.rankingOrder" :options="app.model.outputs.rankingOptions" label="Ranking columns" >
         <template #tooltip>
           Order aware selection. Columns for sequential priority sorting of clonotypes.
         </template>
