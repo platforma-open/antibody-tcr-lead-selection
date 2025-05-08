@@ -27,17 +27,10 @@ def validate_column_format(df):
                         key=lambda x: int(x[3:]))
     print("Found Col* columns:", col_columns)
     
-    if not col_columns:
-        print("Error: Input CSV must contain at least one column starting with 'Col' followed by a number (e.g., Col0, Col1, etc.).")
-        return False
-    
     return col_columns
 
 
-def rank_rows(df, col_columns):
-    # Check if there's a cluster column
-    cluster_columns = [col for col in df.columns if re.match(r'^cluster_\d+$', col)]
-    
+def rank_rows(df, col_columns, cluster_columns):
     if not cluster_columns:
         # If no cluster column, rank as before
         return df.sort_values(by=col_columns, ascending=False)
@@ -104,24 +97,27 @@ def main():
             print(f"Error reading file: {e}")
             return
 
-    # Validate column format and get col columns
-    col_columns = validate_column_format(df)
-    if not col_columns:
-        return
-
     # Validate N
     if args.n <= 0:
         print("Error: N must be a positive integer.")
         return
     if args.n > len(df):
         print(f"Error: N ({args.n}) is greater than the number of rows in the table ({len(df)}).")
-        return
+        args.n = len(df)
+        # return
 
     # Check for cluster columns
     cluster_columns = [col for col in df.columns if re.match(r'^cluster_\d+$', col)]
-    
-    # Rank rows
-    ranked_df = rank_rows(df, col_columns)
+
+    # Validate column format and get col columns
+    col_columns = validate_column_format(df)
+    # In case of no user selection, we just take columns in table order
+    if not col_columns:
+        print("WARNING: User didn't provide ranking columns, selection will be done in table order")
+        ranked_df = df.copy()
+    else:
+        # Rank rows
+        ranked_df = rank_rows(df, col_columns, cluster_columns)
     
     # Select top N rows
     top_n = select_top_n(ranked_df, args.n, cluster_columns)

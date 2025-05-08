@@ -47,6 +47,8 @@ wf.body(func(args) {
 	datasetSpec := columns.getSpec(args.inputAnchor)
 	topClonotypes := args.topClonotypes
 	
+	// output containers 
+	outputs := {}
 	////////// Clonotype Filtering //////////
 	// Build clonotype table
 	clonoTable := columns.xsvTableBuilder()
@@ -81,24 +83,26 @@ wf.body(func(args) {
 	}
 	clonoTable = clonoTable.build("csv")
 
-	// Run sampling script
-	sampleClones := exec.builder().
-		software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.sample-clonotypes:main")).
-		addFile("filteredClonotypes.csv", clonoTable).
-		arg("--csv").arg("filteredClonotypes.csv").
-		arg("--n").arg(string(topClonotypes)).
-		arg("--out").arg("sampledClonotypes.csv").
-		saveFile("sampledClonotypes_top.csv").
-		printErrStreamToStdout().
-		saveStdoutContent().
-		cache(24 * 60 * 60 * 1000).
-		run()
+	if topClonotypes != undefined {
+		// Run sampling script
+		sampleClones := exec.builder().
+			software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.sample-clonotypes:main")).
+			addFile("filteredClonotypes.csv", clonoTable).
+			arg("--csv").arg("filteredClonotypes.csv").
+			arg("--n").arg(string(topClonotypes)).
+			arg("--out").arg("sampledClonotypes.csv").
+			saveFile("sampledClonotypes_top.csv").
+			printErrStreamToStdout().
+			saveStdoutContent().
+			cache(24 * 60 * 60 * 1000).
+			run()
+		
+		// Store outputs
+		sampledColsParams := sampledColsConv.getColumns(datasetSpec, linkerAxisSpec)
+		sampledColumnsPf := xsv.importFile(sampleClones.getFile("sampledClonotypes_top.csv"), "csv", sampledColsParams)
+		outputs["sampledRows"] = pframes.exportFrame(sampledColumnsPf)
+	}
 	
-	// Store outputs
-	sampledColsParams := sampledColsConv.getColumns(datasetSpec, linkerAxisSpec)
-	sampledColumnsPf := xsv.importFile(sampleClones.getFile("sampledClonotypes_top.csv"), "csv", sampledColsParams)
-	
-
 	////////// UMAP //////////
 	// Generate input TSV with Clonotype ID and aa sequence
 	umapTable := columns.xsvTableBuilder()
@@ -120,12 +124,10 @@ wf.body(func(args) {
 
 
 	umapPf := xsv.importFile(umapClones.getFile("umap.tsv"), "tsv", umapConv.getColumns(datasetSpec))
+	outputs["umap"] = pframes.exportFrame(umapPf)
 
 	return {
-		outputs: {
-			"sampledRows": pframes.exportFrame(sampledColumnsPf),
-			"umap": pframes.exportFrame(umapPf)
-		},
+		outputs: outputs,
 		exports: {}
 	}
 })

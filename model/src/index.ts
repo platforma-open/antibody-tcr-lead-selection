@@ -296,7 +296,8 @@ export const model = BlockModel.create()
     if (columns === undefined)
       return undefined;
 
-    const sampledRows = ctx.outputs?.resolve('sampledRows')?.getPColumns();
+    // we wont compute the workflow output in cases where ctx.args.topClonotypes == undefined
+    const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', allowPermanentAbsence: true })?.getPColumns();
     let ops: CreatePlDataTableOps = {
       filters: ctx.uiState.filterModel.filters,
     };
