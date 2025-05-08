@@ -30,10 +30,8 @@ const style = useCssModule();
 const showChemicalProperties = ref(true);
 
 const computedOutput = computed(() => {
-  const parsedAlignment = output.value;
-
-  return parsedAlignment.map((alignmentItem) => {
-    const sequenceHtml = alignmentItem.highlighted.map((highlight) => {
+  return output.value.map((alignmentRow) => {
+    const sequenceHtml = alignmentRow.highlighted.map((highlight) => {
       if (showChemicalProperties.value) {
         return `<span style="color: ${residueTypeColorMap[highlight.color]}">${highlight.residue}</span>`;
       }
@@ -130,7 +128,7 @@ const isReady = computed(() => {
   white-space: pre;
   font-family: monospace;
   display: grid;
-  grid-template-columns: fit-content(20px) 1fr;
+  grid-template-columns: max-content 1fr;
   max-height: 100%;
   overflow: auto;
   padding: 4px 0;
@@ -150,11 +148,6 @@ const isReady = computed(() => {
     overflow: auto;
     max-width: 100%;
   }
-}
-
-.header {
-  color: #000;
-  display: inline-block;
 }
 
 .sequence {
