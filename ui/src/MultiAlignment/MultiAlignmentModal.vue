@@ -1,17 +1,27 @@
 <script lang="ts" setup>
-import { PlSlideModal, PlCheckbox, PlBtnPrimary, PlTooltip, PlIcon24 } from '@platforma-sdk/ui-vue';
+import { PlSlideModal, PlCheckbox, PlBtnPrimary, PlTooltip, PlIcon24, PlBtnGhost, PlAlert } from '@platforma-sdk/ui-vue';
 import { useCssModule } from 'vue';
 const isOpen = defineModel<boolean>({ required: true, default: false });
-import { ref, computed, toRaw } from 'vue';
+import { ref, computed, toRaw, watch } from 'vue';
 import { residueType, residueTypeLabels, residueTypeColorMap } from '../utils/colors';
 import type { SequenceRow, AlignmentRow } from '../types';
-import Worker from './worker?worker';
+import { WorkerManager } from './wm';
 
-const worker = new Worker();
+const wm = new WorkerManager();
 
 const props = defineProps<{
   sequenceRows: SequenceRow[] | undefined;
 }>();
+
+watch(() => props.sequenceRows, () => {
+  isResolved.value = false;
+}, { deep: true });
+
+const error = ref<Error | null>(null);
+
+const isRunning = ref(false);
+
+const isResolved = ref(false);
 
 const output = ref<AlignmentRow[]>([]);
 
@@ -19,16 +29,8 @@ const style = useCssModule();
 
 const showChemicalProperties = ref(true);
 
-const findLabel = (header: string) => {
-  return props.sequenceRows?.find((row) => row.header === header)?.label;
-};
-
 const computedOutput = computed(() => {
   const parsedAlignment = output.value;
-
-  if (parsedAlignment.length === 0) {
-    return '';
-  }
 
   return parsedAlignment.map((alignmentItem) => {
     const sequenceHtml = alignmentItem.highlighted.map((highlight) => {
@@ -41,19 +43,33 @@ const computedOutput = computed(() => {
   }).join('');
 });
 
-const runAlignment = () => {
-  worker.postMessage({
-    sequenceRows: toRaw(props.sequenceRows),
-  });
+const runAlignment = async () => {
+  const sequenceRows = toRaw(props.sequenceRows);
 
-  worker.onmessage = (event: { data: { result: AlignmentRow[] } }) => {
-    output.value = event.data.result;
-  };
+  if (!sequenceRows) {
+    return;
+  }
+
+  isRunning.value = true;
+  error.value = null;
+
+  try {
+    const result = await wm.align({ sequenceRows });
+    output.value = result.result;
+    isResolved.value = true;
+  } catch (err) {
+    error.value = err instanceof Error ? err : new Error(String(err));
+  } finally {
+    isRunning.value = false;
+  }
 };
 
-const isDisabled = computed(() => {
-  const a = props.sequenceRows ?? [];
-  return a.length === 0 || a.length > 100;
+const hasRowsToAlign = computed(() => {
+  return (props.sequenceRows ?? []).length > 0;
+});
+
+const isReady = computed(() => {
+  return hasRowsToAlign.value && !isResolved.value;
 });
 </script>
 
@@ -61,16 +77,21 @@ const isDisabled = computed(() => {
   <PlSlideModal v-model="isOpen" width="80%" :close-on-outside-click="false">
     <template #title>Multi Alignment</template>
     <slot/>
-    <PlBtnPrimary :disabled="isDisabled" @click="runAlignment">Run Alignment {{ props.sequenceRows?.length }}</PlBtnPrimary>
+    <PlAlert v-if="error" type="error" >
+      {{ error.message }}
+    </PlAlert>
+    <PlAlert v-if="!hasRowsToAlign" type="warn">
+      Please select at least one sequence to run alignment
+    </PlAlert>
     <div v-if="output.length" :class="[$style.output]">
       <div>
         <span v-for="row in output" :key="row.header">
-          {{ findLabel(row.header) }}
+          {{ row.label ?? 'Not found' }}
         </span>
       </div>
       <div class="pl-scrollable" v-html="computedOutput" />
     </div>
-    <div :class="[$style['checkbox-panel']]">
+    <div v-if="output.length" :class="[$style['checkbox-panel']]">
       <PlCheckbox v-model="showChemicalProperties">Show chemical properties</PlCheckbox>
       <PlTooltip style="display: flex; align-items: center;">
         <PlIcon24 name="info" />
@@ -85,6 +106,16 @@ const isDisabled = computed(() => {
         </template>
       </PlTooltip>
     </div>
+    <template #actions>
+      <PlBtnPrimary
+        :disabled="!isReady"
+        :loading="isRunning"
+        @click="runAlignment"
+      >
+        Run Alignment ({{ props.sequenceRows?.length }} sequences)
+      </PlBtnPrimary>
+      <PlBtnGhost @click="isOpen = false">Close</PlBtnGhost>
+    </template>
   </PlSlideModal>
 </template>
 
@@ -100,6 +131,9 @@ const isDisabled = computed(() => {
   font-family: monospace;
   display: grid;
   grid-template-columns: fit-content(20px) 1fr;
+  max-height: 100%;
+  overflow: auto;
+  padding: 4px 0;
   > div {
     padding: 4px;
     display: flex;

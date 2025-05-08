@@ -96,7 +96,7 @@ const isSequenceColumn = (column: PColumnSpec) => {
           :defaults="app.model.outputs.defaultFilters"
         />
       </PlAgDataTableToolsPanel>
-      <PlBtnGhost @click.stop="app.openMultiAlignment">Multi Alignment</PlBtnGhost>
+      <PlBtnGhost icon="dna" @click.stop="app.openMultiAlignment">Multi Alignment</PlBtnGhost>
       <PlBtnGhost @click.stop="() => (settingsOpen = true)">
         Settings
         <template #append>

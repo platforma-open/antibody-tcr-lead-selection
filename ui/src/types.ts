@@ -7,6 +7,7 @@ export type SequenceRow = {
 };
 
 export type AlignmentRow = {
+  label?: string;
   header: string;
   sequence: string;
   highlighted: HighlightedResidue[];
