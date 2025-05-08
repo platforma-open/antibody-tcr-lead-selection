@@ -14,8 +14,9 @@ const props = defineProps<{
 }>();
 
 watch(() => props.sequenceRows, () => {
+  console.log('sequenceRows changed', props.sequenceRows);
   isResolved.value = false;
-}, { deep: true });
+}, { deep: true, immediate: true });
 
 const error = ref<Error | null>(null);
 

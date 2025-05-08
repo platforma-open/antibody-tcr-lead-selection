@@ -1,16 +1,15 @@
 <script lang="ts" setup>
-import type {
-  PlMultiAlignmentViewModel,
+import {
+  createRowSelectionColumn,
+  type PlMultiAlignmentViewModel,
+  type RowSelectionModel,
 } from '@platforma-open/milaboratories.top-antibodies.model';
 import type {
   PColumnSpec,
   PFrameHandle,
   PColumn,
-  PColumnKey,
   PColumnValues,
-  PColumnValuesEntry,
   PObjectId,
-  PTableColumnSpec,
   CalculateTableDataRequest,
   PTableSorting,
   ColumnJoinEntry,
@@ -18,13 +17,10 @@ import type {
 } from '@platforma-sdk/model';
 import {
   getRawPlatformaInstance,
-  isPTableAbsent,
-  PTableNA,
   pTableValue,
 } from '@platforma-sdk/model';
 import type {
   ListOption,
-  PTableRowKey,
 } from '@platforma-sdk/ui-vue';
 import {
   PlDropdown,
@@ -42,33 +38,9 @@ const sequenceRows = defineModel<SequenceRow[] | undefined>('sequence-rows');
 const props = defineProps<{
   labelColumnOptionPredicate: (column: PColumnSpec) => boolean;
   sequenceColumnPredicate: (column: PColumnSpec) => boolean;
-  tableColumns: readonly PTableColumnSpec[];
-  selectedRows: readonly PTableRowKey[];
   pframe: PFrameHandle | undefined;
+  rowSelectionModel?: RowSelectionModel | undefined;
 }>();
-
-const FilterColumnId = '__FILTER_COLUMN__' as PObjectId;
-
-const filterColumn = computed<PColumn<PColumnValues> | undefined>(() => {
-  const axes = props.tableColumns.filter((c) => c.type === 'axis');
-  if (axes.length === 0) return undefined;
-
-  return {
-    id: FilterColumnId,
-    spec: {
-      kind: 'PColumn',
-      valueType: 'Int',
-      name: FilterColumnId,
-      axesSpec: axes.map((a) => a.spec),
-    },
-    data: props.selectedRows
-      .filter((r): r is PColumnKey => !r.some((v) => isPTableAbsent(v) || v === PTableNA))
-      .map((r) => ({
-        key: r,
-        val: 1,
-      } satisfies PColumnValuesEntry)),
-  } satisfies PColumn<PColumnValues>;
-});
 
 const driver = getRawPlatformaInstance().pFrameDriver;
 
@@ -76,8 +48,8 @@ const labelColumnOptions = ref<ListOption<PObjectId>[]>();
 const labelColumnId = computed(() => model.value.label);
 
 watch(
-  () => [props.pframe, filterColumn.value, labelColumnId.value] as const,
-  async ([pframe, filterColumn, labelColumnId]) => {
+  () => [props.pframe, props.rowSelectionModel, labelColumnId.value] as const,
+  async ([pframe, rowSelectionModel, labelColumnId]) => {
     if (!pframe) {
       labelColumnOptions.value = undefined;
       sequenceRows.value = undefined;
@@ -92,28 +64,31 @@ watch(
         value: c.columnId,
       }));
     const sequenceColumns = columns.filter((c) => props.sequenceColumnPredicate(c.spec));
-    if (!filterColumn
-      || !labelColumnId
+    if (!labelColumnId
       || !columns.find((c) => c.columnId === labelColumnId)
       || sequenceColumns.length === 0) {
       sequenceRows.value = undefined;
       return;
     }
+    const FilterColumnId = '__FILTER_COLUMN__' as PObjectId;
+    const filterColumn = createRowSelectionColumn(FilterColumnId, rowSelectionModel);
 
-    const def = {
+    const def = JSON.parse(JSON.stringify({
       src: {
         type: 'outer',
         primary: {
           type: 'inner',
           entries: [
-          {
-            type: 'inlineColumn',
-            column: filterColumn,
-          } satisfies InlineColumnJoinEntry,
-          ...sequenceColumns.map((c) => ({
-            type: 'column',
-            column: c.columnId,
-          } satisfies ColumnJoinEntry<PObjectId>)),
+            ...(filterColumn && filterColumn.data.length > 0
+              ? [{
+                type: 'inlineColumn',
+                column: filterColumn,
+              } satisfies InlineColumnJoinEntry]
+              : []),
+            ...sequenceColumns.map((c) => ({
+              type: 'column',
+              column: c.columnId,
+            } satisfies ColumnJoinEntry<PObjectId>)),
           ].filter((e): e is ColumnJoinEntry<PObjectId> => e !== undefined),
         },
         secondary: [{
@@ -130,8 +105,8 @@ watch(
         ascending: true,
         naAndAbsentAreLeastValues: true,
       } satisfies PTableSorting)),
-    } satisfies CalculateTableDataRequest<PObjectId>;
-    const table = await driver.calculateTableData(pframe, JSON.parse(JSON.stringify(def)));
+    } satisfies CalculateTableDataRequest<PObjectId>));
+    const table = await driver.calculateTableData(pframe, def);
 
     const result: SequenceRow[] = [];
     const labelColumnIndices = [];

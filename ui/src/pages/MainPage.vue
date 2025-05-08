@@ -27,6 +27,7 @@ import {
 import { computed, reactive, ref } from 'vue';
 import { useApp } from '../app';
 import { AlignmentDataProvider, MultiAlignmentModal } from '../MultiAlignment';
+import type { RowSelectionModel } from '@platforma-open/milaboratories.top-antibodies.model';
 
 const app = useApp();
 
@@ -81,6 +82,15 @@ const isSequenceColumn = (column: PColumnSpec) => {
 
   return isBulkSequence(column) || isSingleCellSequence(column);
 };
+
+const rowSelectionModel = computed<RowSelectionModel | undefined>(() => {
+  if (columns.value.length === 0) return undefined;
+
+  return {
+    axesSpec: columns.value.filter((c) => c.type === 'axis').map((c) => c.spec),
+    selectedRowsKeys: data.selectedRows,
+  } satisfies RowSelectionModel;
+});
 </script>
 
 <template>
@@ -141,9 +151,8 @@ const isSequenceColumn = (column: PColumnSpec) => {
         v-model:sequence-rows="app.sequenceRows"
         :label-column-option-predicate="isLabelColumnOption"
         :sequence-column-predicate="isSequenceColumn"
-        :table-columns="columns"
-        :selected-rows="data.selectedRows"
         :pframe="app.model.outputs.pf"
+        :row-selection-model="rowSelectionModel"
       />
     </MultiAlignmentModal>
   </PlBlockPage>
