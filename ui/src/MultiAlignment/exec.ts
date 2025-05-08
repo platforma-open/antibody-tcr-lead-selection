@@ -24,7 +24,7 @@ export const exec = async (sequenceRows: SequenceRow[] | undefined) => {
     return '';
   }
 
-  const data = sequenceRows.map(({ sequence, key }) => `>${key}\n${sequence}`).join('\n') + '\n';
+  const data = sequenceRows.map(({ sequence, header }) => `>${header}\n${sequence}`).join('\n') + '\n';
 
   const CLI = await new Aioli(['kalign/3.3.1']);
   // Create sample data (source: https://github.com/TimoLassmann/kalign/blob/master/dev/data/BB11001.tfa)

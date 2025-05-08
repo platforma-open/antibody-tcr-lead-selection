@@ -153,9 +153,8 @@ watch(
     }
 
     const rowCount = table[0].data.data.length;
-    console.log('>>>', table[0].data.data);
+    let key = 0;
     for (let iRow = 0; iRow < rowCount; iRow++) {
-      const key = table[0].data.data[iRow];
       const label = pTableValue(table[labelColumnIndices[0]].data, iRow, { na: '', absent: '' });
       const sequence = [];
       for (const iCol of sequenceColumnIndices) {
@@ -167,7 +166,7 @@ watch(
         continue;
       }
 
-      result.push({ label, sequence: sequence.join(''), key: label });
+      result.push({ label, sequence: sequence.join(''), header: String(++key) });
     }
 
     sequenceRows.value = result;
@@ -180,6 +179,7 @@ watch(
   <div>
     <PlDropdown
       v-model="model.label"
+      label="Label Column"
       :options="labelColumnOptions"
     />
   </div>

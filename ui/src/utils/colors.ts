@@ -36,11 +36,11 @@ export const residueTypeColorMap: Record<ResidueType, string> = {
   unconserved_or_default: '#000000',
 };
 
-interface HighlightedResidue {
+export type HighlightedResidue = {
   residue: string;
   position: number;
   color: ResidueType;
-}
+};
 
 function getColumnCounts(column: string[]): Record<string, number> {
   const counts: Record<string, number> = {};

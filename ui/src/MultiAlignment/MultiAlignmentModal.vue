@@ -1,43 +1,37 @@
 <script lang="ts" setup>
-import { PlSlideModal, PlCheckbox, PlBtnPrimary } from '@platforma-sdk/ui-vue';
+import { PlSlideModal, PlCheckbox, PlBtnPrimary, PlTooltip, PlIcon24 } from '@platforma-sdk/ui-vue';
 import { useCssModule } from 'vue';
 const isOpen = defineModel<boolean>({ required: true, default: false });
-import { ref, computed } from 'vue';
-import { parseBiowasmAlignment } from '../utils/alignment';
-import { highlightAlignment, residueType, residueTypeLabels, residueTypeColorMap } from '../utils/colors';
-import { exec } from './exec';
-import type { SequenceRow } from '../types';
+import { ref, computed, toRaw } from 'vue';
+import { residueType, residueTypeLabels, residueTypeColorMap } from '../utils/colors';
+import type { SequenceRow, AlignmentRow } from '../types';
+import Worker from './worker?worker';
+
+const worker = new Worker();
 
 const props = defineProps<{
   sequenceRows: SequenceRow[] | undefined;
 }>();
 
-const output = ref('');
+const output = ref<AlignmentRow[]>([]);
 
 const style = useCssModule();
 
 const showChemicalProperties = ref(true);
 
+const findLabel = (header: string) => {
+  return props.sequenceRows?.find((row) => row.header === header)?.label;
+};
+
 const computedOutput = computed(() => {
-  const parsedAlignment = parseBiowasmAlignment(output.value);
+  const parsedAlignment = output.value;
 
   if (parsedAlignment.length === 0) {
     return '';
   }
 
-  const sequences = parsedAlignment.map((item) => item.sequence);
-  const highlightedSequences = highlightAlignment(sequences);
-
-  const findLabel = (header: string) => {
-    return props.sequenceRows?.find((row) => row.key === header)?.label;
-  };
-
-  const col1 = parsedAlignment.map((alignmentItem) => {
-    return `<span class="${style.header}">${findLabel(alignmentItem.header)}</span>`;
-  }).join('\n');
-
-  const col2 = parsedAlignment.map((alignmentItem, index) => {
-    const sequenceHtml = highlightedSequences[index].map((highlight) => {
+  return parsedAlignment.map((alignmentItem) => {
+    const sequenceHtml = alignmentItem.highlighted.map((highlight) => {
       if (showChemicalProperties.value) {
         return `<span style="color: ${residueTypeColorMap[highlight.color]}">${highlight.residue}</span>`;
       }
@@ -45,14 +39,16 @@ const computedOutput = computed(() => {
     }).join('');
     return `<span class="${style.sequence}">${sequenceHtml}</span>`;
   }).join('');
-
-  return `<div>${col1}</div><div class="pl-scrollable">${col2}</div>`;
 });
 
 const runAlignment = () => {
-  exec(props.sequenceRows).then((result) => {
-    output.value = result;
+  worker.postMessage({
+    sequenceRows: toRaw(props.sequenceRows),
   });
+
+  worker.onmessage = (event: { data: { result: AlignmentRow[] } }) => {
+    output.value = event.data.result;
+  };
 };
 
 const isDisabled = computed(() => {
@@ -66,26 +62,42 @@ const isDisabled = computed(() => {
     <template #title>Multi Alignment</template>
     <slot/>
     <PlBtnPrimary :disabled="isDisabled" @click="runAlignment">Run Alignment {{ props.sequenceRows?.length }}</PlBtnPrimary>
-    <div :class="[$style.output]" v-html="computedOutput" />
-    <div>
-      <PlCheckbox v-model="showChemicalProperties">Show chemical properties</PlCheckbox>
-      <div
-        v-for="type in residueType"
-        :key="type"
-      >
-        <span :class="[$style.colorSample]" :style="{ backgroundColor: residueTypeColorMap[type] }" />
-        {{ residueTypeLabels[type] }}
+    <div v-if="output.length" :class="[$style.output]">
+      <div>
+        <span v-for="row in output" :key="row.header">
+          {{ findLabel(row.header) }}
+        </span>
       </div>
+      <div class="pl-scrollable" v-html="computedOutput" />
+    </div>
+    <div :class="[$style['checkbox-panel']]">
+      <PlCheckbox v-model="showChemicalProperties">Show chemical properties</PlCheckbox>
+      <PlTooltip style="display: flex; align-items: center;">
+        <PlIcon24 name="info" />
+        <template #tooltip>
+          <div
+            v-for="type in residueType"
+            :key="type"
+          >
+            <span :class="[$style.colorSample]" :style="{ backgroundColor: residueTypeColorMap[type] }" />
+            {{ residueTypeLabels[type] }}
+          </div>
+        </template>
+      </PlTooltip>
     </div>
   </PlSlideModal>
 </template>
 
 <style module>
+.checkbox-panel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .output {
   white-space: pre;
   font-family: monospace;
-  outline: 1px solid #ccc;
-  padding: 24px 0;
   display: grid;
   grid-template-columns: fit-content(20px) 1fr;
   > div {
@@ -96,10 +108,10 @@ const isDisabled = computed(() => {
   }
   > div:first-child {
     background-color: #f0f0f0;
-    border: 1px solid #ccc;
+    border: 1px solid #f0f0f0;
   }
   > div:last-child {
-    border: 1px solid #ccc;
+    border: 1px solid #f0f0f0;
     border-left: none;
     overflow: auto;
     max-width: 100%;

@@ -307,7 +307,6 @@ export const model = BlockModel.create()
     const columns = getColumns(ctx);
     if (!columns) return undefined;
 
-    // @ts-expect-error todo fix
     return createPFrameForGraphs(ctx, columns.props);
   })
 
