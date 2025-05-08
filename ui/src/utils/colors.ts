@@ -25,15 +25,15 @@ export const residueTypeLabels: Record<ResidueType, string> = {
 };
 
 export const residueTypeColorMap: Record<ResidueType, string> = {
-  hydrophobic: '#0000FF',
-  positive_charge: '#FF0000',
-  negative_charge: '#FF0000', // Note: Same as positive_charge in the provided CSS
-  polar: '#00FF00',
-  cysteine_specific: '#FF00FF',
-  glycine: '#FFA500',
-  proline: '#FFEA00',
-  aromatic: '#0000FF', // Note: Same as hydrophobic in the provided CSS
-  unconserved_or_default: '#000000',
+  hydrophobic: '#2D93FA',
+  positive_charge: '#F05670',
+  negative_charge: '#845CFF',
+  polar: '#198020',
+  cysteine_specific: '#E553E5',
+  glycine: '#FF9429',
+  proline: '#95C700',
+  aromatic: '#27C2C2',
+  unconserved_or_default: '#ffffff',
 };
 
 export type HighlightedResidue = {

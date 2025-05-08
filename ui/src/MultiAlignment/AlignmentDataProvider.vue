@@ -151,7 +151,7 @@ watch(
 </script>
 
 <template>
-  <div>
+  <div :style="{ maxInlineSize: 'fit-content' }">
     <PlDropdown
       v-model="model.label"
       label="Label Column"

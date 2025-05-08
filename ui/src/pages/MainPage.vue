@@ -4,10 +4,7 @@ import type {
   PlRef,
   PTableColumnSpec,
 } from '@platforma-sdk/model';
-import {
-  isLabelColumn,
-  plRefsEqual,
-} from '@platforma-sdk/model';
+import { plRefsEqual } from '@platforma-sdk/model';
 import type {
   PlAgDataTableSettings,
   PTableRowKey,
@@ -66,7 +63,7 @@ const filterColumns = computed<PTableColumnSpec[]>(() => {
 });
 
 const isLabelColumnOption = (column: PColumnSpec) => {
-  return isLabelColumn(column) && column.axesSpec[0].annotations?.['pl7.app/label'] === 'Clonotype key';
+  return column.valueType === 'String';
 };
 
 const isSequenceColumn = (column: PColumnSpec) => {

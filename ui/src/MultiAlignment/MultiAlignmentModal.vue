@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { PlSlideModal, PlCheckbox, PlBtnPrimary, PlTooltip, PlIcon24, PlBtnGhost, PlAlert } from '@platforma-sdk/ui-vue';
-import { useCssModule } from 'vue';
 const isOpen = defineModel<boolean>({ required: true, default: false });
 import { ref, computed, toRaw, watch } from 'vue';
 import { residueType, residueTypeLabels, residueTypeColorMap } from '../utils/colors';
@@ -26,21 +25,7 @@ const isResolved = ref(false);
 
 const output = ref<AlignmentRow[]>([]);
 
-const style = useCssModule();
-
 const showChemicalProperties = ref(true);
-
-const computedOutput = computed(() => {
-  return output.value.map((alignmentRow) => {
-    const sequenceHtml = alignmentRow.highlighted.map((highlight) => {
-      if (showChemicalProperties.value) {
-        return `<span style="color: ${residueTypeColorMap[highlight.color]}">${highlight.residue}</span>`;
-      }
-      return `<span>${highlight.residue}</span>`;
-    }).join('');
-    return `<span class="${style.sequence}">${sequenceHtml}</span>`;
-  }).join('');
-});
 
 const runAlignment = async () => {
   const sequenceRows = toRaw(props.sequenceRows);
@@ -75,22 +60,37 @@ const isReady = computed(() => {
 <template>
   <PlSlideModal v-model="isOpen" width="80%" :close-on-outside-click="false">
     <template #title>Multi Alignment</template>
-    <slot/>
+    <slot />
     <PlAlert v-if="error" type="error" >
       {{ error.message }}
     </PlAlert>
     <PlAlert v-if="!hasRowsToAlign" type="warn">
       Please select at least one sequence to run alignment
     </PlAlert>
-    <div v-if="output.length" :class="[$style.output]">
+    <div v-if="output.length" :class="$style.output">
       <div>
         <span v-for="row in output" :key="row.header">
           {{ row.label ?? 'Not found' }}
         </span>
       </div>
-      <div class="pl-scrollable" v-html="computedOutput" />
+      <div class="pl-scrollable">
+        <span v-for="alignmentRow of output" :key="alignmentRow.header" :class="$style.sequence">
+          <span
+            v-for="highlight in alignmentRow.highlighted"
+            :key="highlight.residue"
+            :style="{
+              ...(showChemicalProperties && {
+                backgroundColor: residueTypeColorMap[highlight.color],
+                color: highlight.color === 'unconserved_or_default' ? '#000000' : '#ffffff'
+              }),
+            }"
+          >
+            {{ highlight.residue }}
+          </span>
+        </span>
+      </div>
     </div>
-    <div v-if="output.length" :class="[$style['checkbox-panel']]">
+    <div v-if="output.length" :class="$style['checkbox-panel']">
       <PlCheckbox v-model="showChemicalProperties">Show chemical properties</PlCheckbox>
       <PlTooltip style="display: flex; align-items: center;">
         <PlIcon24 name="info" />
@@ -99,7 +99,10 @@ const isReady = computed(() => {
             v-for="type in residueType"
             :key="type"
           >
-            <span :class="[$style.colorSample]" :style="{ backgroundColor: residueTypeColorMap[type] }" />
+            <span
+              :class="$style['color-sample']"
+              :style="{ backgroundColor: residueTypeColorMap[type] }"
+            />
             {{ residueTypeLabels[type] }}
           </div>
         </template>
@@ -160,7 +163,7 @@ const isReady = computed(() => {
   }
 }
 
-.colorSample {
+.color-sample {
   display: inline-block;
   width: 12px;
   height: 12px;
