@@ -37,6 +37,20 @@ const defaultOptions: GraphMakerProps['defaultOptions'] = [
       ],
     },
   },
+  {
+    inputName: 'filters',
+    selectedSource: {
+      kind: 'PColumn',
+      name: 'pl7.app/vdj/sampling-column-umap',
+      valueType: 'Int',
+      axesSpec: [
+        {
+          name: 'pl7.app/clonotypeKey',
+          type: 'String',
+        },
+      ],
+    },
+  },
 ];
 
 </script>
