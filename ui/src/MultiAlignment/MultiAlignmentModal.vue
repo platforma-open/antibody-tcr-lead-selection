@@ -145,7 +145,8 @@ const isReady = computed(() => {
   > div:last-child {
     border: 1px solid #f0f0f0;
     border-left: none;
-    overflow: auto;
+    overflow-x: auto;
+    overflow-y: hidden;
     max-width: 100%;
   }
 }
