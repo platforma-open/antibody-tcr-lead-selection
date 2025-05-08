@@ -317,11 +317,12 @@ export const model = BlockModel.create()
       };
     }
 
+    const maxAxes = columns.props.reduce((acc, curr) => Math.max(acc, curr.spec.axesSpec.length), 0);
     return createPlDataTableV2(
       ctx,
       cols,
       // if there are links, we need need to pick one of the links to show all axes in the table
-      (spec) => columns.links?.length > 0 ? spec.axesSpec.length == 2 : true,
+      (spec) => spec.axesSpec.length == maxAxes,
       ctx.uiState.tableState,
       ops,
     );
