@@ -1,6 +1,6 @@
 <script lang="ts" setup>
 import type {
-  AlignmentV2Model,
+  PlMultiAlignmentViewModel,
 } from '@platforma-open/milaboratories.top-antibodies.model';
 import type {
   PColumnSpec,
@@ -36,7 +36,7 @@ import {
 } from 'vue';
 import type { SequenceRow } from '../types';
 
-const model = defineModel<AlignmentV2Model>({ default: {} });
+const model = defineModel<PlMultiAlignmentViewModel>({ default: {} });
 const sequenceRows = defineModel<SequenceRow[] | undefined>('sequence-rows');
 
 const props = defineProps<{

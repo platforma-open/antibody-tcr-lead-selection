@@ -1,10 +1,8 @@
 import type {
-  ColumnJoinEntry,
   CreatePlDataTableOps,
   DataInfo,
   InferOutputsType,
   PColumn,
-  PColumnSpec,
   PColumnValues,
   PlDataTableState,
   PlRef,
@@ -12,10 +10,6 @@ import type {
   PlTableFiltersModel,
   PObjectId,
   PTableColumnId,
-  PTableDef,
-  PTableHandle,
-  PTableSorting,
-  PUniversalColumnSpec,
   RenderCtx,
   SUniversalPColumnId,
   TreeNodeAccessor,
@@ -25,22 +19,11 @@ import {
   BlockModel,
   createPFrameForGraphs,
   createPlDataTableV2,
-  isLabelColumn,
   isPColumn,
 } from '@platforma-sdk/model';
 import type { GraphMakerState } from '@milaboratories/graph-maker';
 
-export type ListOption<T> = {
-  label: string;
-  value: T;
-};
-
-export type AlignmentModel = {
-  label?: PObjectId;
-  filterColumn?: PColumn<PColumnValues>;
-};
-
-export type AlignmentV2Model = {
+export type PlMultiAlignmentViewModel = {
   label?: PObjectId;
 };
 
@@ -54,9 +37,8 @@ export type UiState = {
   title?: string;
   tableState: PlDataTableState;
   filterModel: PlTableFiltersModel;
-  alignmentTableState: AlignmentModel;
   graphStateUMAP: GraphMakerState;
-  alignmentModel: AlignmentV2Model;
+  alignmentModel: PlMultiAlignmentViewModel;
 };
 
 type Column = PColumn<DataInfo<TreeNodeAccessor> | TreeNodeAccessor | PColumnValues>;
@@ -188,62 +170,6 @@ function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefined {
   };
 }
 
-export function isSequenceColumn(column: PUniversalColumnSpec): boolean {
-  if (!(column.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'))
-    return false;
-
-  const isBulkSequence = (column: PUniversalColumnSpec) =>
-    column.domain?.['pl7.app/alphabet'] === 'aminoacid';
-  const isSingleCellSequence = (column: PUniversalColumnSpec) =>
-    column.domain?.['pl7.app/vdj/scClonotypeChain/index'] === 'primary'
-    && column.axesSpec.length >= 1
-    && column.axesSpec[1].name === 'pl7.app/vdj/scClonotypeKey';
-
-  return isBulkSequence(column) || isSingleCellSequence(column);
-}
-
-function createAlignmentTableDef(
-  columns: Column[],
-  label: Column,
-  filterColumn: PColumn<PColumnValues>,
-): PTableDef<PColumn<TreeNodeAccessor | PColumnValues | DataInfo<TreeNodeAccessor>>> | undefined {
-  const sequenceColumns = columns.filter((c) => isSequenceColumn(c.spec));
-  if (sequenceColumns.length === 0)
-    throw new Error('No sequence columns found');
-
-  return {
-    src: {
-      type: 'outer',
-      primary: {
-        type: 'inner',
-        entries: [
-          {
-            type: 'column',
-            column: filterColumn,
-          } satisfies ColumnJoinEntry<Column>,
-          ...sequenceColumns.map((c) => ({
-            type: 'column',
-            column: c,
-          } satisfies ColumnJoinEntry<Column>)),
-        ].filter((e): e is ColumnJoinEntry<Column> => e !== undefined),
-      },
-      secondary: [{
-        type: 'column',
-        column: label,
-      } satisfies ColumnJoinEntry<Column>],
-    },
-    filters: [],
-    sorting: sequenceColumns.map((c) => ({
-      column: {
-        type: 'column',
-        id: c.id,
-      },
-      ascending: true,
-      naAndAbsentAreLeastValues: true,
-    } satisfies PTableSorting)),
-  };
-}
-
 export const model = BlockModel.create()
 
   .withArgs<BlockArgs>({
@@ -256,7 +182,6 @@ export const model = BlockModel.create()
       gridState: {},
     },
     filterModel: {},
-    alignmentTableState: {},
     graphStateUMAP: {
       title: 'UMAP',
       template: 'dots',
@@ -400,44 +325,6 @@ export const model = BlockModel.create()
       ctx.uiState.tableState,
       ops,
     );
-  })
-
-  .output('alignmentLabelOptions', (ctx): ListOption<PObjectId>[] | undefined => {
-    const columns = getColumns(ctx);
-    if (!columns) return undefined;
-
-    return columns.props
-      // TODO: rewrite to correct predicate
-      .filter((c) => isLabelColumn(c.spec) && c.spec.axesSpec[0].annotations?.['pl7.app/label'] === 'Clonotype key')
-      .map((c) => ({
-        label: c.spec.annotations?.['pl7.app/label'] ?? '',
-        value: c.id,
-      }));
-  })
-
-  .output('sequenceColumns', (ctx): PColumnSpec[] | undefined => {
-    const columns = getColumns(ctx);
-    if (!columns) return undefined;
-
-    return columns.props.map((c) => c.spec).filter(isSequenceColumn);
-  })
-
-  .output('alignmentTable', (ctx): PTableHandle | undefined => {
-    const columns = getColumns(ctx);
-    if (!columns) return undefined;
-
-    const labelId = ctx.uiState.alignmentTableState.label;
-    if (!labelId) return undefined;
-
-    const label = columns.props.find((c) => c.id === labelId);
-    if (!label) return undefined;
-
-    const filterColumn = ctx.uiState.alignmentTableState.filterColumn;
-    if (!filterColumn) return undefined;
-    const def = createAlignmentTableDef(columns.props, label, filterColumn);
-    if (!def) return undefined;
-
-    return ctx.createPTable(def);
   })
 
   .output('UMAPPf', (ctx): PFrameHandle | undefined => {
