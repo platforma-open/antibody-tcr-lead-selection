@@ -83,6 +83,7 @@ export type UiState = {
   tableState: PlDataTableState;
   filterModel: PlTableFiltersModel;
   graphStateUMAP: GraphMakerState;
+  graphStateHistogram: GraphMakerState;
   alignmentModel: PlMultiAlignmentViewModel;
 };
 
