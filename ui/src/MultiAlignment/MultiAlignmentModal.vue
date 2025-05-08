@@ -12,16 +12,15 @@ const props = defineProps<{
   sequenceRows: SequenceRow[] | undefined;
 }>();
 
-watch(() => props.sequenceRows, () => {
-  console.log('sequenceRows changed', props.sequenceRows);
-  isResolved.value = false;
-}, { deep: true, immediate: true });
-
 const error = ref<Error | null>(null);
 
 const isRunning = ref(false);
 
 const isResolved = ref(false);
+
+watch(() => props.sequenceRows, () => {
+  isResolved.value = false;
+}, { deep: true, immediate: true });
 
 const output = ref<AlignmentRow[]>([]);
 
