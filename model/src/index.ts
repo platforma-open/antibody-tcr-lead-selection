@@ -379,14 +379,13 @@ export const model = BlockModel.create()
       return undefined;
     }
 
-    // enriching with upstream data
-    const upstream = ctx.resultPool
-      .getData()
-      .entries.map((v) => v.obj)
-      .filter(isPColumn)
-      .filter((column) => column.id.includes('metadata'));
+    // Get the selected rows
+    const sampledRowsUmap = ctx.outputs?.resolve('sampledRowsUmap')?.getPColumns();
+    if (sampledRowsUmap === undefined) {
+      return undefined;
+    }
 
-    return createPFrameForGraphs(ctx, [...pCols, ...upstream]);
+    return createPFrameForGraphs(ctx, [...pCols, ...sampledRowsUmap]);
   })
 
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)

@@ -5,6 +5,7 @@ assets:= import("@platforma-sdk/workflow-tengo:assets")
 xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
 pframes := import("@platforma-sdk/workflow-tengo:pframes")
 sampledColsConv := import(":sampled-cols-conv")
+sampledColsUmapConv := import(":sampled-cols-umap-conv")
 slices := import("@platforma-sdk/workflow-tengo:slices")
 umapConv := import(":pf-umap-conv")
 
@@ -101,6 +102,12 @@ wf.body(func(args) {
 		sampledColsParams := sampledColsConv.getColumns(datasetSpec, linkerAxisSpec)
 		sampledColumnsPf := xsv.importFile(sampleClones.getFile("sampledClonotypes_top.csv"), "csv", sampledColsParams)
 		outputs["sampledRows"] = pframes.exportFrame(sampledColumnsPf)
+
+    	// Prepare filter col subset for UMAP
+    	// Avoid taking cluster axis using other params
+    	sampledColsUmapParams := sampledColsUmapConv.getColumns(datasetSpec) 
+    	sampledColsUmapPf := xsv.importFile(sampleClones.getFile("sampledClonotypes_top.csv"), "csv", sampledColsUmapParams)
+		outputs["sampledRowsUmap"] = pframes.exportFrame(sampledColsUmapPf)
 	}
 	
 	////////// UMAP //////////
