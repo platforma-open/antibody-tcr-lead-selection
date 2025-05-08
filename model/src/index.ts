@@ -4,6 +4,7 @@ import type {
   InferOutputsType,
   PColumn,
   PColumnValues,
+  PColumnIdAndSpec,
   PlDataTableState,
   PlRef,
   PlTableFilter,
@@ -116,6 +117,16 @@ function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefined {
         axes: [{ anchor: 'main', idx: 1 }],
       },
     ]) ?? [];
+
+  // const abundance = ctx.resultPool.getAnchoredPColumns(
+  //   { main: anchor },
+  //   [
+  //     {
+  //       axes: [{ anchor: 'main', idx: 0 }, { anchor: 'main', idx: 1 }],
+  //       annotations: { 'pl7.app/isAbundance': 'true' },
+  //     },
+  //   ],
+  // ) ?? [];
 
   // linker columns
   const links: Column[] = [];
@@ -235,6 +246,14 @@ export const model = BlockModel.create()
         },
       },
     },
+    graphStateHistogram: {
+      title: 'CDR3 Length histogram',
+      template: 'bins',
+      currentTab: null,
+      layersSettings: {
+        bins: { fillColor: '#99e099' },
+      },
+    },
     alignmentModel: {},
   })
 
@@ -335,6 +354,24 @@ export const model = BlockModel.create()
     return createPFrameForGraphs(ctx, columns.props);
   })
 
+  .output('histPcols', (ctx) => {
+    const columns = getColumns(ctx);
+    if (!columns) return undefined;
+
+    const pcols = columns.props
+      .filter((column) => column.spec.name === 'pl7.app/vdj/sequenceLength'
+        && column.spec.domain?.['pl7.app/vdj/feature'] === 'CDR3'
+        && column.spec.domain?.['pl7.app/alphabet'] === 'aminoacid');
+
+    return pcols.map(
+      (c) =>
+        ({
+          columnId: c.id,
+          spec: c.spec,
+        } satisfies PColumnIdAndSpec),
+    );
+  })
+
   .output('table', (ctx) => {
     const columns = getColumns(ctx);
     if (columns === undefined)
@@ -395,8 +432,8 @@ export const model = BlockModel.create()
   .sections((_ctx) => ([
     { type: 'link', href: '/', label: 'Main' },
     { type: 'link', href: '/umap', label: 'Clonotype UMAP' },
-    { type: 'link', href: '/spectratype', label: 'CDR3 Spectratype' },
-    { type: 'link', href: '/usage', label: 'V/J gene usage' },
+    { type: 'link', href: '/spectratype', label: 'CDR3 Length histogram' },
+    //  { type: 'link', href: '/usage', label: 'V/J gene usage' },
   ]))
 
   .done();

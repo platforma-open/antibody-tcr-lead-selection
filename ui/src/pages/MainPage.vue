@@ -130,7 +130,7 @@ const rowSelectionModel = computed<RowSelectionModel | undefined>(() => {
       />
       <PlDropdownMulti v-model="app.model.args.rankingOrder" :options="app.model.outputs.rankingOptions" label="Ranking columns" >
         <template #tooltip>
-          Order aware selection. Columns for sequential priority sorting of clonotypes.
+          Select the columns to use for priority-based, sequential sorting of clonotypes.
         </template>
       </PlDropdownMulti>
       <PlNumberField
@@ -138,7 +138,7 @@ const rowSelectionModel = computed<RowSelectionModel | undefined>(() => {
         label="Top clonotypes" :minValue="2" :step="1"
       >
         <template #tooltip>
-          TO CHANGE: Provide a desired number of top clonotypes to be selected by ranking of filtering columns and in house scoring script.
+          Choose how many top clonotypes to include, ranked by the columns you selected in the dropdown above.
         </template>
       </PlNumberField>
     </PlSlideModal>
