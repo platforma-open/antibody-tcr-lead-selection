@@ -22,7 +22,10 @@ watch(() => props.sequenceRows, () => {
   isResolved.value = false;
 }, { deep: true, immediate: true });
 
-const output = shallowRef<AlignmentRow[]>([]);
+const outputRaw = shallowRef<AlignmentRow[]>([]);
+
+// TODO: this is a temporary solution to avoid rendering too many rows (we should implement virtual scrolling)
+const output = computed(() => outputRaw.value.slice(0, 1000));
 
 const showChemicalProperties = ref(true);
 
@@ -38,7 +41,7 @@ const runAlignment = async () => {
 
   try {
     const result = await wm.align({ sequenceRows });
-    output.value = result.result;
+    outputRaw.value = result.result;
     isResolved.value = true;
   } catch (err) {
     error.value = err instanceof Error ? err : new Error(String(err));
