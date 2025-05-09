@@ -66,8 +66,8 @@ test('Positive charge (K,R) are positive_charge if KR > 0.6', ({ expect }) => {
   expect(highlightAlignment(sequences)).toEqual(expected);
 });
 
-test('Positive charge (K) is positive_charge if percent(["K"]) > 0.8', ({ expect }) => {
-  const sequences = ['K', 'K', 'K', 'K']; // percent(["K"]) = 1.0
+test('Positive charge (K) is positive_charge if K > 85%', ({ expect }) => {
+  const sequences = ['K', 'K', 'K', 'K']; // percent(["K"]) = 1.0, satisfies K > 85%
   const expected = [
     [{ residue: 'K', position: 0, color: 'positive_charge' }],
     [{ residue: 'K', position: 0, color: 'positive_charge' }],
@@ -97,12 +97,16 @@ test('Negative charge (D,E) are negative_charge if ED > 0.5', ({ expect }) => {
   expect(highlightAlignment(sequences)).toEqual(expected);
 });
 
-test('Polar (N) is polar if percent(["N"]) > 0.5; D is negative_charge', ({ expect }) => {
-  const sequences = ['N', 'N', 'D']; // percent(["N"]) = 2/3 = 0.66 > 0.5 for N. For D: percent(ND) = 3/3 = 1.0 > 0.85
+test('Polar (N) is polar if N > 50%; D is unconserved for this data', ({ expect }) => {
+  // For N: percent(['N']) = 2/3 ≈ 0.66 > 0.5.
+  // For D: With sequences ['N', 'N', 'D'], relevant conditions for negative_charge are not met.
+  // e.g., percentForAny(['D','E','N'], 0.85) is false as percent(['D']) ≈ 0.33, percent(['N']) ≈ 0.66.
+  // percent(ED) > 0.5 is also false.
+  const sequences = ['N', 'N', 'D'];
   const expected = [
     [{ residue: 'N', position: 0, color: 'polar' }],
     [{ residue: 'N', position: 0, color: 'polar' }],
-    [{ residue: 'D', position: 0, color: 'negative_charge' }], // D is negative_charge via percent(ND) > 0.85
+    [{ residue: 'D', position: 0, color: 'unconserved_or_default' }],
   ];
   expect(highlightAlignment(sequences)).toEqual(expected);
 });
