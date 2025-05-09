@@ -156,8 +156,13 @@ def main():
     
     # Validate sequences for amino acids
     valid_aas = {'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 
-                 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y'}
-    invalid_seqs = [i for i, seq in enumerate(sequences) if not all(aa in valid_aas for aa in str(seq).upper().strip("_"))]
+                 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y', '*'}
+    invalid_seqs = []
+    for i, seq in enumerate(sequences):
+        # Remove trailing underscore and check each character
+        seq = str(seq).upper().rstrip("_")
+        if not all(aa in valid_aas for aa in seq):
+            invalid_seqs.append(i)
     if invalid_seqs:
         print(f"Error: Invalid amino acid sequences found at rows: {invalid_seqs}")
         sys.exit(1)
