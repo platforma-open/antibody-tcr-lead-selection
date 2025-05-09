@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import { PlSlideModal, PlCheckbox, PlBtnPrimary, PlTooltip, PlIcon24, PlBtnGhost, PlAlert } from '@platforma-sdk/ui-vue';
 const isOpen = defineModel<boolean>({ required: true, default: false });
-import { ref, computed, toRaw, watch } from 'vue';
+import { ref, computed, toRaw, watch, shallowRef } from 'vue';
 import { residueType, residueTypeLabels, residueTypeColorMap } from '../utils/colors';
 import type { SequenceRow, AlignmentRow } from '../types';
 import { WorkerManager } from './wm';
@@ -22,7 +22,7 @@ watch(() => props.sequenceRows, () => {
   isResolved.value = false;
 }, { deep: true, immediate: true });
 
-const output = ref<AlignmentRow[]>([]);
+const output = shallowRef<AlignmentRow[]>([]);
 
 const showChemicalProperties = ref(true);
 
