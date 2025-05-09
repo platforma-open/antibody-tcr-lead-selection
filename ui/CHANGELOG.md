@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.1.5
+
+### Patch Changes
+
+- a378bfd: Limit the number of rows shown in a multiple alignment component to 1000 (temp fix)
+
 ## 1.1.4
 
 ### Patch Changes
