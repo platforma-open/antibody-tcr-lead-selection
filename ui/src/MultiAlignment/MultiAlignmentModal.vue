@@ -51,7 +51,7 @@ const runAlignment = async () => {
 };
 
 const hasRowsToAlign = computed(() => {
-  return (props.sequenceRows ?? []).length > 0;
+  return (props.sequenceRows ?? []).length > 1; // at least two sequences are required to run alignment
 });
 
 const isReady = computed(() => {
@@ -67,7 +67,7 @@ const isReady = computed(() => {
       {{ error.message }}
     </PlAlert>
     <PlAlert v-if="!hasRowsToAlign" type="warn">
-      Please select at least one sequence to run alignment
+      Please select at least two sequences to run alignment
     </PlAlert>
     <div v-if="output.length" :class="$style.output">
       <div>
@@ -78,8 +78,8 @@ const isReady = computed(() => {
       <div class="pl-scrollable">
         <span v-for="alignmentRow of output" :key="alignmentRow.header" :class="$style.sequence">
           <span
-            v-for="highlight in alignmentRow.highlighted"
-            :key="highlight.residue"
+            v-for="(highlight, index) in alignmentRow.highlighted"
+            :key="index"
             :style="{
               ...(showChemicalProperties && {
                 backgroundColor: residueTypeColorMap[highlight.color],
