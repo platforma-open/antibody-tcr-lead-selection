@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.1.3
+
+### Patch Changes
+
+- 4319244: Fix higlighting algorithm and speed up a little
+
 ## 1.1.2
 
 ### Patch Changes
