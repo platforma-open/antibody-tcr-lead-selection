@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.1.4
+
+### Patch Changes
+
+- 4a3f480: Speed up the highlighting algorithm
+
 ## 1.1.3
 
 ### Patch Changes
