@@ -29,3 +29,8 @@ onmessage = async (event: MessageEvent<Message<{ sequenceRows: SequenceRow[] }>>
     postMessage({ id: event.data.id, error });
   }
 };
+
+onerror = (event) => {
+  console.error('Error in worker', event);
+  return true;
+};

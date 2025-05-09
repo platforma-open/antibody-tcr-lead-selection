@@ -1,57 +1,3 @@
-export const residueType = [
-  'hydrophobic',
-  'positive_charge',
-  'negative_charge',
-  'polar',
-  'cysteine_specific',
-  'glycine',
-  'proline',
-  'aromatic',
-  'unconserved_or_default',
-] as const;
-
-export type ResidueType = typeof residueType[number];
-
-export const residueTypeLabels: Record<ResidueType, string> = {
-  hydrophobic: 'Hydrophobic',
-  positive_charge: 'Positive Charge',
-  negative_charge: 'Negative Charge',
-  polar: 'Polar',
-  cysteine_specific: 'Cysteine (Specific)',
-  glycine: 'Glycine',
-  proline: 'Proline',
-  aromatic: 'Aromatic',
-  unconserved_or_default: 'Unconserved / Default',
-};
-
-export const residueTypeColorMap: Record<ResidueType, string> = {
-  hydrophobic: '#2D93FA',
-  positive_charge: '#F05670',
-  negative_charge: '#845CFF',
-  polar: '#198020',
-  cysteine_specific: '#E553E5',
-  glycine: '#FF9429',
-  proline: '#95C700',
-  aromatic: '#27C2C2',
-  unconserved_or_default: '#ffffff',
-};
-
-export type HighlightedResidue = {
-  residue: string;
-  position: number;
-  color: ResidueType;
-};
-
-function getColumnCounts(column: string[]): Record<string, number> {
-  const counts: Record<string, number> = {};
-  for (const res of column) {
-    const r = res.toUpperCase();
-    if (r === '-') continue;
-    counts[r] = (counts[r] || 0) + 1;
-  }
-  return counts;
-}
-
 /*
 Clustal X Default Colouring Rules (adapted for this implementation):
 
@@ -108,20 +54,76 @@ Thresholds refer to the percentage of residues in a column belonging to a specif
 Note: Residue groups mentioned (e.g., WLVIMAFCYHP, KR) are defined as constants within the function.
 The percentages are strict inequalities (e.g., >60% means count/total > 0.6).
 */
-function getTypeForResidue(residue: string, column: string[]): ResidueType {
+
+export const residueType = [
+  'hydrophobic',
+  'positive_charge',
+  'negative_charge',
+  'polar',
+  'cysteine_specific',
+  'glycine',
+  'proline',
+  'aromatic',
+  'unconserved_or_default',
+] as const;
+
+export type ResidueType = typeof residueType[number];
+
+export const residueTypeLabels: Record<ResidueType, string> = {
+  hydrophobic: 'Hydrophobic',
+  positive_charge: 'Positive Charge',
+  negative_charge: 'Negative Charge',
+  polar: 'Polar',
+  cysteine_specific: 'Cysteine (Specific)',
+  glycine: 'Glycine',
+  proline: 'Proline',
+  aromatic: 'Aromatic',
+  unconserved_or_default: 'Unconserved / Default',
+};
+
+export const residueTypeColorMap: Record<ResidueType, string> = {
+  hydrophobic: '#2D93FA',
+  positive_charge: '#F05670',
+  negative_charge: '#845CFF',
+  polar: '#198020',
+  cysteine_specific: '#E553E5',
+  glycine: '#FF9429',
+  proline: '#95C700',
+  aromatic: '#27C2C2',
+  unconserved_or_default: '#ffffff',
+};
+
+export type HighlightedResidue = {
+  residue: string;
+  position: number;
+  color: ResidueType;
+};
+
+function getColumnCounts(column: string[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const res of column) {
+    const r = res.toUpperCase();
+    if (r === '-') continue;
+    counts[r] = (counts[r] || 0) + 1;
+  }
+  return counts;
+}
+
+function getResidueType(
+  residue: string,
+  counts: Record<string, number>,
+  totalNonGapInColumn: number,
+): ResidueType {
   residue = residue.toUpperCase();
   if (residue === '-') return 'unconserved_or_default';
-
-  const total = column.filter((r) => r !== '-').length;
-  const counts = getColumnCounts(column);
+  if (totalNonGapInColumn === 0) return 'unconserved_or_default'; // Avoid division by zero
 
   const percent = (group: string[]) =>
-    group.reduce((sum, r) => sum + (counts[r] || 0), 0) / total;
+    group.reduce((sum, r) => sum + (counts[r] || 0), 0) / totalNonGapInColumn;
 
   const doesAnyResidueMeetPercentThreshold = (group: string[], threshold = 0.6) =>
-    group.some((r) => percent([r]) > threshold);
+    group.some((r) => (counts[r] || 0) / totalNonGapInColumn > threshold);
 
-  // Group checks in Clustal X order
   const WLVIMAFCYHP = ['W', 'L', 'V', 'I', 'M', 'A', 'F', 'C', 'Y', 'H', 'P'];
   const KR = ['K', 'R'];
   const QE = ['Q', 'E'];
@@ -144,7 +146,7 @@ function getTypeForResidue(residue: string, column: string[]): ResidueType {
     return 'negative_charge';
 
   if (residue === 'N' && (
-    percent(['N']) > 0.5 || doesAnyResidueMeetPercentThreshold(['D', 'E', 'N'], 0.85)))
+    ((counts['N'] || 0) / totalNonGapInColumn > 0.5) || doesAnyResidueMeetPercentThreshold(['D', 'E', 'N'], 0.85)))
     return 'polar';
 
   if (residue === 'Q' && (
@@ -155,14 +157,11 @@ function getTypeForResidue(residue: string, column: string[]): ResidueType {
     percent(WLVIMAFCYHP) > 0.6 || percent(ST) > 0.5 || doesAnyResidueMeetPercentThreshold(['S', 'T'], 0.85)))
     return 'polar';
 
-  if (residue === 'C' && percent(['C']) > 0.85)
+  if (residue === 'C' && ((counts['C'] || 0) / totalNonGapInColumn > 0.85))
     return 'cysteine_specific';
 
-  if (residue === 'G')
-    return 'glycine';
-
-  if (residue === 'P')
-    return 'proline';
+  if (residue === 'G') return 'glycine';
+  if (residue === 'P') return 'proline';
 
   if (['H', 'Y'].includes(residue) && (
     percent(WLVIMAFCYHP) > 0.6 || doesAnyResidueMeetPercentThreshold(WYA_MEMBERS, 0.85)))
@@ -171,35 +170,51 @@ function getTypeForResidue(residue: string, column: string[]): ResidueType {
   return 'unconserved_or_default';
 }
 
-const cache: Map<string, ResidueType> = new Map();
-
-function getTypeForResidueCached(residue: string, column: string[]): ResidueType {
-  const cacheKey = `${residue}:${column.join('')}`;
-  if (cache.has(cacheKey)) {
-    return cache.get(cacheKey)!;
-  }
-  const result = getTypeForResidue(residue, column);
-  cache.set(cacheKey, result);
-  return result;
-}
-
 export function highlightAlignment(sequences: string[]): HighlightedResidue[][] {
+  if (!sequences || sequences.length === 0 || sequences[0].length === 0) {
+    return [];
+  }
+
   const alignmentLength = sequences[0].length;
-  const result: HighlightedResidue[][] = sequences.map(() => []);
+  const numSequences = sequences.length;
+  const result: HighlightedResidue[][] = Array(numSequences).fill(null).map(() => []);
+
+  const columnProcessedCache = new Map<string, Map<string, ResidueType>>();
 
   for (let i = 0; i < alignmentLength; i++) {
-    const column = sequences.map((seq) => seq[i]);
-    sequences.forEach((seq, j) => {
-      const residue = seq[i];
-      const color = getTypeForResidueCached(residue, column);
-      result[j].push({ residue, position: i, color });
-    });
-  }
+    const currentColumnArray: string[] = [];
+    for (let k = 0; k < numSequences; k++) {
+      currentColumnArray.push(sequences[k][i]);
+    }
 
+    const columnKey = currentColumnArray.join('');
+    let residueToColorMapForThisColumn: Map<string, ResidueType>;
+
+    if (columnProcessedCache.has(columnKey)) {
+      residueToColorMapForThisColumn = columnProcessedCache.get(columnKey)!;
+    } else {
+      residueToColorMapForThisColumn = new Map<string, ResidueType>();
+      const columnCounts = getColumnCounts(currentColumnArray);
+      const totalNonGapInColumn = currentColumnArray.filter((r) => r !== '-').length;
+
+      const uniqueResiduesInColumn = new Set(currentColumnArray);
+      for (const uniqueResidue of uniqueResiduesInColumn) {
+        const color = getResidueType(uniqueResidue, columnCounts, totalNonGapInColumn);
+        residueToColorMapForThisColumn.set(uniqueResidue, color);
+      }
+      columnProcessedCache.set(columnKey, residueToColorMapForThisColumn);
+    }
+
+    for (let j = 0; j < numSequences; j++) {
+      const residueChar = currentColumnArray[j];
+      const color = residueToColorMapForThisColumn.get(residueChar)!;
+      result[j].push({ residue: residueChar, position: i, color });
+    }
+  }
   return result;
 }
 
-// Example usage:
+// Example usage comments can remain if desired
 // const sequences = [
 //   'GKGDPKKPRG-KMSSYAFFVQTSREEHKKKHPDASVNFSEFSKKCSERWKTMSAKEKGKF',
 //   '-----MQDRV-KRPMNAFIVWSRDQRRKMALENPRMRNSEISKQLGYQWKMLTEAEKWPF',
