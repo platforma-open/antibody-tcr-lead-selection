@@ -111,13 +111,14 @@ function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefined {
     return undefined;
 
   // all clone properties
-  const props = ctx.resultPool.getAnchoredPColumns(
+  const props = (ctx.resultPool.getAnchoredPColumns(
     { main: anchor },
     [
       {
         axes: [{ anchor: 'main', idx: 1 }],
       },
-    ]) ?? [];
+    ]) ?? [])
+    .filter((p) => p.spec.annotations?.['pl7.app/sequence/isAnnotation'] !== 'true');
 
   // const abundance = ctx.resultPool.getAnchoredPColumns(
   //   { main: anchor },
