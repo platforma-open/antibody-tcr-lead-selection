@@ -396,8 +396,8 @@ export const model = BlockModel.create()
       cols.push(...columns.props, ...sampledRows);
       ops = {
         filters: ctx.uiState.filterModel.filters,
-        // coreColumnPredicate: (spec) => spec.name === 'pl7.app/vdj/sampling-column',
-        // coreJoinType: 'inner',
+        coreColumnPredicate: (spec) => spec.name === 'pl7.app/vdj/sampling-column',
+        coreJoinType: 'inner',
       };
     }
 
