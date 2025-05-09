@@ -114,45 +114,45 @@ function getTypeForResidue(residue: string, column: string[]): ResidueType {
 
   const total = column.filter((r) => r !== '-').length;
   const counts = getColumnCounts(column);
+
   const percent = (group: string[]) =>
     group.reduce((sum, r) => sum + (counts[r] || 0), 0) / total;
+
+  const doesAnyResidueMeetPercentThreshold = (group: string[], threshold = 0.6) =>
+    group.some((r) => percent([r]) > threshold);
 
   // Group checks in Clustal X order
   const WLVIMAFCYHP = ['W', 'L', 'V', 'I', 'M', 'A', 'F', 'C', 'Y', 'H', 'P'];
   const KR = ['K', 'R'];
   const QE = ['Q', 'E'];
   const ED = ['E', 'D'];
-  const EQD = ['E', 'Q', 'D'];
-  const DEN = ['D', 'E', 'N'];
-  const ND = ['N', 'D'];
   const ST = ['S', 'T'];
-  const QT = ['Q', 'T'];
-  const WYA = ['W', 'Y', 'A', 'C', 'P', 'Q', 'F', 'H', 'I', 'L', 'M', 'V'];
+  const WYA_MEMBERS = ['W', 'Y', 'A', 'C', 'P', 'Q', 'F', 'H', 'I', 'L', 'M', 'V'];
 
   if (['A', 'C', 'I', 'L', 'M', 'F', 'W', 'V'].includes(residue) && percent(WLVIMAFCYHP) > 0.6)
     return 'hydrophobic';
 
-  if (['K', 'R'].includes(residue) && (percent(KR) > 0.6 || percent(['K']) > 0.8 || percent(['R']) > 0.8 || percent(['Q']) > 0.8))
+  if (['K', 'R'].includes(residue) && (percent(KR) > 0.6 || doesAnyResidueMeetPercentThreshold(['K', 'R', 'Q'], 0.85)))
     return 'positive_charge';
 
   if (residue === 'E' && (
-    percent(KR) > 0.6 || percent(QE) > 0.5 || percent(ED) > 0.5 || percent(EQD) > 0.85))
+    percent(KR) > 0.6 || percent(QE) > 0.5 || percent(ED) > 0.5 || doesAnyResidueMeetPercentThreshold(['E', 'Q', 'D'], 0.85)))
     return 'negative_charge';
 
   if (residue === 'D' && (
-    percent(KR) > 0.6 || percent(DEN) > 0.85 || percent(ED) > 0.5))
+    percent(KR) > 0.6 || doesAnyResidueMeetPercentThreshold(['D', 'E', 'N'], 0.85) || percent(ED) > 0.5))
     return 'negative_charge';
 
   if (residue === 'N' && (
-    percent(['N']) > 0.5 || percent(ND) > 0.85))
+    percent(['N']) > 0.5 || doesAnyResidueMeetPercentThreshold(['D', 'E', 'N'], 0.85)))
     return 'polar';
 
   if (residue === 'Q' && (
-    percent(KR) > 0.6 || percent(QE) > 0.5 || percent([...QT, ...KR]) > 0.85))
+    percent(KR) > 0.6 || percent(QE) > 0.5 || doesAnyResidueMeetPercentThreshold(['Q', 'T', 'K', 'R'], 0.85)))
     return 'polar';
 
   if (['S', 'T'].includes(residue) && (
-    percent(WLVIMAFCYHP) > 0.6 || percent(ST) > 0.5 || percent(['S']) > 0.85 || percent(['T']) > 0.85))
+    percent(WLVIMAFCYHP) > 0.6 || percent(ST) > 0.5 || doesAnyResidueMeetPercentThreshold(['S', 'T'], 0.85)))
     return 'polar';
 
   if (residue === 'C' && percent(['C']) > 0.85)
@@ -165,10 +165,22 @@ function getTypeForResidue(residue: string, column: string[]): ResidueType {
     return 'proline';
 
   if (['H', 'Y'].includes(residue) && (
-    percent(WLVIMAFCYHP) > 0.6 || percent(WYA) > 0.85))
+    percent(WLVIMAFCYHP) > 0.6 || doesAnyResidueMeetPercentThreshold(WYA_MEMBERS, 0.85)))
     return 'aromatic';
 
   return 'unconserved_or_default';
+}
+
+const cache: Map<string, ResidueType> = new Map();
+
+function getTypeForResidueCached(residue: string, column: string[]): ResidueType {
+  const cacheKey = `${residue}:${column.join('')}`;
+  if (cache.has(cacheKey)) {
+    return cache.get(cacheKey)!;
+  }
+  const result = getTypeForResidue(residue, column);
+  cache.set(cacheKey, result);
+  return result;
 }
 
 export function highlightAlignment(sequences: string[]): HighlightedResidue[][] {
@@ -178,9 +190,9 @@ export function highlightAlignment(sequences: string[]): HighlightedResidue[][] 
   for (let i = 0; i < alignmentLength; i++) {
     const column = sequences.map((seq) => seq[i]);
     sequences.forEach((seq, j) => {
-      const res = seq[i];
-      const color = getTypeForResidue(res, column);
-      result[j].push({ residue: res, position: i, color });
+      const residue = seq[i];
+      const color = getTypeForResidueCached(residue, column);
+      result[j].push({ residue, position: i, color });
     });
   }
 
