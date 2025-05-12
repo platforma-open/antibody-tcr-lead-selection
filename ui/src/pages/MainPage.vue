@@ -74,8 +74,8 @@ const isSequenceColumn = (column: PColumnSpec) => {
     column.domain?.['pl7.app/alphabet'] === 'aminoacid';
   const isSingleCellSequence = (column: PColumnSpec) =>
     column.domain?.['pl7.app/vdj/scClonotypeChain/index'] === 'primary'
-    && column.axesSpec.length >= 1
-    && column.axesSpec[1].name === 'pl7.app/vdj/scClonotypeKey';
+    // && column.axesSpec.length >= 1
+    && column.axesSpec[0].name === 'pl7.app/vdj/scClonotypeKey';
 
   return isBulkSequence(column) || isSingleCellSequence(column);
 };
