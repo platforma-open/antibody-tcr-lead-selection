@@ -3,11 +3,13 @@ import type {
   PColumnSpec,
   PlRef,
   PTableColumnSpec,
+  RowSelectionModel,
 } from '@platforma-sdk/model';
-import { plRefsEqual } from '@platforma-sdk/model';
+import {
+  plRefsEqual,
+} from '@platforma-sdk/model';
 import type {
   PlAgDataTableSettings,
-  PTableRowKey,
 } from '@platforma-sdk/ui-vue';
 import {
   PlAgDataTableToolsPanel,
@@ -20,11 +22,16 @@ import {
   PlTableFilters,
   PlNumberField,
   PlDropdownMulti,
+  PlMultiSequenceAlignment,
 } from '@platforma-sdk/ui-vue';
-import { computed, reactive, ref } from 'vue';
-import { useApp } from '../app';
-import { AlignmentDataProvider, MultiAlignmentModal } from '../MultiAlignment';
-import type { RowSelectionModel } from '@platforma-open/milaboratories.top-antibodies.model';
+import {
+  computed,
+  reactive,
+  ref,
+} from 'vue';
+import {
+  useApp,
+} from '../app';
 
 const app = useApp();
 
@@ -40,18 +47,23 @@ function setAnchorColumn(ref: PlRef | undefined) {
     : '');
 }
 
-const tableSettings = computed<PlAgDataTableSettings>(() => (app.model.outputs.table
-  ? {
-      sourceType: 'ptable',
-      model: app.model.outputs.table,
-    }
-  : undefined));
+const tableSettings = computed<PlAgDataTableSettings>(() => (
+  app.model.outputs.table
+    ? {
+        sourceType: 'ptable',
+        model: app.model.outputs.table,
+      }
+    : undefined
+));
 
 const columns = ref<PTableColumnSpec[]>([]);
-const data = reactive<{
-  selectedRows: PTableRowKey[];
+const selection = reactive<{
+  model?: RowSelectionModel;
 }>({
-  selectedRows: [],
+  model: {
+    axesSpec: [],
+    selectedRowsKeys: [],
+  },
 });
 
 const filterColumns = computed<PTableColumnSpec[]>(() => {
@@ -79,21 +91,12 @@ const isSequenceColumn = (column: PColumnSpec) => {
 
   return isBulkSequence(column) || isSingleCellSequence(column);
 };
-
-const rowSelectionModel = computed<RowSelectionModel | undefined>(() => {
-  if (columns.value.length === 0) return undefined;
-
-  return {
-    axesSpec: columns.value.filter((c) => c.type === 'axis').map((c) => c.spec),
-    selectedRowsKeys: data.selectedRows,
-  } satisfies RowSelectionModel;
-});
 </script>
 
 <template>
   <PlBlockPage>
     <template #title>
-      {{ app.model.ui.title }} / {{ data.selectedRows.length }}
+      {{ app.model.ui.title }} / {{ selection.model?.selectedRowsKeys.length ?? 0 }}
     </template>
     <template #append>
       <PlAgDataTableToolsPanel>
@@ -102,8 +105,14 @@ const rowSelectionModel = computed<RowSelectionModel | undefined>(() => {
           :columns="filterColumns"
           :defaults="app.model.outputs.defaultFilters"
         />
+        <PlMultiSequenceAlignment
+          v-model="app.model.ui.alignmentModel"
+          :label-column-option-predicate="isLabelColumnOption"
+          :sequence-column-predicate="isSequenceColumn"
+          :pframe="app.model.outputs.pf"
+          :row-selection-model="selection.model"
+        />
       </PlAgDataTableToolsPanel>
-      <PlBtnGhost icon="dna" @click.stop="app.openMultiAlignment">Multi Alignment</PlBtnGhost>
       <PlBtnGhost @click.stop="() => (settingsOpen = true)">
         Settings
         <template #append>
@@ -113,7 +122,7 @@ const rowSelectionModel = computed<RowSelectionModel | undefined>(() => {
     </template>
     <PlAgDataTableV2
       v-model="app.model.ui.tableState"
-      v-model:selected-rows="data.selectedRows"
+      v-model:selected-rows="selection.model"
       :settings="tableSettings"
       show-columns-panel
       show-export-button
@@ -142,15 +151,5 @@ const rowSelectionModel = computed<RowSelectionModel | undefined>(() => {
         </template>
       </PlNumberField>
     </PlSlideModal>
-    <MultiAlignmentModal v-model="app.multiAlignmentOpen" :sequence-rows="app.sequenceRows">
-      <AlignmentDataProvider
-        v-model="app.model.ui.alignmentModel"
-        v-model:sequence-rows="app.sequenceRows"
-        :label-column-option-predicate="isLabelColumnOption"
-        :sequence-column-predicate="isSequenceColumn"
-        :pframe="app.model.outputs.pf"
-        :row-selection-model="rowSelectionModel"
-      />
-    </MultiAlignmentModal>
   </PlBlockPage>
 </template>

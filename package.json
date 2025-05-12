@@ -21,13 +21,13 @@
     "@changesets/cli": "catalog:",
     "js-yaml": "catalog:"
   },
-  "//pnpm": {
+  "pnpm": {
     "overrides": {
-      "@milaboratories/pl-model-common": "file:/Users/poslavskysv/Projects/milab/platforma/platforma-sdk/lib/model/common/package.tgz",
-      "@platforma-sdk/model": "file:/Users/poslavskysv/Projects/milab/platforma/platforma-sdk/sdk/model/package.tgz",
-      "@platforma-sdk/ui-vue": "file:/Users/poslavskysv/Projects/milab/platforma/platforma-sdk/sdk/ui-vue/package.tgz",
-      "@platforma-sdk/workflow-tengo": "file:/Users/poslavskysv/Projects/milab/platforma/platforma-sdk/sdk/workflow-tengo/package.tgz",
-      "@milaboratories/uikit": "file:/Users/poslavskysv/Projects/milab/platforma/platforma-sdk/lib/ui/uikit/package.tgz"
+      "@milaboratories/pl-model-common": "file:/Users/vadimpiven/Documents/MiLabs/git/platforma/lib/model/common/package.tgz",
+      "@platforma-sdk/model": "file:/Users/vadimpiven/Documents/MiLabs/git/platforma/sdk/model/package.tgz",
+      "@platforma-sdk/ui-vue": "file:/Users/vadimpiven/Documents/MiLabs/git/platforma/sdk/ui-vue/package.tgz",
+      "@platforma-sdk/workflow-tengo": "file:/Users/vadimpiven/Documents/MiLabs/git/platforma/sdk/workflow-tengo/package.tgz",
+      "@milaboratories/uikit": "file:/Users/vadimpiven/Documents/MiLabs/git/platforma/lib/ui/uikit/package.tgz"
     }
   },
   "packageManager": "pnpm@9.12.0"

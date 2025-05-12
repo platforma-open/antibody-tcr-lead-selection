@@ -9,68 +9,19 @@ import type {
   PlRef,
   PlTableFilter,
   PlTableFiltersModel,
-  PObjectId,
   PTableColumnId,
   RenderCtx,
   SUniversalPColumnId,
   TreeNodeAccessor,
   PFrameHandle,
-  AxesSpec,
-  PTableValue,
-  PColumnKey,
-  PColumnValuesEntry,
+  PlMultiSequenceAlignmentModel,
 } from '@platforma-sdk/model';
 import {
   BlockModel,
   createPFrameForGraphs,
   createPlDataTableV2,
-  isPColumn,
-  isPTableAbsent,
-  PTableNA,
 } from '@platforma-sdk/model';
 import type { GraphMakerState } from '@milaboratories/graph-maker';
-
-export type PlMultiAlignmentViewModel = {
-  label?: PObjectId;
-};
-
-export type PTableRowKey = PTableValue[];
-
-export type RowSelectionModel = {
-  axesSpec: AxesSpec;
-  selectedRowsKeys: PTableRowKey[];
-};
-
-export function createRowSelectionColumn(
-  columnId: PObjectId,
-  rowSelectionModel: RowSelectionModel | undefined,
-  label?: string,
-  domain?: Record<string, string>,
-): PColumn<PColumnValues> | undefined {
-  if (!rowSelectionModel || rowSelectionModel.axesSpec.length === 0) return undefined;
-
-  return {
-    id: columnId,
-    spec: {
-      kind: 'PColumn',
-      valueType: 'Int',
-      name: 'pl7.app/table/row-selection',
-      axesSpec: rowSelectionModel.axesSpec,
-      ...(domain && { domain }),
-      annotations: {
-        'pl7.app/label': label ?? 'Selected rows',
-        'pl7.app/discreteValues': '[1]',
-      },
-    },
-    data: rowSelectionModel
-      .selectedRowsKeys
-      .filter((r): r is PColumnKey => !r.some((v) => isPTableAbsent(v) || v === PTableNA))
-      .map((r) => ({
-        key: r,
-        val: 1,
-      } satisfies PColumnValuesEntry)),
-  } satisfies PColumn<PColumnValues>;
-}
 
 export type BlockArgs = {
   inputAnchor?: PlRef;
@@ -84,7 +35,7 @@ export type UiState = {
   filterModel: PlTableFiltersModel;
   graphStateUMAP: GraphMakerState;
   graphStateHistogram: GraphMakerState;
-  alignmentModel: PlMultiAlignmentViewModel;
+  alignmentModel: PlMultiSequenceAlignmentModel;
 };
 
 type Column = PColumn<DataInfo<TreeNodeAccessor> | TreeNodeAccessor | PColumnValues>;
