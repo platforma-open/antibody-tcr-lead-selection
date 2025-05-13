@@ -29,7 +29,7 @@ wf.prepare(func(args){
 		"linker")
 
 	// Add full aa sequence column
-	bundleBuilder.addSingle({
+	bundleBuilder.addMulti({
 		axes: [{ anchor: "main", idx: 1 }],
 		annotations: { "pl7.app/vdj/isAssemblingFeature": "true" },
 		domain: {"pl7.app/alphabet": "aminoacid"}
@@ -47,6 +47,9 @@ wf.body(func(args) {
 	columns := args.columns
 	datasetSpec := columns.getSpec(args.inputAnchor)
 	topClonotypes := args.topClonotypes
+
+	// Needed conditional variables
+	isSingleCell := datasetSpec.axesSpec[1].name == "pl7.app/vdj/scClonotypeKey"
 	
 	// output containers 
 	outputs := {}
@@ -114,7 +117,15 @@ wf.body(func(args) {
 	// Generate input TSV with Clonotype ID and aa sequence
 	umapTable := columns.xsvTableBuilder()
 	umapTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
-	umapTable.add("aaSequence", {header: "aaSequence"})
+	for col in columns.getColumns("aaSequence") {
+		if isSingleCell {
+			chainLabel := col.spec.domain["pl7.app/vdj/scClonotypeChain"]
+			umapTable.add(col.key, {header: "aaSequence." + chainLabel})
+		} else {
+			chainLabel := col.spec.axesSpec[0].domain["pl7.app/vdj/chain"]
+			umapTable.add(col.key, {header: "aaSequence." + chainLabel})
+		}
+	}
 	umapTable = umapTable.build("tsv")
 
 	// UMAP script should go here
