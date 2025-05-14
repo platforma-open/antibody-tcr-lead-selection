@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+  PColumnIdAndSpec,
   PColumnSpec,
   PlRef,
   PTableColumnSpec,
@@ -74,12 +75,8 @@ const filterColumns = computed<PTableColumnSpec[]>(() => {
   })) ?? [];
 });
 
-const isLabelColumnOption = (column: PColumnSpec) => {
-  return column.valueType === 'String';
-};
-
-const isSequenceColumn = (column: PColumnSpec) => {
-  if (!(column.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'))
+const isSequenceColumn = (column: PColumnIdAndSpec) => {
+  if (!(column.spec.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'))
     return false;
 
   const isBulkSequence = (column: PColumnSpec) =>
@@ -89,7 +86,18 @@ const isSequenceColumn = (column: PColumnSpec) => {
     // && column.axesSpec.length >= 1
     && column.axesSpec[0].name === 'pl7.app/vdj/scClonotypeKey';
 
-  return isBulkSequence(column) || isSingleCellSequence(column);
+  return isBulkSequence(column.spec) || isSingleCellSequence(column.spec);
+};
+
+const isLabelColumnOption = (_column: PColumnIdAndSpec) => {
+  // TODO: add linker columns so it would work!
+  // return column.spec.valueType === 'String';
+  return false;
+};
+
+const isLinkerColumn = (_column: PColumnIdAndSpec) => {
+  // TODO
+  return false;
 };
 </script>
 
@@ -109,6 +117,7 @@ const isSequenceColumn = (column: PColumnSpec) => {
           v-model="app.model.ui.alignmentModel"
           :label-column-option-predicate="isLabelColumnOption"
           :sequence-column-predicate="isSequenceColumn"
+          :linker-column-predicate="isLinkerColumn"
           :pframe="app.model.outputs.pf"
           :row-selection-model="selection.model"
         />

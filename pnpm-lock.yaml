@@ -1161,7 +1161,7 @@ packages:
     engines: {node: '>=20.16.0'}
 
   '@milaboratories/uikit@file:../platforma/lib/ui/uikit/package.tgz':
-    resolution: {integrity: sha512-t/Z2LRy4yWdJFWW149VLj4BsRyPascfE29i2XX+hZAFz7Hwq/U81Mu3+mzb+PHZB771pIWvGN5dkObQ22WPutA==, tarball: file:../platforma/lib/ui/uikit/package.tgz}
+    resolution: {integrity: sha512-+MxKyDO9RaLo9KOOQI9clVBomy8dSfv5k9ba54XmQ/Z+rJeAhBtyXcQ/O+bXfdty9jtVDScecCNO951AHSujAw==, tarball: file:../platforma/lib/ui/uikit/package.tgz}
     version: 2.2.75
 
   '@nodelib/fs.scandir@2.1.5':
@@ -1243,7 +1243,7 @@ packages:
       typescript-eslint: ^8.17.0
 
   '@platforma-sdk/model@file:../platforma/sdk/model/package.tgz':
-    resolution: {integrity: sha512-YESOHAeqr7BG+SGZe10kbePMIxOWrUzsdB168IF7gizC4Rx14U+vxIvuBIUOSy7cfm5N+bH0FFlcyub+H0MklA==, tarball: file:../platforma/sdk/model/package.tgz}
+    resolution: {integrity: sha512-O8va1yqyXYuyhXXGDAUbxfaC6a6UrvW8G5a8iJkJCiGvZxtCKLDpo0hsdm6H1AeXEY1z4CEDFiDgcdvpELpSzw==, tarball: file:../platforma/sdk/model/package.tgz}
     version: 1.30.26
 
   '@platforma-sdk/package-builder@2.15.6':
@@ -1259,7 +1259,7 @@ packages:
     resolution: {integrity: sha512-Ht9tY1TAv/GyKRFRf7obrq3B7Ha6osMPret3HKMVRdFNYc1cGio4hHuAV0z6Ou0zoHgHakt5IJUUfLP40vk9GQ==}
 
   '@platforma-sdk/ui-vue@file:../platforma/sdk/ui-vue/package.tgz':
-    resolution: {integrity: sha512-mVxejNqKXoazl1GHxKrdc9ntDUf3QcMGc5eu7fhB6Xhsqj6RLlMtdSV32D5QMp5sPLsY6O6ziJJDPFN2cHd84g==, tarball: file:../platforma/sdk/ui-vue/package.tgz}
+    resolution: {integrity: sha512-pIZzz8kpj/Aq/LPCPe4W/5mHU1D9u6WQs0CpFBWz3CaI8+c/2wDIYmCJyEmeYJvUXFMkFzIYDqPPLR58cYSw6A==, tarball: file:../platforma/sdk/ui-vue/package.tgz}
     version: 1.30.26
 
   '@platforma-sdk/workflow-tengo@file:../platforma/sdk/workflow-tengo/package.tgz':
