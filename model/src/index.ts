@@ -303,39 +303,41 @@ export const model = BlockModel.create()
     if (allowedOptions === undefined)
       return undefined;
 
+    // Using this columns causes error right now
+    // @TODO: fix this
     // linker columns
-    for (const idx of [0, 1]) {
-      let axesToMatch;
-      if (idx === 0) {
-        // clonotypeKey in second axis
-        axesToMatch = [{}, { anchor: 'main', idx: 1 }];
-      } else {
-        // clonotypeKey in first axis
-        axesToMatch = [{ anchor: 'main', idx: 1 }, {}];
-      }
+    // for (const idx of [0, 1]) {
+    //   let axesToMatch;
+    //   if (idx === 0) {
+    //     // clonotypeKey in second axis
+    //     axesToMatch = [{}, { anchor: 'main', idx: 1 }];
+    //   } else {
+    //     // clonotypeKey in first axis
+    //     axesToMatch = [{ anchor: 'main', idx: 1 }, {}];
+    //   }
 
-      const l = ctx.resultPool.getAnchoredPColumns(
-        { main: anchor },
-        [
-          {
-            axes: axesToMatch,
-            annotations: { 'pl7.app/isLinkerColumn': 'true' },
-          },
-        ],
-      ) ?? [];
+    //   const l = ctx.resultPool.getAnchoredPColumns(
+    //     { main: anchor },
+    //     [
+    //       {
+    //         axes: axesToMatch,
+    //         annotations: { 'pl7.app/isLinkerColumn': 'true' },
+    //       },
+    //     ],
+    //   ) ?? [];
 
-      for (const link of l) {
-        allowedOptions.push(...ctx.resultPool.getCanonicalOptions(
-          { linker: link.spec },
-          [
-            {
-              axes: [{ anchor: 'linker', idx: idx }],
-              type: ['Int', 'Long', 'Double', 'Float'],
-            },
-          ],
-        ) ?? []);
-      }
-    }
+    //   for (const link of l) {
+    //     allowedOptions.push(...ctx.resultPool.getCanonicalOptions(
+    //       { linker: link.spec },
+    //       [
+    //         {
+    //           axes: [{ anchor: 'linker', idx: idx }],
+    //           type: ['Int', 'Long', 'Double', 'Float'],
+    //         },
+    //       ],
+    //     ) ?? []);
+    //   }
+    // }
 
     return allowedOptions;
   })
