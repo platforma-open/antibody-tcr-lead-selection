@@ -99,7 +99,7 @@ const isLinkerColumn = (_column: PColumnIdAndSpec) => {
 <template>
   <PlBlockPage>
     <template #title>
-      {{ app.model.ui.title }}/ {{ selection.selectedRowsKeys.length ?? 0 }}
+      {{ app.model.ui.title }} / {{ selection.selectedRowsKeys.length ?? 0 }}
     </template>
     <template #append>
       <PlAgDataTableToolsPanel>
@@ -113,7 +113,7 @@ const isLinkerColumn = (_column: PColumnIdAndSpec) => {
           :label-column-option-predicate="isLabelColumnOption"
           :sequence-column-predicate="isSequenceColumn"
           :linker-column-predicate="isLinkerColumn"
-          :pframe="app.model.outputs.pf"
+          :p-frame="app.model.outputs.pf"
           :row-selection-model="selection"
         />
       </PlAgDataTableToolsPanel>
