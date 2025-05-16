@@ -27,7 +27,6 @@ import {
 } from '@platforma-sdk/ui-vue';
 import {
   computed,
-  reactive,
   ref,
 } from 'vue';
 import {
@@ -58,13 +57,9 @@ const tableSettings = computed<PlAgDataTableSettings>(() => (
 ));
 
 const columns = ref<PTableColumnSpec[]>([]);
-const selection = reactive<{
-  model?: RowSelectionModel;
-}>({
-  model: {
-    axesSpec: [],
-    selectedRowsKeys: [],
-  },
+const selection = ref<RowSelectionModel>({
+  axesSpec: [],
+  selectedRowsKeys: [],
 });
 
 const filterColumns = computed<PTableColumnSpec[]>(() => {
@@ -104,7 +99,7 @@ const isLinkerColumn = (_column: PColumnIdAndSpec) => {
 <template>
   <PlBlockPage>
     <template #title>
-      {{ app.model.ui.title }} / {{ selection.model?.selectedRowsKeys.length ?? 0 }}
+      {{ app.model.ui.title }}/ {{ selection.selectedRowsKeys.length ?? 0 }}
     </template>
     <template #append>
       <PlAgDataTableToolsPanel>
@@ -119,7 +114,7 @@ const isLinkerColumn = (_column: PColumnIdAndSpec) => {
           :sequence-column-predicate="isSequenceColumn"
           :linker-column-predicate="isLinkerColumn"
           :pframe="app.model.outputs.pf"
-          :row-selection-model="selection.model"
+          :row-selection-model="selection"
         />
       </PlAgDataTableToolsPanel>
       <PlBtnGhost @click.stop="() => (settingsOpen = true)">
@@ -131,7 +126,7 @@ const isLinkerColumn = (_column: PColumnIdAndSpec) => {
     </template>
     <PlAgDataTableV2
       v-model="app.model.ui.tableState"
-      v-model:selected-rows="selection.model"
+      v-model:selected-rows="selection"
       :settings="tableSettings"
       show-columns-panel
       show-export-button
