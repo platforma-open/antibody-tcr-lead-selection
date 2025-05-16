@@ -1,34 +1,33 @@
+import type { GraphMakerState } from '@milaboratories/graph-maker';
 import type {
+  AxesSpec,
   CreatePlDataTableOps,
   DataInfo,
   InferOutputsType,
   PColumn,
-  PColumnValues,
   PColumnIdAndSpec,
+  PColumnKey,
+  PColumnValues,
+  PColumnValuesEntry,
+  PFrameHandle,
   PlDataTableState,
   PlRef,
   PlTableFilter,
   PlTableFiltersModel,
   PObjectId,
   PTableColumnId,
+  PTableValue,
   RenderCtx,
   SUniversalPColumnId,
   TreeNodeAccessor,
-  PFrameHandle,
-  AxesSpec,
-  PTableValue,
-  PColumnKey,
-  PColumnValuesEntry,
 } from '@platforma-sdk/model';
 import {
   BlockModel,
   createPFrameForGraphs,
   createPlDataTableV2,
-  isPColumn,
   isPTableAbsent,
   PTableNA,
 } from '@platforma-sdk/model';
-import type { GraphMakerState } from '@milaboratories/graph-maker';
 
 export type PlMultiAlignmentViewModel = {
   label?: PObjectId;
@@ -418,10 +417,11 @@ export const model = BlockModel.create()
       return undefined;
     }
 
-    // Get the selected rows
-    const sampledRowsUmap = ctx.outputs?.resolve('sampledRowsUmap')?.getPColumns();
+    // Get the selected rows if any
+    const sampledRowsUmap = ctx.outputs?.resolve({ field: 'sampledRowsUmap',
+      allowPermanentAbsence: true })?.getPColumns();
     if (sampledRowsUmap === undefined) {
-      return undefined;
+      return createPFrameForGraphs(ctx, [...pCols]);
     }
 
     return createPFrameForGraphs(ctx, [...pCols, ...sampledRowsUmap]);
