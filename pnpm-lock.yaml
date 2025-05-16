@@ -13,8 +13,8 @@ catalogs:
       specifier: ^2.28.1
       version: 2.28.1
     '@milaboratories/graph-maker':
-      specifier: ^1.1.94
-      version: 1.1.94
+      specifier: ^1.1.96
+      version: 1.1.96
     '@platforma-open/milaboratories.runenv-python-3':
       specifier: ^1.1.7
       version: 1.1.13
@@ -104,7 +104,7 @@ importers:
     dependencies:
       '@milaboratories/graph-maker':
         specifier: 'catalog:'
-        version: 1.1.94(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(typescript@5.5.4)
+        version: 1.1.96(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(typescript@5.5.4)
       '@platforma-sdk/model':
         specifier: 'catalog:'
         version: 1.30.24
@@ -169,7 +169,7 @@ importers:
         version: 3.2.1
       '@milaboratories/graph-maker':
         specifier: 'catalog:'
-        version: 1.1.94(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(typescript@5.5.4)
+        version: 1.1.96(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(typescript@5.5.4)
       '@platforma-open/milaboratories.top-antibodies.model':
         specifier: workspace:*
         version: link:../model
@@ -1080,8 +1080,8 @@ packages:
     resolution: {integrity: sha512-FbfFR6ZDSC+RybnV0Hqf5XhOpm+IgfOboyHhoaYQRt/VB4NyyVten58DRH2PQ+AAzYfSuTaHM2NASAhKUJDhkw==}
     engines: {node: '>=20.0.0'}
 
-  '@milaboratories/graph-maker@1.1.94':
-    resolution: {integrity: sha512-/ymapu6S5TedbRNofkljtcIEnLml88JchET1UCQQDnwy12H8yaHZjFOHP5lcf7IuIWwQ0Wj7mZbflpEtN2WNgA==}
+  '@milaboratories/graph-maker@1.1.96':
+    resolution: {integrity: sha512-xNejSwluW2VecimtMAtfjK65qMxx4bpCbZ6N4iDryZ5q30QqTtzk1RmrVtiuW6yw4RrWZVDMmd438bxynB0Gwg==}
 
   '@milaboratories/helpers@1.6.11':
     resolution: {integrity: sha512-TyERmUULB8hvbwqnMOQ14YAPQzVBGpBSLkByYpl3/5vCkf4OndBg+V8XqITHEZkca9y82LVm5IDU0hP7KOCQ9Q==}
@@ -6391,7 +6391,7 @@ snapshots:
       utility-types: 3.11.0
       zod: 3.23.8
 
-  '@milaboratories/graph-maker@1.1.94(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(typescript@5.5.4)':
+  '@milaboratories/graph-maker@1.1.96(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(typescript@5.5.4)':
     dependencies:
       '@ag-grid-community/core': 32.3.5
       '@milaboratories/helpers': 1.6.11
@@ -6402,6 +6402,7 @@ snapshots:
       '@types/d3-hierarchy': 3.1.7
       '@vueuse/core': 13.1.0(vue@3.5.13(typescript@5.5.4))
       ag-grid-vue3: 33.1.0(vue@3.5.13(typescript@5.5.4))
+      canonicalize: 2.1.0
       d3-hierarchy: 3.1.2
       d3-scale: 4.0.2
       vue: 3.5.13(typescript@5.5.4)
