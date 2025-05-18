@@ -17,13 +17,13 @@ import {
   PlAgDataTableV2,
   PlBlockPage,
   PlBtnGhost,
+  PlDropdownMulti,
   PlDropdownRef,
   PlMaskIcon24,
+  PlMultiSequenceAlignment,
+  PlNumberField,
   PlSlideModal,
   PlTableFilters,
-  PlNumberField,
-  PlDropdownMulti,
-  PlMultiSequenceAlignment,
 } from '@platforma-sdk/ui-vue';
 import {
   computed,
@@ -32,6 +32,7 @@ import {
 import {
   useApp,
 } from '../app';
+import { defaultFilters } from '../filters';
 
 const app = useApp();
 
@@ -87,7 +88,7 @@ const isSequenceColumn = (column: PColumnIdAndSpec) => {
 const isLabelColumnOption = (_column: PColumnIdAndSpec) => {
   // TODO: add linker columns so it would work!
   // return column.spec.valueType === 'String';
-  return false;
+  return true;// column.spec.valueType === 'String';
 };
 
 const isLinkerColumn = (_column: PColumnIdAndSpec) => {
@@ -106,7 +107,7 @@ const isLinkerColumn = (_column: PColumnIdAndSpec) => {
         <PlTableFilters
           v-model="app.model.ui.filterModel"
           :columns="filterColumns"
-          :defaults="app.model.outputs.defaultFilters"
+          :defaults="defaultFilters"
         />
         <PlMultiSequenceAlignment
           v-model="app.model.ui.alignmentModel"

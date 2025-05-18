@@ -119,10 +119,10 @@ function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefined {
   }
 
   // score columns
-  const cloneScores = props?.filter((p) => p.spec.annotations?.['pl7.app/vdj/isScore'] === 'true');
+  const cloneScores = props?.filter((p) => p.spec.annotations?.['pl7.app/isScore'] === 'true');
 
   // links score columns
-  const linkScores = linkProps?.filter((p) => p.spec.annotations?.['pl7.app/vdj/isScore'] === 'true');
+  const linkScores = linkProps?.filter((p) => p.spec.annotations?.['pl7.app/isScore'] === 'true');
 
   // @TODO: remove this hack once the bug with excessive labels is fixed
   for (const arr of [props, links, linkProps]) {
