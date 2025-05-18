@@ -1,7 +1,5 @@
 {
-    "files.exclude": {
-
-    },
+    "files.exclude": {},
     "vitest.disableWorkspaceWarning": true,
     "prettier.singleAttributePerLine": true,
     "vue.format.wrapAttributes": "auto",

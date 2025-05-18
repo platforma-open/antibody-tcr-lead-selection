@@ -12,7 +12,7 @@ Usage:
 
 Inputs:
   - A TSV file (`-i`/`--input`) with at least one column of nucleotide sequences.
-  - Specify the sequence column name with `-c`/`--seq-col` (default: "sequence").
+  - Specify the sequence column starting string with `-c`/`--seq-col-start` (default: "sequence").
 
 Outputs:
   - A CSV file (`-u`/`--umap-output`) containing the UMAP embeddings for each sequence.
@@ -83,8 +83,8 @@ def main():
         description='Compute UMAP embeddings from amino acid sequences via k-mer counts and PCA.')
     parser.add_argument('-i', '--input', required=True,
                         help='Input TSV file with sequence column')
-    parser.add_argument('-c', '--seq-col', default='aaSequence',
-                        help='Name of the column containing amino acid sequences')
+    parser.add_argument('-c', '--seq-col-start', default='aaSequence',
+                        help='Starting string of the column containing amino acid sequences')
     parser.add_argument('-u', '--umap-output', required=True,
                         help='Output TSV file for UMAP embeddings')
     parser.add_argument('--dr-components', type=int, default=5,
@@ -145,11 +145,17 @@ def main():
         print(f"Error reading input file: {e}")
         sys.exit(1)
 
-    if args.seq_col not in df_input.columns:
-        print(f"Error: Column '{args.seq_col}' not found in input TSV. Available columns: {', '.join(df_input.columns)}")
+    seq_col_list = sorted([c for c in df_input.columns 
+                        if c.startswith(args.seq_col_start)])
+    if len(seq_col_list) == 0:
+        print(f"Error: Columns starting with '{args.seq_col_start}' not found in input TSV. Available columns: {', '.join(df_input.columns)}")
         sys.exit(1)
+
+    # Concatenate sequence columns
+    seq_col = "aaSequence"
+    df_input[seq_col] = df_input[seq_col_list].agg(''.join, axis=1)
     
-    sequences = df_input[args.seq_col].tolist()
+    sequences = df_input[seq_col].tolist()
     if not sequences:
         print('Error: No sequences found in the specified column.')
         sys.exit(1)

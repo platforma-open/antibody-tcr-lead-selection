@@ -37,7 +37,10 @@ const defaultOptions: GraphMakerProps['defaultOptions'] = [
       ],
     },
   },
-  {
+];
+
+if (app.model.args.topClonotypes !== undefined) {
+  defaultOptions.push({
     inputName: 'filters',
     selectedSource: {
       kind: 'PColumn',
@@ -50,13 +53,17 @@ const defaultOptions: GraphMakerProps['defaultOptions'] = [
         },
       ],
     },
-  },
-];
+  });
+}
 
 </script>
 
 <template>
   <PlBlockPage>
-    <GraphMaker v-model="app.model.ui.graphStateUMAP" chartType="scatterplot-umap" :p-frame="app.model.outputs.UMAPPf" :default-options="defaultOptions" />
+    <GraphMaker
+      v-model="app.model.ui.graphStateUMAP"
+      :dataStateKey="app.model.outputs.UMAPPf" chartType="scatterplot-umap"
+      :p-frame="app.model.outputs.UMAPPf" :default-options="defaultOptions"
+    />
   </PlBlockPage>
 </template>
