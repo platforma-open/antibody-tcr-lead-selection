@@ -2,14 +2,17 @@ import pandas as pd
 import argparse
 
 # Expected input file has clonotypeKey, and one or two cdr3Sequence[.chain] columns, and one or two vGene[.chain] columns
-# Output file will have chain, cdr3Length, vGene, and count columns
+# Spectratype output file will have chain, cdr3Length, vGene, and count columns
+# V/J usage output file will have chain, vGene, jGene, and count columns
 
 def main():
     parser = argparse.ArgumentParser(description="Calculate CDR3 lengths and output in long format.")
     parser.add_argument("--input_tsv", required=True, 
                        help="Input TSV file with clonotypeKey, cdr3Sequence[.chain], and vGene[.chain] columns.")
-    parser.add_argument("--output_tsv", required=True, 
+    parser.add_argument("--spectratype_tsv", required=True, 
                        help="Output TSV file with chain, cdr3Length, vGene, and count columns.")
+    parser.add_argument("--vj_usage_tsv", required=True,
+                        help="Output TSV file with vGene, jGene, and count columns for V/J gene usage.")
     args = parser.parse_args()
 
     # Read input data
@@ -18,42 +21,46 @@ def main():
     # Transform data to long format
     df_long = pd.wide_to_long(
         df,
-        stubnames=['cdr3Sequence', 'vGene'],
+        stubnames=['cdr3Sequence', 'vGene', 'jGene'],
         i='clonotypeKey',
         j='chain',
         sep='.',
         suffix='.+'
     ).reset_index()
 
-    # Filter out rows with empty sequences
-    mask = df_long['cdr3Sequence'].notna() & (df_long['cdr3Sequence'].str.strip() != '')
-    df_long = df_long[mask].copy()
+    # Calculate lengths for valid sequences and filter out empty ones
+    df_long['cdr3Length'] = df_long['cdr3Sequence'].str.strip().str.len()
+    df_long = df_long[df_long['cdr3Length'] > 0].copy()
 
     if df_long.empty:
-        # Create empty output if no valid data after filtering
-        output_df = pd.DataFrame(columns=["chain", "cdr3Length", "vGene", "count"])
+        # Create empty outputs if no valid data
+        spectratype_df = pd.DataFrame(columns=["chain", "cdr3Length", "vGene", "count"])
+        vj_usage_df = pd.DataFrame(columns=["chain", "vGene", "jGene", "count"])
     else:
-        # Calculate CDR3 lengths
-        df_long['cdr3Length'] = df_long['cdr3Sequence'].str.len()
+        # Generate CDR3 length spectratype
+        spectratype_df = (df_long
+                         .groupby(['chain', 'cdr3Length', 'vGene'])
+                         .size()
+                         .reset_index(name='count')
+                         .sort_values(['chain', 'cdr3Length']))
 
-        # Group and aggregate
-        output_df = (df_long
-                    .groupby(['chain', 'cdr3Length', 'vGene'])
-                    .size()
-                    .reset_index(name='count'))
+        # Generate V/J gene usage
+        vj_usage_df = (df_long
+                      .groupby(['chain', 'vGene', 'jGene'])
+                      .size()
+                      .reset_index(name='count')
+                      .sort_values('count'))
 
-        # Sort by chain and length
-        #output_df = output_df.sort_values(['chain', 'cdr3Length'])
-
-    # Write output
-    output_df.to_csv(args.output_tsv, sep="\t", index=False)
+    # Write outputs
+    spectratype_df.to_csv(args.spectratype_tsv, sep="\t", index=False)
+    vj_usage_df.to_csv(args.vj_usage_tsv, sep="\t", index=False)
 
 
 if __name__ == "__main__":
     main()
 
 # Example usage:
-# python software/spectratype/src/main.py --input_tsv cdr3_sequences_input.tsv  --output_tsv 'cdr3_lengths.tsv'
+# python software/spectratype/src/main.py --input_tsv cdr3_sequences_input.tsv  --output_tsv 'cdr3_lengths.tsv' --vj_usage_tsv vj_usage.tsv
 
 # You can check the if the output is correct with:
 # awk '{ print length($2), $2 }' cdr3_sequences_input.tsv |sort -n -k1,1 | less

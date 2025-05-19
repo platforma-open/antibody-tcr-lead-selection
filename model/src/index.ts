@@ -34,6 +34,7 @@ export type UiState = {
   filterModel: PlTableFiltersModel;
   graphStateUMAP: GraphMakerState;
   cdr3StackedBarPlotState: GraphMakerState;
+  vjUsagePlotState: GraphMakerState;
   alignmentModel: PlMultiSequenceAlignmentModel;
 };
 
@@ -203,6 +204,11 @@ export const model = BlockModel.create()
       template: 'stackedBar',
       currentTab: null,
     },
+    vjUsagePlotState: {
+      title: 'V/J Usage',
+      template: 'heatmap',
+      currentTab: null,
+    },
     alignmentModel: {},
   })
 
@@ -313,6 +319,14 @@ export const model = BlockModel.create()
     return createPFrameForGraphs(ctx, pcols);
   })
 
+  // Use the cdr3LengthsCalculated cols
+  .output('vjUsagePf', (ctx) => {
+    const pcols = ctx.outputs?.resolve('vjUsagePf')?.getPColumns();
+    if (!pcols) return undefined;
+
+    return createPFrameForGraphs(ctx, pcols);
+  })
+
   .output('table', (ctx) => {
     const columns = getColumns(ctx);
     if (columns === undefined)
@@ -375,7 +389,7 @@ export const model = BlockModel.create()
     { type: 'link', href: '/', label: 'Main' },
     { type: 'link', href: '/umap', label: 'Clonotype UMAP' },
     { type: 'link', href: '/spectratype', label: 'CDR3 V Spectratype' },
-    //  { type: 'link', href: '/usage', label: 'V/J gene usage' },
+    { type: 'link', href: '/usage', label: 'V/J gene usage' },
   ]))
 
   .done();
