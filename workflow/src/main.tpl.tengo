@@ -180,10 +180,17 @@ wf.body(func(args) {
     // Notice chain is in spec.domain for single cell data and spec.axesSpec[0].domain for bulk data
 
 	// Helper function to add chain information to the headers dynamically
+	chainMapping := {
+		"IG": { "A": "Heavy", "B": "Light" },
+		"TCRAB": { "A": "TRA", "B": "TRB" },
+		"TCRGD": { "A": "TRG", "B": "TRD" }
+	}
+
 	makeHeaderName := func(col, baseHeaderName, isSingleCell) {
 		if isSingleCell {
-			chain := col.spec.domain["pl7.app/vdj/scClonotypeChain"] // e.g., "A", "B"
-			chainLabel := (chain == "A" ? "Heavy" : "Light")
+			chain := col.spec.domain["pl7.app/vdj/scClonotypeChain"]  // e.g., "A", "B"
+			receptor := col.spec.axesSpec[0].domain["pl7.app/vdj/receptor"]  // e.g., "IG", "TCRAB", "TCRGD"
+			chainLabel := chainMapping[receptor][chain]
 			return baseHeaderName + "." + chainLabel
 		} else {
 			// For bulk, if chain info is available (e.g. IGH, IGK, IGL)
