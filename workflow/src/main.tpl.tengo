@@ -22,19 +22,22 @@ wf.prepare(func(args){
 
 	// Add linker column
 	bundleBuilder.addMulti({
-		axes: [{ anchor: "main", idx: 1 }],
-		partialAxesMatch: true,
-		annotations: { "pl7.app/isLinkerColumn": "true" }
-		},
-		"linker")
+		axes: [{ anchor: "main", idx: 1 }], // this will do partial axes match (unlike in the model)
+		annotations: { "pl7.app/isLinkerColumn": "true" },
+		partialAxesMatch: true
+	}, "linkers")
 
 	// Add full aa sequence column
-	bundleBuilder.addSingle({
+	bundleBuilder.addMulti({
 		axes: [{ anchor: "main", idx: 1 }],
-		annotations: { "pl7.app/vdj/isAssemblingFeature": "true" },
-		domain: {"pl7.app/alphabet": "aminoacid"}
+		annotations: {
+			"pl7.app/vdj/isAssemblingFeature": "true",
+			"pl7.app/vdj/isMainSequence": "true"
 		},
-		"aaSequence")
+		domain: {
+			"pl7.app/alphabet": "aminoacid"
+		}
+	}, "aaSequence")
 
 	return {
 		columns: bundleBuilder.build()
@@ -46,49 +49,56 @@ wf.body(func(args) {
 	// Input arguments
 	columns := args.columns
 	datasetSpec := columns.getSpec(args.inputAnchor)
+	
 	topClonotypes := args.topClonotypes
+
+	// Needed conditional variables
+	isSingleCell := datasetSpec.axesSpec[1].name == "pl7.app/vdj/scClonotypeKey"
 	
 	// output containers 
 	outputs := {}
+	
 	////////// Clonotype Filtering //////////
+	
 	// Build clonotype table
-	clonoTable := columns.xsvTableBuilder()
-	clonoTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
+	cloneTable := columns.xsvTableBuilder()
+	cloneTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
+	
 	for i, col in args.rankingOrder {
-		clonoTable.add(col, {header: "Col" + string(i)})
+		cloneTable.add(col, {header: "Col" + string(i)})
+	
 		// If column does not have main anchor axis we have to include theirs
 		colsSpec := columns.getSpec(col)
 		axesNames := slices.map(colsSpec.axesSpec, func (a) { return a.name})
 		if !slices.hasElement(axesNames, datasetSpec.axesSpec[1].name) {
 			for na, ax in colsSpec.axesSpec {
 				if ax.name != datasetSpec.axesSpec[1].name {
-					clonoTable.setAxisHeader(ax.name, "cluster_" + string(i) + string(na))
+					cloneTable.setAxisHeader(ax.name, "cluster_" + string(i) + string(na))
 				}
-				
 			}
 		}	
 	}
 
 	// Columns gotten by query require .key
 	linkerAxisSpec := {}
-	for i, col in columns.getColumns("linker") {
+	for i, col in columns.getColumns("linkers") {
 		if datasetSpec.axesSpec[1].name == col.spec.axesSpec[1].name {
-			clonoTable.add(col.key, {header: "linker." + string(i)})
-			clonoTable.setAxisHeader(col.spec.axesSpec[0].name, "cluster_" + string(i))
+			cloneTable.add(col.key, {header: "linker." + string(i)})
+			cloneTable.setAxisHeader(col.spec.axesSpec[0].name, "cluster_" + string(i))
 			linkerAxisSpec["cluster_" + string(i)] = col.spec.axesSpec[0]
 		} else if datasetSpec.axesSpec[1].name == col.spec.axesSpec[0].name {
-			clonoTable.add(col.key, {header: "linker." + string(i)})
-			clonoTable.setAxisHeader(col.spec.axesSpec[1].name, "cluster_" + string(i))
+			cloneTable.add(col.key, {header: "linker." + string(i)})
+			cloneTable.setAxisHeader(col.spec.axesSpec[1].name, "cluster_" + string(i))
 			linkerAxisSpec["cluster_" + string(i)] = col.spec.axesSpec[1]
 		}
 	}
-	clonoTable = clonoTable.build("csv")
+	cloneTable = cloneTable.build("csv")
 
 	if topClonotypes != undefined {
 		// Run sampling script
 		sampleClones := exec.builder().
 			software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.sample-clonotypes:main")).
-			addFile("filteredClonotypes.csv", clonoTable).
+			addFile("filteredClonotypes.csv", cloneTable).
 			arg("--csv").arg("filteredClonotypes.csv").
 			arg("--n").arg(string(topClonotypes)).
 			arg("--out").arg("sampledClonotypes.csv").
@@ -114,7 +124,15 @@ wf.body(func(args) {
 	// Generate input TSV with Clonotype ID and aa sequence
 	umapTable := columns.xsvTableBuilder()
 	umapTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
-	umapTable.add("aaSequence", {header: "aaSequence"})
+	for col in columns.getColumns("aaSequence") {
+		if isSingleCell {
+			chainLabel := col.spec.domain["pl7.app/vdj/scClonotypeChain"]
+			umapTable.add(col.key, {header: "aaSequence." + chainLabel})
+		} else {
+			chainLabel := col.spec.axesSpec[0].domain["pl7.app/vdj/chain"]
+			umapTable.add(col.key, {header: "aaSequence." + chainLabel})
+		}
+	}
 	umapTable = umapTable.build("tsv")
 
 	// UMAP script should go here

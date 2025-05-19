@@ -1,4 +1,28 @@
+import type { PColumnIdAndSpec, PColumnSpec } from '@platforma-sdk/model';
 import { type PlTableFilter, type PTableColumnSpec } from '@platforma-sdk/model';
+
+export const isSequenceColumn = (column: PColumnIdAndSpec) => {
+  if (!(column.spec.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'))
+    return false;
+
+  const isBulkSequence = (column: PColumnSpec) =>
+    column.domain?.['pl7.app/alphabet'] === 'aminoacid';
+  const isSingleCellSequence = (column: PColumnSpec) =>
+    column.domain?.['pl7.app/vdj/scClonotypeChain/index'] === 'primary'
+    // && column.axesSpec.length >= 1
+    && column.axesSpec[0].name === 'pl7.app/vdj/scClonotypeKey';
+
+  return isBulkSequence(column.spec) || isSingleCellSequence(column.spec);
+};
+
+export const isLabelColumnOption = (_column: PColumnIdAndSpec) => {
+  // allow using any column as label
+  return true;
+};
+
+export const isLinkerColumn = (column: PColumnIdAndSpec) => {
+  return column.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true';
+};
 
 export function defaultFilters(tSpec: PTableColumnSpec): (PlTableFilter | undefined) {
   console.log('defaultFilters spec', tSpec);
@@ -19,6 +43,7 @@ export function defaultFilters(tSpec: PTableColumnSpec): (PlTableFilter | undefi
     const value = JSON.parse(valueString);
     // should be an array of strings
     if (!Array.isArray(value)) {
+      console.error('defaultFilters: invalid string filter', valueString);
       return undefined;
     }
     console.log('defaultFilters: string filter', value);
@@ -42,7 +67,7 @@ export function defaultFilters(tSpec: PTableColumnSpec): (PlTableFilter | undefi
 
     console.log('defaultFilters: number filter', numericValue, direction);
     return {
-      type: direction === 'increasing' ? 'number_greaterThan' : 'number_lessThan',
+      type: direction === 'increasing' ? 'number_greaterThanOrEqualTo' : 'number_lessThanOrEqualTo',
       reference: numericValue,
     };
   }

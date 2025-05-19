@@ -1,10 +1,8 @@
 <script setup lang="ts">
 import type {
-  PColumnIdAndSpec,
-  PColumnSpec,
   PlRef,
   PTableColumnSpec,
-  RowSelectionModel,
+  RowSelectionModel
 } from '@platforma-sdk/model';
 import {
   plRefsEqual,
@@ -32,7 +30,7 @@ import {
 import {
   useApp,
 } from '../app';
-import { defaultFilters } from '../filters';
+import { defaultFilters, isLabelColumnOption, isLinkerColumn, isSequenceColumn } from '../util';
 
 const app = useApp();
 
@@ -58,55 +56,24 @@ const tableSettings = computed<PlAgDataTableSettings>(() => (
 ));
 
 const columns = ref<PTableColumnSpec[]>([]);
+
 const selection = ref<RowSelectionModel>({
   axesSpec: [],
   selectedRowsKeys: [],
 });
 
-const filterColumns = computed<PTableColumnSpec[]>(() => {
-  return app.model.outputs.scoreColumns?.map((c) => ({
-    type: 'column',
-    spec: c.spec,
-    id: c.id,
-  })) ?? [];
-});
-
-const isSequenceColumn = (column: PColumnIdAndSpec) => {
-  if (!(column.spec.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'))
-    return false;
-
-  const isBulkSequence = (column: PColumnSpec) =>
-    column.domain?.['pl7.app/alphabet'] === 'aminoacid';
-  const isSingleCellSequence = (column: PColumnSpec) =>
-    column.domain?.['pl7.app/vdj/scClonotypeChain/index'] === 'primary'
-    // && column.axesSpec.length >= 1
-    && column.axesSpec[0].name === 'pl7.app/vdj/scClonotypeKey';
-
-  return isBulkSequence(column.spec) || isSingleCellSequence(column.spec);
-};
-
-const isLabelColumnOption = (_column: PColumnIdAndSpec) => {
-  // TODO: add linker columns so it would work!
-  // return column.spec.valueType === 'String';
-  return true;// column.spec.valueType === 'String';
-};
-
-const isLinkerColumn = (_column: PColumnIdAndSpec) => {
-  // TODO
-  return false;
-};
 </script>
 
 <template>
   <PlBlockPage>
     <template #title>
-      {{ app.model.ui.title }}/ {{ selection.selectedRowsKeys.length ?? 0 }}
+      {{ app.model.ui.title }} / {{ selection.selectedRowsKeys.length ?? 0 }}
     </template>
     <template #append>
       <PlAgDataTableToolsPanel>
         <PlTableFilters
           v-model="app.model.ui.filterModel"
-          :columns="filterColumns"
+          :columns="columns"
           :defaults="defaultFilters"
         />
         <PlMultiSequenceAlignment
@@ -114,7 +81,7 @@ const isLinkerColumn = (_column: PColumnIdAndSpec) => {
           :label-column-option-predicate="isLabelColumnOption"
           :sequence-column-predicate="isSequenceColumn"
           :linker-column-predicate="isLinkerColumn"
-          :pframe="app.model.outputs.pf"
+          :p-frame="app.model.outputs.pf"
           :row-selection-model="selection"
         />
       </PlAgDataTableToolsPanel>
