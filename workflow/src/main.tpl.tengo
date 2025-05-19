@@ -39,6 +39,25 @@ wf.prepare(func(args){
 		}
 	}, "aaSequence")
 
+	// Add CDR3 sequences
+	bundleBuilder.addMulti({
+		axes: [{ anchor: "main", idx: 1 }], // Clonotype axis
+		name: "pl7.app/vdj/sequence",
+		domain: {
+			"pl7.app/alphabet": "aminoacid",
+			"pl7.app/vdj/feature": "CDR3"    // Specify CDR3 feature
+		}
+	}, "cdr3Sequences") // New collection name for CDR3 sequences
+
+	// Add V gene
+	bundleBuilder.addMulti({
+		axes: [{ anchor: "main", idx: 1 }], // Clonotype axis
+		name: "pl7.app/vdj/geneHit",
+		domain: {
+			"pl7.app/vdj/reference": "VGene"
+		}
+	}, "VGenes")
+
 	return {
 		columns: bundleBuilder.build()
 	}
@@ -57,7 +76,7 @@ wf.body(func(args) {
 	
 	// output containers 
 	outputs := {}
-	
+
 	////////// Clonotype Filtering //////////
 	
 	// Build clonotype table
@@ -151,9 +170,132 @@ wf.body(func(args) {
 	umapPf := xsv.importFile(umapClones.getFile("umap.tsv"), "tsv", umapConv.getColumns(datasetSpec))
 	outputs["umap"] = pframes.exportFrame(umapPf)
 
+	////////// CDR3 Length Calculation //////////
+	
+	cdr3SeqTable := columns.xsvTableBuilder()
+	cdr3SeqTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
+
+    // Must deal with multiple CDR3 sequences (two for each cell in single cell data)
+    // Chain will be added in the header as cdr3Sequence.chain and used in python script
+    // Notice chain is in spec.domain for single cell data and spec.axesSpec[0].domain for bulk data
+
+	// Helper function to add chain information to the headers dynamically
+	makeHeaderName := func(col, baseHeaderName, isSingleCell) {
+		if isSingleCell {
+			chainDesignator := col.spec.domain["pl7.app/vdj/scClonotypeChain"] // e.g., "A", "B"
+			return baseHeaderName + "." + chainDesignator
+		} else {
+			// For bulk, if chain info is available (e.g. IGH, IGK, IGL)
+			chainFromDomain := col.spec.axesSpec[0].domain["pl7.app/vdj/chain"] // e.g. "IGH", "IGK"
+			if chainFromDomain != undefined {
+				return baseHeaderName + "." + chainFromDomain
+			}
+		}
+		return baseHeaderName // Default header for bulk
+	};
+
+	// Process CDR3 sequences
+	cdr3Sequences := columns.getColumns("cdr3Sequences")
+
+	for col in cdr3Sequences {
+		headerName := makeHeaderName(col, "cdr3Sequence", isSingleCell)
+		cdr3SeqTable.add(col.key, {header: headerName})
+	}
+
+	// Process V genes
+	vGenes := columns.getColumns("VGenes")	
+
+	for col in vGenes {
+		headerName := makeHeaderName(col, "vGene", isSingleCell)
+		cdr3SeqTable.add(col.key, {header: headerName})
+	}
+
+	cdr3SeqTableBuilt := cdr3SeqTable.build("tsv")
+
+	cdr3VspectratypeCmd := exec.builder().
+		software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.spectratype:main")).
+		addFile("cdr3_sequences_input.tsv", cdr3SeqTableBuilt).
+		arg("--input_tsv").arg("cdr3_sequences_input.tsv").
+		arg("--output_tsv").arg("cdr3_lengths.tsv").
+		saveFile("cdr3_lengths.tsv").
+		printErrStreamToStdout().
+		saveStdoutContent().
+		cache(24 * 60 * 60 * 1000).
+		run()
+
+
+	// For spectratype structure is:
+	// [chain][cdr3Length][vGene] -> count
+
+	// Get the spec for the vGene column
+	vGeneSpec := columns.getSpec(vGenes[0].key)
+
+	// Set up the axes for the output data
+	axes := [
+		{
+			column: "chain",
+			spec: {
+				name: "pl7.app/vdj/chain",
+				type: "String", // For axis it is type, not valueType 
+				annotations: { "pl7.app/label": "CDR3 chain" }
+			}
+		},
+				{
+			column: "cdr3Length",
+			spec: {
+				name: "pl7.app/vdj/sequenceLength",
+				type: "Int",
+				domain: {
+					"pl7.app/vdj/feature": "CDR3",
+					"pl7.app/alphabet": "aminoacid"
+				},
+				annotations: { "pl7.app/label": "CDR3 aa Length" }
+			}
+		},
+		{
+			column: "vGene",
+			spec: {
+				name: "pl7.app/vdj/geneHit",
+				type: "String",
+				domain: vGeneSpec.domain,
+				annotations: {
+					"pl7.app/label": vGeneSpec.annotations["pl7.app/label"]
+				}
+			}
+		}
+		
+	]
+
+
+	spectratypeColumns := [
+		{
+			column: "count",
+			spec: {
+				name: "pl7.app/vdj/vSpectratype",
+				valueType: "Int",
+				domain: {
+					"pl7.app/vdj/feature": "CDR3",
+					"pl7.app/alphabet": "aminoacid"
+				},
+				annotations: { "pl7.app/label": "CDR3 V Spectratype" }
+			}
+		}
+	]
+
+	spectratypeSpec := {
+		axes: axes,
+		columns: spectratypeColumns,
+		storageFormat: "Binary",
+		partitionKeyLength: 0
+	}
+
+	cdr3VspectratypePf := xsv.importFile(cdr3VspectratypeCmd.getFile("cdr3_lengths.tsv"), "tsv", spectratypeSpec)
+	
+	outputs["cdr3VspectratypePf"] = pframes.exportFrame(cdr3VspectratypePf) 
+	//ll.print("CDR3 lengths PFrame imported.")
+
 	return {
 		outputs: outputs,
 		exports: {}
 	}
 })
-
