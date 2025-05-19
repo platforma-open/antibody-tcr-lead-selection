@@ -182,8 +182,9 @@ wf.body(func(args) {
 	// Helper function to add chain information to the headers dynamically
 	makeHeaderName := func(col, baseHeaderName, isSingleCell) {
 		if isSingleCell {
-			chainDesignator := col.spec.domain["pl7.app/vdj/scClonotypeChain"] // e.g., "A", "B"
-			return baseHeaderName + "." + chainDesignator
+			chain := col.spec.domain["pl7.app/vdj/scClonotypeChain"] // e.g., "A", "B"
+			chainLabel := (chain == "A" ? "Heavy" : "Light")
+			return baseHeaderName + "." + chainLabel
 		} else {
 			// For bulk, if chain info is available (e.g. IGH, IGK, IGL)
 			chainFromDomain := col.spec.axesSpec[0].domain["pl7.app/vdj/chain"] // e.g. "IGH", "IGK"
@@ -259,7 +260,7 @@ wf.body(func(args) {
 				type: "String",
 				domain: vGeneSpec.domain,
 				annotations: {
-					"pl7.app/label": vGeneSpec.annotations["pl7.app/label"]
+					"pl7.app/label": "Best V gene"
 				}
 			}
 		}
