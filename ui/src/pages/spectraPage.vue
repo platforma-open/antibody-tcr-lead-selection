@@ -1,32 +1,57 @@
 <script setup lang="ts">
-import type { PredefinedGraphOption } from '@milaboratories/graph-maker';
-import type { PDataColumnSpec } from '@platforma-sdk/model';
-import { PlBlockPage } from '@platforma-sdk/ui-vue';
+import type { GraphMakerProps } from '@milaboratories/graph-maker';
 import { GraphMaker } from '@milaboratories/graph-maker';
+import '@milaboratories/graph-maker/styles';
+import { PlBtnGroup } from '@platforma-sdk/ui-vue';
+import { computed, useTemplateRef } from 'vue';
+import { PlBlockPage } from '@platforma-sdk/ui-vue';
 import { useApp } from '../app';
 
 const app = useApp();
 
-function getColumnSpec(name: string): PDataColumnSpec {
-  const index = app.model.outputs.histPcols?.findIndex((p) => p.spec.name === name) ?? -1;
-  return (index >= 0 ? app.model.outputs.histPcols?.[index].spec : {}) as PDataColumnSpec;
-}
-
-const defaultOptions: PredefinedGraphOption<'histogram'>[] = [
-  {
-    inputName: 'value',
-    selectedSource: getColumnSpec('pl7.app/vdj/sequenceLength'),
-  },
-];
+const defaultOptions = computed((): GraphMakerProps['defaultOptions'] => {
+  return [
+    {
+      inputName: 'y',
+      selectedSource: {
+        kind: 'PColumn',
+        valueType: 'Int',
+        name: 'pl7.app/vdj/vSpectratype',
+        axesSpec: [],
+      },
+    },
+    {
+      inputName: 'primaryGrouping',
+      selectedSource: {
+        type: 'Int',
+        name: 'pl7.app/vdj/sequenceLength',
+      },
+    },
+    {
+      inputName: 'secondaryGrouping',
+      selectedSource: {
+        type: 'String',
+        name: 'pl7.app/vdj/geneHit',
+      },
+    },
+    {
+      inputName: 'tabBy',
+      selectedSource: {
+        type: 'String',
+        name: 'pl7.app/vdj/chain',
+      },
+    },
+  ];
+});
 
 </script>
 
 <template>
   <PlBlockPage>
     <GraphMaker
-      v-model="app.model.ui.graphStateHistogram"
-      chartType="histogram"
-      :p-frame="app.model.outputs.pf"
+      v-model="app.model.ui.cdr3StackedBarPlotState"
+      chartType="discrete"
+      :p-frame="app.model.outputs.spectratypePf"
       :default-options="defaultOptions"
     />
   </PlBlockPage>

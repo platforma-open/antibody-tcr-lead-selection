@@ -1,6 +1,7 @@
 packages:
   - software/sample-clonotypes
   - software/umap
+  - software/spectratype
   - workflow
   - model
   - ui
