@@ -83,7 +83,7 @@ export type UiState = {
   tableState: PlDataTableState;
   filterModel: PlTableFiltersModel;
   graphStateUMAP: GraphMakerState;
-  graphStateHistogram: GraphMakerState;
+  cdr3StackedBarPlotState: GraphMakerState;
   alignmentModel: PlMultiAlignmentViewModel;
 };
 
@@ -248,13 +248,10 @@ export const model = BlockModel.create()
         },
       },
     },
-    graphStateHistogram: {
-      title: 'CDR3 Length histogram',
-      template: 'bins',
+    cdr3StackedBarPlotState: {
+      title: 'CDR3 V Spectratype',
+      template: 'stackedBar',
       currentTab: null,
-      layersSettings: {
-        bins: { fillColor: '#99e099' },
-      },
     },
     alignmentModel: {},
   })
@@ -348,30 +345,21 @@ export const model = BlockModel.create()
 
     return anchor;
   })
-
+/* 
   .output('pf', (ctx) => {
     const columns = getColumns(ctx);
     if (!columns) return undefined;
 
     return createPFrameForGraphs(ctx, columns.props);
   })
+ */
 
-  .output('histPcols', (ctx) => {
-    const columns = getColumns(ctx);
-    if (!columns) return undefined;
+  // Use the cdr3LengthsCalculated cols
+  .output('pf', (ctx) => {
+    const pcols = ctx.outputs?.resolve('cdr3VspectratypePf')?.getPColumns();
+    if (!pcols) return undefined;
 
-    const pcols = columns.props
-      .filter((column) => column.spec.name === 'pl7.app/vdj/sequenceLength'
-        && column.spec.domain?.['pl7.app/vdj/feature'] === 'CDR3'
-        && column.spec.domain?.['pl7.app/alphabet'] === 'aminoacid');
-
-    return pcols.map(
-      (c) =>
-        ({
-          columnId: c.id,
-          spec: c.spec,
-        } satisfies PColumnIdAndSpec),
-    );
+    return createPFrameForGraphs(ctx, pcols);
   })
 
   .output('table', (ctx) => {
@@ -434,7 +422,7 @@ export const model = BlockModel.create()
   .sections((_ctx) => ([
     { type: 'link', href: '/', label: 'Main' },
     { type: 'link', href: '/umap', label: 'Clonotype UMAP' },
-    { type: 'link', href: '/spectratype', label: 'CDR3 Length histogram' },
+    { type: 'link', href: '/spectratype', label: 'CDR3 V Spectratype' },
     //  { type: 'link', href: '/usage', label: 'V/J gene usage' },
   ]))
 
