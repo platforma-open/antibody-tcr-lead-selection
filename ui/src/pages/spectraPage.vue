@@ -51,7 +51,7 @@ const defaultOptions = computed((): GraphMakerProps['defaultOptions'] => {
     <GraphMaker
       v-model="app.model.ui.cdr3StackedBarPlotState"
       chartType="discrete"
-      :p-frame="app.model.outputs.pf"
+      :p-frame="app.model.outputs.spectratypePf"
       :default-options="defaultOptions"
     />
   </PlBlockPage>
