@@ -1,10 +1,13 @@
 <script setup lang="ts">
 import '@milaboratories/graph-maker/styles';
-import { PlBlockPage } from '@platforma-sdk/ui-vue';
+import { PlAgDataTableToolsPanel, PlBlockPage, PlMultiSequenceAlignment } from '@platforma-sdk/ui-vue';
 import { useApp } from '../app';
 
 import type { GraphMakerProps } from '@milaboratories/graph-maker';
 import { GraphMaker } from '@milaboratories/graph-maker';
+import type { PlSelectionModel } from '@platforma-sdk/model';
+import { ref } from 'vue';
+import { isLabelColumnOption, isLinkerColumn, isSequenceColumn } from '../util';
 
 const app = useApp();
 
@@ -37,10 +40,7 @@ const defaultOptions: GraphMakerProps['defaultOptions'] = [
       ],
     },
   },
-];
-
-if (app.model.args.topClonotypes !== undefined) {
-  defaultOptions.push({
+  {
     inputName: 'filters',
     selectedSource: {
       kind: 'PColumn',
@@ -53,8 +53,13 @@ if (app.model.args.topClonotypes !== undefined) {
         },
       ],
     },
-  });
-}
+  },
+];
+
+const selection = ref<PlSelectionModel>({
+  axesSpec: [],
+  selectedKeys: [],
+});
 
 </script>
 
@@ -62,8 +67,24 @@ if (app.model.args.topClonotypes !== undefined) {
   <PlBlockPage>
     <GraphMaker
       v-model="app.model.ui.graphStateUMAP"
-      :dataStateKey="app.model.outputs.UMAPPf" chartType="scatterplot-umap"
-      :p-frame="app.model.outputs.UMAPPf" :default-options="defaultOptions"
-    />
+      v-model:selection="selection"
+      chartType="scatterplot-umap"
+      :data-state-key="app.model.outputs.UMAPPf"
+      :p-frame="app.model.outputs.UMAPPf"
+      :default-options="defaultOptions"
+    >
+      <template #titleLineSlot>
+        <PlAgDataTableToolsPanel>
+          <PlMultiSequenceAlignment
+            v-model="app.model.ui.alignmentModel"
+            :label-column-option-predicate="isLabelColumnOption"
+            :sequence-column-predicate="isSequenceColumn"
+            :linker-column-predicate="isLinkerColumn"
+            :p-frame="app.model.outputs.pf"
+            :selection="selection"
+          />
+        </PlAgDataTableToolsPanel>
+      </template>
+    </GraphMaker>
   </PlBlockPage>
 </template>

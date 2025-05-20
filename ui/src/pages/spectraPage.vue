@@ -2,9 +2,8 @@
 import type { GraphMakerProps } from '@milaboratories/graph-maker';
 import { GraphMaker } from '@milaboratories/graph-maker';
 import '@milaboratories/graph-maker/styles';
-import { PlBtnGroup } from '@platforma-sdk/ui-vue';
-import { computed, useTemplateRef } from 'vue';
 import { PlBlockPage } from '@platforma-sdk/ui-vue';
+import { computed } from 'vue';
 import { useApp } from '../app';
 
 const app = useApp();

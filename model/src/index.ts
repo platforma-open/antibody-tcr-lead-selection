@@ -1,22 +1,17 @@
 import type { GraphMakerState } from '@milaboratories/graph-maker';
 import type {
-  AxesSpec,
   CreatePlDataTableOps,
   DataInfo,
   InferOutputsType,
   PColumn,
-  PColumnIdAndSpec,
-  PColumnKey,
   PColumnValues,
-  PColumnValuesEntry,
   PFrameHandle,
   PlDataTableState,
+  PlMultiSequenceAlignmentModel,
   PlRef,
   PlTableFilter,
   PlTableFiltersModel,
-  PObjectId,
   PTableColumnId,
-  PTableValue,
   RenderCtx,
   SUniversalPColumnId,
   TreeNodeAccessor,
@@ -25,51 +20,7 @@ import {
   BlockModel,
   createPFrameForGraphs,
   createPlDataTableV2,
-  isPTableAbsent,
-  PTableNA,
 } from '@platforma-sdk/model';
-
-export type PlMultiAlignmentViewModel = {
-  label?: PObjectId;
-};
-
-export type PTableRowKey = PTableValue[];
-
-export type RowSelectionModel = {
-  axesSpec: AxesSpec;
-  selectedRowsKeys: PTableRowKey[];
-};
-
-export function createRowSelectionColumn(
-  columnId: PObjectId,
-  rowSelectionModel: RowSelectionModel | undefined,
-  label?: string,
-  domain?: Record<string, string>,
-): PColumn<PColumnValues> | undefined {
-  if (!rowSelectionModel || rowSelectionModel.axesSpec.length === 0) return undefined;
-
-  return {
-    id: columnId,
-    spec: {
-      kind: 'PColumn',
-      valueType: 'Int',
-      name: 'pl7.app/table/row-selection',
-      axesSpec: rowSelectionModel.axesSpec,
-      ...(domain && { domain }),
-      annotations: {
-        'pl7.app/label': label ?? 'Selected rows',
-        'pl7.app/discreteValues': '[1]',
-      },
-    },
-    data: rowSelectionModel
-      .selectedRowsKeys
-      .filter((r): r is PColumnKey => !r.some((v) => isPTableAbsent(v) || v === PTableNA))
-      .map((r) => ({
-        key: r,
-        val: 1,
-      } satisfies PColumnValuesEntry)),
-  } satisfies PColumn<PColumnValues>;
-}
 
 export type BlockArgs = {
   inputAnchor?: PlRef;
@@ -83,7 +34,7 @@ export type UiState = {
   filterModel: PlTableFiltersModel;
   graphStateUMAP: GraphMakerState;
   cdr3StackedBarPlotState: GraphMakerState;
-  alignmentModel: PlMultiAlignmentViewModel;
+  alignmentModel: PlMultiSequenceAlignmentModel;
 };
 
 type Column = PColumn<DataInfo<TreeNodeAccessor> | TreeNodeAccessor | PColumnValues>;
@@ -167,10 +118,10 @@ function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefined {
   }
 
   // score columns
-  const cloneScores = props?.filter((p) => p.spec.annotations?.['pl7.app/vdj/isScore'] === 'true');
+  const cloneScores = props?.filter((p) => p.spec.annotations?.['pl7.app/isScore'] === 'true');
 
   // links score columns
-  const linkScores = linkProps?.filter((p) => p.spec.annotations?.['pl7.app/vdj/isScore'] === 'true');
+  const linkScores = linkProps?.filter((p) => p.spec.annotations?.['pl7.app/isScore'] === 'true');
 
   // @TODO: remove this hack once the bug with excessive labels is fixed
   for (const arr of [props, links, linkProps]) {
@@ -351,7 +302,7 @@ export const model = BlockModel.create()
     const columns = getColumns(ctx);
     if (!columns) return undefined;
 
-    return createPFrameForGraphs(ctx, columns.props);
+    return createPFrameForGraphs(ctx, [...columns.props, ...columns.links]);
   })
 
   // Use the cdr3LengthsCalculated cols

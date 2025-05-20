@@ -1,30 +1,36 @@
 <script setup lang="ts">
 import type {
-  PColumnSpec,
   PlRef,
+  PlSelectionModel,
   PTableColumnSpec,
 } from '@platforma-sdk/model';
-import { plRefsEqual } from '@platforma-sdk/model';
+import {
+  plRefsEqual,
+} from '@platforma-sdk/model';
 import type {
   PlAgDataTableSettings,
-  PTableRowKey,
 } from '@platforma-sdk/ui-vue';
 import {
   PlAgDataTableToolsPanel,
   PlAgDataTableV2,
   PlBlockPage,
   PlBtnGhost,
+  PlDropdownMulti,
   PlDropdownRef,
   PlMaskIcon24,
+  PlMultiSequenceAlignment,
+  PlNumberField,
   PlSlideModal,
   PlTableFilters,
-  PlNumberField,
-  PlDropdownMulti,
 } from '@platforma-sdk/ui-vue';
-import { computed, reactive, ref } from 'vue';
-import { useApp } from '../app';
-import { AlignmentDataProvider, MultiAlignmentModal } from '../MultiAlignment';
-import type { RowSelectionModel } from '@platforma-open/milaboratories.top-antibodies.model';
+import {
+  computed,
+  ref,
+} from 'vue';
+import {
+  useApp,
+} from '../app';
+import { defaultFilters, isLabelColumnOption, isLinkerColumn, isSequenceColumn } from '../util';
 
 const app = useApp();
 
@@ -40,70 +46,45 @@ function setAnchorColumn(ref: PlRef | undefined) {
     : '');
 }
 
-const tableSettings = computed<PlAgDataTableSettings>(() => (app.model.outputs.table
-  ? {
-      sourceType: 'ptable',
-      model: app.model.outputs.table,
-    }
-  : undefined));
+const tableSettings = computed<PlAgDataTableSettings>(() => (
+  app.model.outputs.table
+    ? {
+        sourceType: 'ptable',
+        model: app.model.outputs.table,
+      }
+    : undefined
+));
 
 const columns = ref<PTableColumnSpec[]>([]);
-const data = reactive<{
-  selectedRows: PTableRowKey[];
-}>({
-  selectedRows: [],
+
+const selection = ref<PlSelectionModel>({
+  axesSpec: [],
+  selectedKeys: [],
 });
 
-const filterColumns = computed<PTableColumnSpec[]>(() => {
-  return app.model.outputs.scoreColumns?.map((c) => ({
-    type: 'column',
-    spec: c.spec,
-    id: c.id,
-  })) ?? [];
-});
-
-const isLabelColumnOption = (column: PColumnSpec) => {
-  return column.valueType === 'String';
-};
-
-const isSequenceColumn = (column: PColumnSpec) => {
-  if (!(column.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'))
-    return false;
-
-  const isBulkSequence = (column: PColumnSpec) =>
-    column.domain?.['pl7.app/alphabet'] === 'aminoacid';
-  const isSingleCellSequence = (column: PColumnSpec) =>
-    column.domain?.['pl7.app/vdj/scClonotypeChain/index'] === 'primary'
-    // && column.axesSpec.length >= 1
-    && column.axesSpec[0].name === 'pl7.app/vdj/scClonotypeKey';
-
-  return isBulkSequence(column) || isSingleCellSequence(column);
-};
-
-const rowSelectionModel = computed<RowSelectionModel | undefined>(() => {
-  if (columns.value.length === 0) return undefined;
-
-  return {
-    axesSpec: columns.value.filter((c) => c.type === 'axis').map((c) => c.spec),
-    selectedRowsKeys: data.selectedRows,
-  } satisfies RowSelectionModel;
-});
 </script>
 
 <template>
   <PlBlockPage>
     <template #title>
-      {{ app.model.ui.title }} / {{ data.selectedRows.length }}
+      {{ app.model.ui.title }}
     </template>
     <template #append>
       <PlAgDataTableToolsPanel>
         <PlTableFilters
           v-model="app.model.ui.filterModel"
-          :columns="filterColumns"
-          :defaults="app.model.outputs.defaultFilters"
+          :columns="columns"
+          :defaults="defaultFilters"
+        />
+        <PlMultiSequenceAlignment
+          v-model="app.model.ui.alignmentModel"
+          :label-column-option-predicate="isLabelColumnOption"
+          :sequence-column-predicate="isSequenceColumn"
+          :linker-column-predicate="isLinkerColumn"
+          :p-frame="app.model.outputs.pf"
+          :selection="selection"
         />
       </PlAgDataTableToolsPanel>
-      <PlBtnGhost icon="dna" @click.stop="app.openMultiAlignment">Multi Alignment</PlBtnGhost>
       <PlBtnGhost @click.stop="() => (settingsOpen = true)">
         Settings
         <template #append>
@@ -113,7 +94,7 @@ const rowSelectionModel = computed<RowSelectionModel | undefined>(() => {
     </template>
     <PlAgDataTableV2
       v-model="app.model.ui.tableState"
-      v-model:selected-rows="data.selectedRows"
+      v-model:selection="selection"
       :settings="tableSettings"
       show-columns-panel
       show-export-button
@@ -142,15 +123,5 @@ const rowSelectionModel = computed<RowSelectionModel | undefined>(() => {
         </template>
       </PlNumberField>
     </PlSlideModal>
-    <MultiAlignmentModal v-model="app.multiAlignmentOpen" :sequence-rows="app.sequenceRows">
-      <AlignmentDataProvider
-        v-model="app.model.ui.alignmentModel"
-        v-model:sequence-rows="app.sequenceRows"
-        :label-column-option-predicate="isLabelColumnOption"
-        :sequence-column-predicate="isSequenceColumn"
-        :pframe="app.model.outputs.pf"
-        :row-selection-model="rowSelectionModel"
-      />
-    </MultiAlignmentModal>
   </PlBlockPage>
 </template>
