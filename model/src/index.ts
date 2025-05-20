@@ -297,14 +297,13 @@ export const model = BlockModel.create()
 
     return anchor;
   })
-/* 
+
   .output('pf', (ctx) => {
     const columns = getColumns(ctx);
     if (!columns) return undefined;
 
     return createPFrameForGraphs(ctx, [...columns.props, ...columns.links]);
   })
- */
 
   .output('pf', (ctx) => {
     const columns = getColumns(ctx);

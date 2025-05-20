@@ -1,5 +1,16 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.2.0
+
+### Minor Changes
+
+- 5ee90ac: Add CDR3 spectratype
+
+### Patch Changes
+
+- Updated dependencies [5ee90ac]
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.1.0
+
 ## 1.1.1
 
 ### Patch Changes

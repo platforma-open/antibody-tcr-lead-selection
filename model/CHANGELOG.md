@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.3.0
+
+### Minor Changes
+
+- 5ee90ac: Add CDR3 spectratype
+
 ## 1.2.1
 
 ### Patch Changes
