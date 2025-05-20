@@ -1,17 +1,17 @@
 import { model } from '@platforma-open/milaboratories.top-antibodies.model';
 import { defineApp } from '@platforma-sdk/ui-vue';
 import MainPage from './pages/MainPage.vue';
-import spectraPage from './pages/spectraPage.vue';
-import umapPage from './pages/umapPage.vue';
-import usagePage from './pages/usagePage.vue';
+import SpectratypePage from './pages/SpectratypePage.vue';
+import UmapPage from './pages/UmapPage.vue';
+import UsagePage from './pages/UsagePage.vue';
 
 export const sdkPlugin = defineApp(model, () => {
   return {
     routes: {
       '/': () => MainPage,
-      '/umap': () => umapPage,
-      '/spectratype': () => spectraPage,
-      '/usage': () => usagePage,
+      '/umap': () => UmapPage,
+      '/spectratype': () => SpectratypePage,
+      '/usage': () => UsagePage,
     },
   };
 });
