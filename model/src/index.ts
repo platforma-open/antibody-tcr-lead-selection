@@ -305,12 +305,6 @@ export const model = BlockModel.create()
     return createPFrameForGraphs(ctx, [...columns.props, ...columns.links]);
   })
 
-  .output('pf', (ctx) => {
-    const columns = getColumns(ctx);
-    if (!columns) return undefined;
-    return createPFrameForGraphs(ctx, columns.props);
-  })
-
   // Use the cdr3LengthsCalculated cols
   .output('spectratypePf', (ctx) => {
     const pcols = ctx.outputs?.resolve('cdr3VspectratypePf')?.getPColumns();
