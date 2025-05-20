@@ -5,7 +5,7 @@ import { useApp } from '../app';
 
 import type { GraphMakerProps } from '@milaboratories/graph-maker';
 import { GraphMaker } from '@milaboratories/graph-maker';
-import type { AxisSpec, PValue, RowSelectionModel } from '@platforma-sdk/model';
+import type { PlSelectionModel } from '@platforma-sdk/model';
 import { ref } from 'vue';
 import { isLabelColumnOption, isLinkerColumn, isSequenceColumn } from '../util';
 
@@ -56,30 +56,22 @@ const defaultOptions: GraphMakerProps['defaultOptions'] = [
   },
 ];
 
-const selection = ref<RowSelectionModel>({
+const selection = ref<PlSelectionModel>({
   axesSpec: [],
-  selectedRowsKeys: [],
+  selectedKeys: [],
 });
 
-function onUpdateLasso(data: { axesSpec: AxisSpec[]; selectedRowsKeys: PValue[][] }) {
-  console.log('onUpdateLasso', data);
-  selection.value = {
-    axesSpec: data.axesSpec,
-    selectedRowsKeys: data.selectedRowsKeys.map((v) => v as string[]),
-  };
-}
 </script>
 
 <template>
   <PlBlockPage>
     <GraphMaker
       v-model="app.model.ui.graphStateUMAP"
-      v-model:selection-model="selection"
+      v-model:selection="selection"
       chartType="scatterplot-umap"
       :data-state-key="app.model.outputs.UMAPPf"
       :p-frame="app.model.outputs.UMAPPf"
       :default-options="defaultOptions"
-      @update-lasso-polygon="onUpdateLasso"
     >
       <template #titleLineSlot>
         <PlAgDataTableToolsPanel>
@@ -89,7 +81,7 @@ function onUpdateLasso(data: { axesSpec: AxisSpec[]; selectedRowsKeys: PValue[][
             :sequence-column-predicate="isSequenceColumn"
             :linker-column-predicate="isLinkerColumn"
             :p-frame="app.model.outputs.pf"
-            :row-selection-model="selection"
+            :selection="selection"
           />
         </PlAgDataTableToolsPanel>
       </template>

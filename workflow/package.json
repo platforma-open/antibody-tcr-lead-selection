@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@platforma-open/milaboratories.top-antibodies.sample-clonotypes": "workspace:*",
+    "@platforma-open/milaboratories.top-antibodies.spectratype": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.umap": "workspace:*",
     "@platforma-sdk/workflow-tengo": "catalog:"
   },

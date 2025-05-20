@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import type {
   PlRef,
+  PlSelectionModel,
   PTableColumnSpec,
-  RowSelectionModel
 } from '@platforma-sdk/model';
 import {
   plRefsEqual,
@@ -57,9 +57,9 @@ const tableSettings = computed<PlAgDataTableSettings>(() => (
 
 const columns = ref<PTableColumnSpec[]>([]);
 
-const selection = ref<RowSelectionModel>({
+const selection = ref<PlSelectionModel>({
   axesSpec: [],
-  selectedRowsKeys: [],
+  selectedKeys: [],
 });
 
 </script>
@@ -67,7 +67,7 @@ const selection = ref<RowSelectionModel>({
 <template>
   <PlBlockPage>
     <template #title>
-      {{ app.model.ui.title }} / {{ selection.selectedRowsKeys.length ?? 0 }}
+      {{ app.model.ui.title }}
     </template>
     <template #append>
       <PlAgDataTableToolsPanel>
@@ -82,7 +82,7 @@ const selection = ref<RowSelectionModel>({
           :sequence-column-predicate="isSequenceColumn"
           :linker-column-predicate="isLinkerColumn"
           :p-frame="app.model.outputs.pf"
-          :row-selection-model="selection"
+          :selection="selection"
         />
       </PlAgDataTableToolsPanel>
       <PlBtnGhost @click.stop="() => (settingsOpen = true)">
@@ -94,7 +94,7 @@ const selection = ref<RowSelectionModel>({
     </template>
     <PlAgDataTableV2
       v-model="app.model.ui.tableState"
-      v-model:selected-rows="selection"
+      v-model:selection="selection"
       :settings="tableSettings"
       show-columns-panel
       show-export-button
