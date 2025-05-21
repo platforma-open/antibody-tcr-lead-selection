@@ -31,14 +31,14 @@ catalogs:
       specifier: ^2.16.0
       version: 2.16.0
     '@platforma-sdk/tengo-builder':
-      specifier: ^2.1.3
-      version: 2.1.3
+      specifier: ^2.1.4
+      version: 2.1.4
     '@platforma-sdk/test':
       specifier: ^1.30.39
       version: 1.30.39
     '@platforma-sdk/ui-vue':
-      specifier: ^1.31.0
-      version: 1.31.0
+      specifier: ^1.31.1
+      version: 1.31.1
     '@platforma-sdk/workflow-tengo':
       specifier: ^4.5.1
       version: 4.5.1
@@ -117,7 +117,7 @@ importers:
         version: 1.0.3(@eslint/js@9.23.0)(@stylistic/eslint-plugin@2.13.0(eslint@9.23.0)(typescript@5.5.4))(eslint-plugin-n@17.15.1(eslint@9.23.0))(eslint-plugin-vue@9.32.0(eslint@9.23.0))(eslint@9.23.0)(globals@15.14.0)(typescript-eslint@8.24.0(eslint@9.23.0)(typescript@5.5.4))(typescript@5.5.4)
       '@platforma-sdk/ui-vue':
         specifier: 'catalog:'
-        version: 1.31.0(typescript@5.5.4)
+        version: 1.31.1(typescript@5.5.4)
       tsup:
         specifier: 'catalog:'
         version: 8.3.5(postcss@8.5.3)(typescript@5.5.4)(yaml@2.7.0)
@@ -187,7 +187,7 @@ importers:
         version: 1.30.37
       '@platforma-sdk/ui-vue':
         specifier: 'catalog:'
-        version: 1.31.0(typescript@5.5.4)
+        version: 1.31.1(typescript@5.5.4)
       vue:
         specifier: 'catalog:'
         version: 3.5.13(typescript@5.5.4)
@@ -228,7 +228,7 @@ importers:
     devDependencies:
       '@platforma-sdk/tengo-builder':
         specifier: 'catalog:'
-        version: 2.1.3
+        version: 2.1.4
       '@platforma-sdk/test':
         specifier: 'catalog:'
         version: 1.30.39(@types/node@22.9.0)
@@ -1257,16 +1257,16 @@ packages:
     resolution: {integrity: sha512-9IwCEobdd4V/7aTyUbCumdXKzrAy4hccECf6zSK1BgB331U/htSWdI2E6L70jtcYsuKE1aWYqNhufMZ8UTzHtA==}
     hasBin: true
 
-  '@platforma-sdk/tengo-builder@2.1.3':
-    resolution: {integrity: sha512-UWvzhgSR913r2jNxktdC6GhTV5B6ivKQ+kkroi0CpGEZUOWPEo+gJrqp1ebtPBPPdQXOMZz2PL3r3M6z0E2Ctw==}
+  '@platforma-sdk/tengo-builder@2.1.4':
+    resolution: {integrity: sha512-T9jF1lwab/KNU2I34HxF45P+9M0XC/9vIGKMwTFZeQeb/PpBxAITwtTLyYoC4lf8bBqIvWWNS/O+7TJheT42tA==}
     engines: {node: '>=20'}
     hasBin: true
 
   '@platforma-sdk/test@1.30.39':
     resolution: {integrity: sha512-Addy5POO/xaqkIa86+7s/rFFg+bv5q82c13V2k3LWkuOQXxzx7Xymhbx7G64SthIN4KNXh6q8/5+x4jKUe7APg==}
 
-  '@platforma-sdk/ui-vue@1.31.0':
-    resolution: {integrity: sha512-IZGtf99KMjLDO7+f9pOHfoGH/9XzSO2OrRwWB1kxIc05aafKKkC3OVYSd5SegKX0naMXqF9GG3HAD0N0vqC7iA==}
+  '@platforma-sdk/ui-vue@1.31.1':
+    resolution: {integrity: sha512-lUnVYjgaI/U3sMIk6LOcw1DbfHVE1aukLzM9DfTn3gtnsLcT3MbE7Cd1Ty0svxfOJ+THcXmYiT71W+UBrOoxSg==}
 
   '@platforma-sdk/workflow-tengo@4.5.1':
     resolution: {integrity: sha512-NhzXmH38J76JWOX0iH6o/LwTQnaNDANV5hZwLnO0ZBTke6yr5LNLZjYAZbKO6FRegZqqZVBeUjdo8dLhI58zmA==}
@@ -6407,7 +6407,7 @@ snapshots:
       '@milaboratories/miplots4': 1.0.91(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)
       '@milaboratories/pf-plots': 1.1.7
       '@platforma-sdk/model': 1.30.37
-      '@platforma-sdk/ui-vue': 1.31.0(typescript@5.5.4)
+      '@platforma-sdk/ui-vue': 1.31.1(typescript@5.5.4)
       '@types/d3-hierarchy': 3.1.7
       '@vueuse/core': 13.1.0(vue@3.5.13(typescript@5.5.4))
       ag-grid-vue3: 33.1.0(vue@3.5.13(typescript@5.5.4))
@@ -6775,7 +6775,7 @@ snapshots:
     transitivePeerDependencies:
       - aws-crt
 
-  '@platforma-sdk/tengo-builder@2.1.3':
+  '@platforma-sdk/tengo-builder@2.1.4':
     dependencies:
       '@milaboratories/pl-model-backend': 1.1.0
       '@milaboratories/resolve-helper': 1.1.0
@@ -6815,7 +6815,7 @@ snapshots:
       - supports-color
       - terser
 
-  '@platforma-sdk/ui-vue@1.31.0(typescript@5.5.4)':
+  '@platforma-sdk/ui-vue@1.31.1(typescript@5.5.4)':
     dependencies:
       '@biowasm/aioli': 3.2.1
       '@milaboratories/uikit': 2.2.75(typescript@5.5.4)
