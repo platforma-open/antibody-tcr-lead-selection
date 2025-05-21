@@ -1,5 +1,12 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.2.1
+
+### Patch Changes
+
+- Updated dependencies [6443da1]
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.2.0
+
 ## 1.2.0
 
 ### Minor Changes
