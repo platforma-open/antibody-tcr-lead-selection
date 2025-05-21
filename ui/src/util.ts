@@ -16,7 +16,6 @@ export const isSequenceColumn = (column: PColumnIdAndSpec) => {
 };
 
 export const isLabelColumnOption = (_column: PColumnIdAndSpec) => {
-  // allow using any column as label
   return true;
 };
 

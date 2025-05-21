@@ -222,18 +222,6 @@ export const model = BlockModel.create()
     }], { refsWithEnrichments: true }),
   )
 
-  .output('scoreColumns', (ctx) => {
-    return getColumns(ctx)?.scores;
-  })
-
-  .output('defaultFilters', (ctx) => {
-    return getColumns(ctx)?.defaultFilters;
-  })
-
-  .output('__TEMP__OUTPUT__', (ctx) => {
-    return getColumns(ctx);
-  })
-
   .output('rankingOptions', (ctx) => {
     const anchor = ctx.args.inputAnchor;
     if (anchor === undefined)
@@ -290,27 +278,19 @@ export const model = BlockModel.create()
     return allowedOptions;
   })
 
-  .output('test', (ctx) => {
-    const anchor = ctx.args.inputAnchor;
-    if (anchor === undefined)
-      return undefined;
-
-    return anchor;
-  })
-
   .output('pf', (ctx) => {
     const columns = getColumns(ctx);
     if (!columns) return undefined;
 
-    return createPFrameForGraphs(ctx, [...columns.props, ...columns.links]);
+    return createPFrameForGraphs(ctx, columns.props);
   })
 
   // Use the cdr3LengthsCalculated cols
   .output('spectratypePf', (ctx) => {
-    const pcols = ctx.outputs?.resolve('cdr3VspectratypePf')?.getPColumns();
-    if (!pcols) return undefined;
+    const pCols = ctx.outputs?.resolve('cdr3VspectratypePf')?.getPColumns();
+    if (!pCols) return undefined;
 
-    return createPFrameForGraphs(ctx, pcols);
+    return createPFrameForGraphs(ctx, pCols);
   })
 
   .output('table', (ctx) => {
