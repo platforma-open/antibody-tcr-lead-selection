@@ -1,0 +1,54 @@
+ll := import("@platforma-sdk/workflow-tengo:ll")
+
+getColumns := func() {
+    return {
+        "axes": [
+                {
+                "column": "chain",
+                "spec": {
+                    "name": "pl7.app/vdj/chain",
+                    "type": "String",
+                    "annotations": { "pl7.app/label": "CDR3 chain" }
+                }
+            },
+            {
+                "column": "vGene",
+                "spec": {
+                    "name": "pl7.app/vdj/geneHit",
+                    "type": "String",
+                    "domain": { "pl7.app/vdj/reference": "VGene" },
+                    "annotations": {
+                        "pl7.app/label": "Best V gene"
+                    }
+                }
+            },
+            {
+                "column": "jGene",
+                "spec": {
+                    "name": "pl7.app/vdj/geneHit",
+                    "type": "String",
+                    "domain": { "pl7.app/vdj/reference": "JGene" },
+                    "annotations": {
+                        "pl7.app/label": "Best J gene"
+                    }
+                }
+            }
+        ],
+        "columns": [
+            {
+                "column": "count",
+                "spec": {
+                    "name": "pl7.app/vdj/vjGeneUsage",
+                    "valueType": "Int",
+                    "annotations": { "pl7.app/label": "V/J usage" }
+                }
+            }
+        ],
+        "storageFormat": "Binary",
+        "partitionKeyLength": 0
+    }
+}
+
+export ll.toStrict({
+    getColumns: getColumns
+})
