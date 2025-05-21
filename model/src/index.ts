@@ -208,6 +208,11 @@ export const model = BlockModel.create()
       title: 'V/J Usage',
       template: 'heatmap',
       currentTab: null,
+      layersSettings: {
+        heatmap: {
+          normalizationDirection: null,
+        },
+      },
     },
     alignmentModel: {},
   })
