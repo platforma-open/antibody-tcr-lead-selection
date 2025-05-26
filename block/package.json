@@ -22,12 +22,12 @@
       "ui": "@platforma-open/milaboratories.top-antibodies.ui/dist"
     },
     "meta": {
-      "title": "Top Antibodies",
+      "title": "Antibody/TCR Lead Selection",
       "logo": "file:../logos/block-logo.png",
       "url": "https://github.com/milaboratory/platforma-top-antibodies",
       "docs": "https://github.com/milaboratory/platforma-top-antibodies/docs",
       "support": "mailto:support@milaboratories.com",
-      "description": "Block for top antibody selection based on precalculated scores.",
+      "description": "Pick top antibody/TCR lead candidates based on various scoring metrics.",
       "longDescription": "file:../docs/description.md",
       "changelog": "file:../CHANGELOG.md",
       "tags": [

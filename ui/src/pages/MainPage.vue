@@ -15,7 +15,6 @@ import {
   PlAgDataTableV2,
   PlBlockPage,
   PlBtnGhost,
-  PlDropdownMulti,
   PlDropdownRef,
   PlMaskIcon24,
   PlMultiSequenceAlignment,
@@ -31,6 +30,7 @@ import {
   useApp,
 } from '../app';
 import { defaultFilters, isLabelColumnOption, isLinkerColumn, isSequenceColumn } from '../util';
+import RankList from './components/RankList.vue';
 
 const app = useApp();
 
@@ -38,8 +38,8 @@ const settingsOpen = ref(app.model.args.inputAnchor === undefined);
 
 function setAnchorColumn(ref: PlRef | undefined) {
   app.model.args.inputAnchor = ref;
-  app.model.ui.filterModel = {};
-  app.model.ui.title = 'Top Antibodies - ' + (ref
+  app.model.ui.filterModel = {}; // clear filters
+  app.model.ui.title = 'Antibody/TCR Leads - ' + (ref
     ? app.model.outputs.inputOptions?.find((o) =>
       plRefsEqual(o.ref, ref),
     )?.label
@@ -109,19 +109,16 @@ const selection = ref<PlSelectionModel>({
         clearable
         @update:model-value="setAnchorColumn"
       />
-      <PlDropdownMulti v-model="app.model.args.rankingOrder" :options="app.model.outputs.rankingOptions" label="Ranking columns" >
-        <template #tooltip>
-          Select the columns to use for priority-based, sequential sorting of clonotypes.
-        </template>
-      </PlDropdownMulti>
       <PlNumberField
         v-model="app.model.args.topClonotypes"
-        label="Top clonotypes" :minValue="2" :step="1"
+        label="Pick top candidates" :minValue="2" :step="1"
       >
         <template #tooltip>
           Choose how many top clonotypes to include, ranked by the columns you selected in the dropdown above.
         </template>
       </PlNumberField>
+
+      <RankList/> <!-- @TODO: move to SDK in the future -->
     </PlSlideModal>
   </PlBlockPage>
 </template>

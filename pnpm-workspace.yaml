@@ -10,7 +10,7 @@ packages:
 
 catalog:
   "@platforma-sdk/model": ^1.30.37
-  "@platforma-sdk/ui-vue": ^1.31.1
+  "@platforma-sdk/ui-vue": ^1.31.2
   "@platforma-sdk/workflow-tengo": ^4.5.1
   "@platforma-sdk/block-tools": ^2.5.47
   "@platforma-sdk/test": ^1.30.39
@@ -23,6 +23,8 @@ catalog:
   "@platforma-open/milaboratories.runenv-python-3": ^1.1.7
 
   '@biowasm/aioli': ~3.2.1
+  
+  "sass-embedded": ^1.77.8
   
   "vue": ^3.5.13
   "vue-tsc": ^2.2.8

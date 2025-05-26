@@ -19,7 +19,7 @@ wf.prepare(func(args){
 	bundleBuilder.addAnchor("main", args.inputAnchor) 
 	
 	for col in args.rankingOrder {
-		bundleBuilder.addSingle(col)
+		bundleBuilder.addSingle(col.value)
 	}
 
 	// Add linker column
@@ -95,10 +95,10 @@ wf.body(func(args) {
 	cloneTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
 	
 	for i, col in args.rankingOrder {
-		cloneTable.add(col, {header: "Col" + string(i)})
+		cloneTable.add(col.value, {header: "Col" + string(i)})
 	
 		// If column does not have main anchor axis we have to include theirs
-		colsSpec := columns.getSpec(col)
+		colsSpec := columns.getSpec(col.value)
 		axesNames := slices.map(colsSpec.axesSpec, func (a) { return a.name})
 		if !slices.hasElement(axesNames, datasetSpec.axesSpec[1].name) {
 			for na, ax in colsSpec.axesSpec {
