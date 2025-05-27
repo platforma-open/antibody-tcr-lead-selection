@@ -125,6 +125,8 @@ wf.body(func(args) {
 	}
 	cloneTable = cloneTable.build()
 
+	topClonotypesCsv := undefined
+
 	if topClonotypes != undefined {
 		// Run sampling script
 		sampleClones := exec.builder().
@@ -138,16 +140,19 @@ wf.body(func(args) {
 			saveStdoutContent().
 			cache(24 * 60 * 60 * 1000).
 			run()
-		
+
+		// Save top clonotypes CSV file
+		topClonotypesCsv = sampleClones.getFile("sampledClonotypes_top.csv")
+
 		// Store outputs
 		sampledColsParams := sampledColsConv.getColumns(datasetSpec, linkerAxisSpec)
-		sampledColumnsPf := xsv.importFile(sampleClones.getFile("sampledClonotypes_top.csv"), "csv", sampledColsParams)
+		sampledColumnsPf := xsv.importFile(topClonotypesCsv, "csv", sampledColsParams)
 		outputs["sampledRows"] = pframes.exportFrame(sampledColumnsPf)
 
     	// Prepare filter col subset for UMAP
     	// Avoid taking cluster axis using other params
     	sampledColsUmapParams := sampledColsUmapConv.getColumns(datasetSpec) 
-    	sampledColsUmapPf := xsv.importFile(sampleClones.getFile("sampledClonotypes_top.csv"), "csv", sampledColsUmapParams)
+    	sampledColsUmapPf := xsv.importFile(topClonotypesCsv, "csv", sampledColsUmapParams)
 		outputs["sampledRowsUmap"] = pframes.exportFrame(sampledColsUmapPf)
 	}
 	
@@ -245,7 +250,16 @@ wf.body(func(args) {
 		addFile("cdr3_sequences_input.tsv", cdr3SeqTableBuilt).
 		arg("--input_tsv").arg("cdr3_sequences_input.tsv").
 		arg("--spectratype_tsv").arg("spectratype.tsv").
-		arg("--vj_usage_tsv").arg("vj_usage.tsv").
+		arg("--vj_usage_tsv").arg("vj_usage.tsv") // no dot here
+
+	// Add top clonotypes argument and file to the builder if provided
+	if topClonotypes != undefined {
+		cdr3VspectratypeCmd = cdr3VspectratypeCmd.
+			arg("--top_clonotypes_csv").arg("topClonotypes.csv").
+			addFile("topClonotypes.csv", topClonotypesCsv)
+	}
+
+	cdr3VspectratypeCmd = cdr3VspectratypeCmd. // continue building the command
 		saveFile("spectratype.tsv").
 		saveFile("vj_usage.tsv").
 		printErrStreamToStdout().
