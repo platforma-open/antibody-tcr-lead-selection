@@ -5,11 +5,9 @@ assets:= import("@platforma-sdk/workflow-tengo:assets")
 xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
 pframes := import("@platforma-sdk/workflow-tengo:pframes")
 sampledColsConv := import(":sampled-cols-conv")
-sampledColsUmapConv := import(":sampled-cols-umap-conv")
 spectratypeConv := import(":pf-spectratype-conv")
 vjUsageConv := import(":pf-vj-usage-conv")
 slices := import("@platforma-sdk/workflow-tengo:slices")
-umapConv := import(":pf-umap-conv")
 
 wf.prepare(func(args){
 	// We need a table with cluster ID (optional) | clonotype id | selected ranking columns
@@ -145,47 +143,10 @@ wf.body(func(args) {
 		topClonotypesCsv = sampleClones.getFile("sampledClonotypes_top.csv")
 
 		// Store outputs
-		sampledColsParams := sampledColsConv.getColumns(datasetSpec, linkerAxisSpec)
+		sampledColsParams := sampledColsConv.getColumns(datasetSpec)
 		sampledColumnsPf := xsv.importFile(topClonotypesCsv, "csv", sampledColsParams)
 		outputs["sampledRows"] = pframes.exportFrame(sampledColumnsPf)
-
-    	// Prepare filter col subset for UMAP
-    	// Avoid taking cluster axis using other params
-    	sampledColsUmapParams := sampledColsUmapConv.getColumns(datasetSpec) 
-    	sampledColsUmapPf := xsv.importFile(topClonotypesCsv, "csv", sampledColsUmapParams)
-		outputs["sampledRowsUmap"] = pframes.exportFrame(sampledColsUmapPf)
 	}
-	
-	////////// UMAP //////////
-	// Generate input TSV with Clonotype ID and aa sequence
-	umapTable := pframes.tsvFileBuilder()
-	umapTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
-	for col in columns.getColumns("aaSequence") {
-		if isSingleCell {
-			chainLabel := col.spec.domain["pl7.app/vdj/scClonotypeChain"]
-			umapTable.add(col, {header: "aaSequence." + chainLabel})
-		} else {
-			chainLabel := col.spec.axesSpec[0].domain["pl7.app/vdj/chain"]
-			umapTable.add(col, {header: "aaSequence." + chainLabel})
-		}
-	}
-	umapTable = umapTable.build()
-
-	// UMAP script should go here
-	umapClones := exec.builder().
-		software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.umap:main")).
-		addFile("sequences.tsv", umapTable).
-		arg("-i").arg("sequences.tsv").
-		arg("-u").arg("umap.tsv").
-		saveFile("umap.tsv").
-		printErrStreamToStdout().
-		saveStdoutContent().
-		cache(24 * 60 * 60 * 1000).
-		run()
-
-
-	umapPf := xsv.importFile(umapClones.getFile("umap.tsv"), "tsv", umapConv.getColumns(datasetSpec))
-	outputs["umap"] = pframes.exportFrame(umapPf)
 
 	////////// CDR3 Length Calculation //////////
 	

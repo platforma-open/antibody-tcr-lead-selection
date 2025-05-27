@@ -41,10 +41,10 @@ const defaultOptions: GraphMakerProps['defaultOptions'] = [
     },
   },
   {
-    inputName: 'filters',
+    inputName: 'highlight',
     selectedSource: {
       kind: 'PColumn',
-      name: 'pl7.app/vdj/sampling-column-umap',
+      name: 'pl7.app/vdj/sampling-column',
       valueType: 'Int',
       axesSpec: [
         {
@@ -69,8 +69,8 @@ const selection = ref<PlSelectionModel>({
       v-model="app.model.ui.graphStateUMAP"
       v-model:selection="selection"
       chartType="scatterplot-umap"
-      :data-state-key="app.model.outputs.UMAPPf"
-      :p-frame="app.model.outputs.UMAPPf"
+      :data-state-key="app.model.outputs.umapPf"
+      :p-frame="app.model.outputs.umapPf"
       :default-options="defaultOptions"
     >
       <template #titleLineSlot>

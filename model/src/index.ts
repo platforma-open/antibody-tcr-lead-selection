@@ -45,12 +45,12 @@ export const model = BlockModel.create()
       gridState: {},
     },
     graphStateUMAP: {
-      title: 'UMAP',
+      title: 'Clonotype Space UMAP',
       template: 'dots',
       currentTab: null,
       layersSettings: {
         dots: {
-          dotFill: '#99E099',
+          dotFill: '#5d32c6',
         },
       },
     },
@@ -128,10 +128,10 @@ export const model = BlockModel.create()
 
   // Use the cdr3LengthsCalculated cols
   .output('vjUsagePf', (ctx) => {
-    const pcols = ctx.outputs?.resolve('vjUsagePf')?.getPColumns();
-    if (!pcols) return undefined;
+    const pCols = ctx.outputs?.resolve('vjUsagePf')?.getPColumns();
+    if (!pCols) return undefined;
 
-    return createPFrameForGraphs(ctx, pcols);
+    return createPFrameForGraphs(ctx, pCols);
   })
 
   .output('table', (ctx) => {
@@ -174,32 +174,44 @@ export const model = BlockModel.create()
     );
   })
 
-  .output('UMAPPf', (ctx): PFrameHandle | undefined => {
-    const pCols = ctx.outputs?.resolve('umap')?.getPColumns();
-    if (pCols === undefined) {
+  // Use UMAP output from ctx from clonotype-space block
+  .output('umapPf', (ctx): PFrameHandle | undefined => {
+    const anchor = ctx.args.inputAnchor;
+    if (anchor === undefined)
       return undefined;
-    }
 
-    // Get the selected rows if any
-    const sampledRowsUmap = ctx.outputs?.resolve({ field: 'sampledRowsUmap',
-      allowPermanentAbsence: true })?.getPColumns();
-    if (sampledRowsUmap === undefined) {
-      return createPFrameForGraphs(ctx, [...pCols]);
-    }
+    const umap = ctx.resultPool.getAnchoredPColumns(
+      { main: anchor },
+      [
+        {
+          axes: [{ anchor: 'main', idx: 1 }],
+          namePattern: '^pl7\\.app/vdj/umap[12]$',
+        },
+      ],
+    );
 
-    return createPFrameForGraphs(ctx, [...pCols, ...sampledRowsUmap]);
+    if (umap === undefined || umap.length === 0)
+      return undefined;
+
+    // @TODO: if umap size is > 2 !
+
+    const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', allowPermanentAbsence: true })?.getPColumns();
+
+    return createPFrameForGraphs(ctx, [...umap, ...(sampledRows ?? [])]);
   })
 
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)
 
   .title((ctx) => ctx.uiState.title ?? 'Antibody/TCR Leads')
 
-  .sections((_ctx) => ([
-    { type: 'link', href: '/', label: 'Main' },
-    { type: 'link', href: '/umap', label: 'Clonotype UMAP' },
-    { type: 'link', href: '/spectratype', label: 'CDR3 V Spectratype' },
-    { type: 'link', href: '/usage', label: 'V/J gene usage' },
-  ]))
+  .sections((_) => {
+    return [
+      { type: 'link', href: '/', label: 'Main' },
+      { type: 'link', href: '/umap', label: 'Clonotype Space' },
+      { type: 'link', href: '/spectratype', label: 'CDR3 V Spectratype' },
+      { type: 'link', href: '/usage', label: 'V/J gene usage' },
+    ];
+  })
 
   .done();
 

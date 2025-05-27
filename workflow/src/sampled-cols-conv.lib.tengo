@@ -1,24 +1,12 @@
 ll := import("@platforma-sdk/workflow-tengo:ll")
 
-getColumns := func(datasetSpec, linkerAxisSpec) {
-  axes := [
+getColumns := func(datasetSpec) {
+  return {
+    "axes": [
       {
         "column": "clonotypeKey",
         "spec": datasetSpec.axesSpec[1]
-      }]
-
-  if len(linkerAxisSpec) > 0 {
-    for key, val in linkerAxisSpec {
-      axes = axes + [
-        {
-          "column": key,
-          "spec": val
-        }]
-    }
-    
-  }
-  return {
-    "axes": axes,
+      }],
     "columns": [
       {
         "column": "top",
@@ -30,7 +18,8 @@ getColumns := func(datasetSpec, linkerAxisSpec) {
           "domain": {},
           "annotations": {
             "pl7.app/label": "Sampling column",
-            "pl7.app/table/visibility": "optional"
+            "pl7.app/table/visibility": "optional",
+            "pl7.app/isSubset": "true"
           }
         }
       }

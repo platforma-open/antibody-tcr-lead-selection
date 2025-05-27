@@ -2,55 +2,55 @@ ll := import("@platforma-sdk/workflow-tengo:ll")
 
 getColumns := func() {
     return {
-        "axes": [
+        axes: [
             {
-                "column": "chain",
-                "spec": {
-                    "name": "pl7.app/vdj/chain",
-                    "type": "String",
-                    "annotations": { "pl7.app/label": "CDR3 chain" }
+                column: "chain",
+                spec: {
+                    name: "pl7.app/vdj/chain",
+                    type: "String",
+                    annotations: { "pl7.app/label": "CDR3 chain" }
                 }
             },
             {
-                "column": "cdr3Length",
-                "spec": {
-                    "name": "pl7.app/vdj/sequenceLength",
-                    "type": "Int",
-                    "domain": {
+                column: "cdr3Length",
+                spec: {
+                    name: "pl7.app/vdj/sequenceLength",
+                    type: "Int",
+                    domain: {
                         "pl7.app/vdj/feature": "CDR3",
                         "pl7.app/alphabet": "aminoacid"
                     },
-                    "annotations": { "pl7.app/label": "CDR3 aa Length" }
+                    annotations: { "pl7.app/label": "CDR3 aa Length" }
                 }
             },
             {
-                "column": "vGene",
-                "spec": {
-                    "name": "pl7.app/vdj/geneHit",
-                    "type": "String",
-                    "domain": { "pl7.app/vdj/reference": "VGene" },
-                    "annotations": {
+                column: "vGene",
+                spec: {
+                    name: "pl7.app/vdj/geneHit",
+                    type: "String",
+                    domain: { "pl7.app/vdj/reference": "VGene" },
+                    annotations: {
                         "pl7.app/label": "Best V gene"
                     }
                 }
             }
         ],
-        "columns": [
+        columns: [
             {
-                "column": "count",
-                "spec": {
-                    "name": "pl7.app/vdj/vSpectratype",
-                    "valueType": "Int",
-                    "domain": {
+                column: "count",
+                spec: {
+                    name: "pl7.app/vdj/vSpectratype",
+                    valueType: "Int",
+                    domain: {
                         "pl7.app/vdj/feature": "CDR3",
                         "pl7.app/alphabet": "aminoacid"
                     },
-                    "annotations": { "pl7.app/label": "CDR3 V Spectratype" }
+                    annotations: { "pl7.app/label": "CDR3 V Spectratype" }
                 }
             }
         ],
-        "storageFormat": "Binary",
-        "partitionKeyLength": 0
+        storageFormat: "Binary",
+        partitionKeyLength: 0
     }
 }
 
