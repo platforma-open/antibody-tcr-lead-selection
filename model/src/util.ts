@@ -1,13 +1,13 @@
 import type {
-    DataInfo,
-    PColumn,
-    PColumnValues,
-    PlRef,
-    PlTableFilter,
-    PTableColumnId,
-    RenderCtx,
-    SUniversalPColumnId,
-    TreeNodeAccessor,
+  DataInfo,
+  PColumn,
+  PColumnValues,
+  PlRef,
+  PlTableFilter,
+  PTableColumnId,
+  RenderCtx,
+  SUniversalPColumnId,
+  TreeNodeAccessor,
 } from '@platforma-sdk/model';
 import type { BlockArgs, UiState } from '.';
 
