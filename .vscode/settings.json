@@ -1,6 +1,7 @@
 {
     "files.exclude": {
         "**/.npmrc": true,
+        "**/.turbo": true,
         "**/*.tgz": true,
         "**/block-pack": true,
         "**/dist": true,

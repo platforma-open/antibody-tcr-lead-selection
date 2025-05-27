@@ -16,7 +16,8 @@
     "@platforma-sdk/model": "catalog:",
     "@milaboratories/graph-maker": "catalog:",
     "vue": "catalog:",
-    "@biowasm/aioli": "catalog:"
+    "@biowasm/aioli": "catalog:",
+    "sass-embedded": "catalog:"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "catalog:",
