@@ -13,6 +13,7 @@ import {
   createPFrameForGraphs,
   createPlDataTableV2,
   deriveLabels,
+  isPColumn,
 } from '@platforma-sdk/model';
 import type { AnchoredColumnId, Column, RankingOrder } from './util';
 import { anchoredColumnId, getColumns } from './util';
@@ -174,13 +175,32 @@ export const model = BlockModel.create()
     );
   })
 
-  .output('UMAPPf', (ctx): PFrameHandle | undefined => {
+// @TODO: remove when UMAP is removed from workflow
+/*   .output('UMAPPf', (ctx): PFrameHandle | undefined => {
     const pCols = ctx.outputs?.resolve('umap')?.getPColumns();
     if (pCols === undefined) {
       return undefined;
     }
 
     // Get the selected rows if any
+    const sampledRowsUmap = ctx.outputs?.resolve({ field: 'sampledRowsUmap',
+      allowPermanentAbsence: true })?.getPColumns();
+    if (sampledRowsUmap === undefined) {
+      return createPFrameForGraphs(ctx, [...pCols]);
+    }
+
+    return createPFrameForGraphs(ctx, [...pCols, ...sampledRowsUmap]);
+  }) */
+
+  // Use UMAP output from ctx from clonotype-space block
+  .output('UMAPPf', (ctx): PFrameHandle | undefined => {
+    const pCols = ctx.resultPool
+      .getData()
+      .entries.map((c) => c.obj)
+      .filter(isPColumn);
+    // .filter((column) => column.spec.name.includes('umap')),
+
+    // Get the top clonotype subset if any
     const sampledRowsUmap = ctx.outputs?.resolve({ field: 'sampledRowsUmap',
       allowPermanentAbsence: true })?.getPColumns();
     if (sampledRowsUmap === undefined) {
