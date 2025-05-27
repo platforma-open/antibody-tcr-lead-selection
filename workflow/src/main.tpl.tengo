@@ -156,7 +156,8 @@ wf.body(func(args) {
 		outputs["sampledRowsUmap"] = pframes.exportFrame(sampledColsUmapPf)
 	}
 	
-	////////// UMAP //////////
+	// @TODO: remove when UMAP clonotype-space block is finished
+	/* ////////// UMAP //////////
 	// Generate input TSV with Clonotype ID and aa sequence
 	umapTable := pframes.tsvFileBuilder()
 	umapTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
@@ -186,7 +187,7 @@ wf.body(func(args) {
 
 	umapPf := xsv.importFile(umapClones.getFile("umap.tsv"), "tsv", umapConv.getColumns(datasetSpec))
 	outputs["umap"] = pframes.exportFrame(umapPf)
-
+ */
 	////////// CDR3 Length Calculation //////////
 	
 	cdr3SeqTable := pframes.tsvFileBuilder()
