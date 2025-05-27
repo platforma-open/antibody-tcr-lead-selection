@@ -1,8 +1,5 @@
 <script setup lang="ts" >
-import type { RankingOrder } from '@platforma-open/milaboratories.top-antibodies.model';
-import type {
-  SUniversalPColumnId,
-} from '@platforma-sdk/model';
+import type { AnchoredColumnId, RankingOrder } from '@platforma-open/milaboratories.top-antibodies.model';
 import type { ListOption } from '@platforma-sdk/ui-vue';
 import { PlDropdown } from '@platforma-sdk/ui-vue';
 import './metrics-manager.scss';
@@ -20,7 +17,7 @@ const model = defineModel<RankingOrder>(
   });
 
 const props = defineProps<{
-  options?: ListOption<SUniversalPColumnId>[];
+  options?: ListOption<AnchoredColumnId>[];
 }>();
 </script>
 

@@ -1,7 +1,7 @@
 <script setup lang="ts" generic="T = unknown">
-import type { SUniversalPColumnId } from '@platforma-sdk/model';
+import type { AnchoredColumnId } from '@platforma-open/milaboratories.top-antibodies.model';
 import { PlIcon16, PlMaskIcon16, PlMaskIcon24, PlRow, PlTooltip, useSortable2 } from '@platforma-sdk/ui-vue';
-import { reactive, ref } from 'vue';
+import { reactive, ref, watch } from 'vue';
 import { useApp } from '../../app';
 import './metrics-manager.scss';
 import RankCard from './RankCard.vue';
@@ -24,9 +24,9 @@ useSortable2(listRef, {
   },
 });
 
-const getMetricLabel = (value: SUniversalPColumnId | undefined) => {
+const getMetricLabel = (value: AnchoredColumnId | undefined) => {
   const column = app.model.outputs.rankingOptions?.find(
-    (option) => option && option.value === value,
+    (option) => option && option.value.column === value?.column,
   );
   return column?.label ?? 'Set rank';
 };
@@ -90,6 +90,13 @@ const resetToDefaults = () => {
   });
   listKey.value++;
 };
+
+// set default ranking order when topClonotypes is set
+watch(() => app.model.args.topClonotypes, (oldValue, newValue) => {
+  if (oldValue === undefined && newValue !== undefined) {
+    resetToDefaults();
+  }
+});
 </script>
 
 <template>

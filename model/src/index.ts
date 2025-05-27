@@ -7,7 +7,6 @@ import type {
   PlMultiSequenceAlignmentModel,
   PlRef,
   PlTableFiltersModel,
-  SUniversalPColumnId,
 } from '@platforma-sdk/model';
 import {
   BlockModel,
@@ -15,8 +14,8 @@ import {
   createPlDataTableV2,
   deriveLabels,
 } from '@platforma-sdk/model';
-import type { Column, RankingOrder } from './util';
-import { getColumns } from './util';
+import type { AnchoredColumnId, Column, RankingOrder } from './util';
+import { anchoredColumnId, getColumns } from './util';
 
 export type BlockArgs = {
   inputAnchor?: PlRef;
@@ -45,10 +44,10 @@ export const model = BlockModel.create()
     tableState: {
       gridState: {},
     },
-    filterModel: {},
     graphStateUMAP: {
       title: 'UMAP',
       template: 'dots',
+      currentTab: null,
       layersSettings: {
         dots: {
           dotFill: '#99E099',
@@ -64,8 +63,14 @@ export const model = BlockModel.create()
       title: 'V/J Usage',
       template: 'heatmap',
       currentTab: null,
+      layersSettings: {
+        heatmap: {
+          normalizationDirection: null,
+        },
+      },
     },
     alignmentModel: {},
+    filterModel: {},
   })
 
   .output('inputOptions', (ctx) =>
@@ -98,11 +103,11 @@ export const model = BlockModel.create()
       return undefined;
 
     return deriveLabels(
-      columns.props.filter((c) => c.spec.valueType !== 'String'),
-      (c) => c.spec,
-    ).map((c) => ({
-      value: c.value.id as SUniversalPColumnId,
-      label: c.label,
+      columns.props.filter((c) => c.column.spec.valueType !== 'String'),
+      (c) => c.column.spec,
+    ).map((o) => ({
+      ...o,
+      value: anchoredColumnId(o.value),
     }));
   })
 
@@ -110,7 +115,7 @@ export const model = BlockModel.create()
     const columns = getColumns(ctx);
     if (!columns) return undefined;
 
-    return createPFrameForGraphs(ctx, columns.props);
+    return createPFrameForGraphs(ctx, columns.props.map((c) => c.column));
   })
 
   // Use the cdr3LengthsCalculated cols
@@ -134,6 +139,8 @@ export const model = BlockModel.create()
     if (columns === undefined)
       return undefined;
 
+    const props = columns.props.map((c) => c.column);
+
     // we wont compute the workflow output in cases where ctx.args.topClonotypes == undefined
     const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', allowPermanentAbsence: true })?.getPColumns();
     let ops: CreatePlDataTableOps = {
@@ -141,14 +148,14 @@ export const model = BlockModel.create()
     };
     const cols: Column[] = [];
     if (ctx.args.topClonotypes === undefined) {
-      cols.push(...columns.props);
+      cols.push(...props);
       ops = {
         filters: ctx.uiState.filterModel.filters,
       };
     } else if (sampledRows === undefined) {
       return undefined;
     } else {
-      cols.push(...columns.props, ...sampledRows);
+      cols.push(...props, ...sampledRows);
       ops = {
         filters: ctx.uiState.filterModel.filters,
         coreColumnPredicate: (spec) => spec.name === 'pl7.app/vdj/sampling-column',
@@ -156,7 +163,7 @@ export const model = BlockModel.create()
       };
     }
 
-    const maxAxes = columns.props.reduce((acc, curr) => Math.max(acc, curr.spec.axesSpec.length), 0);
+    const maxAxes = props.reduce((acc, curr) => Math.max(acc, curr.spec.axesSpec.length), 0);
     return createPlDataTableV2(
       ctx,
       cols,
@@ -198,4 +205,4 @@ export const model = BlockModel.create()
 
 export type BlockOutputs = InferOutputsType<typeof model>;
 
-export type { RankingOrder };
+export type { AnchoredColumnId, RankingOrder };
