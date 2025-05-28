@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.spectratype
 
+## 1.3.1
+
+### Patch Changes
+
+- b280c5c: Use embedded kalign
+
 ## 1.3.0
 
 ### Minor Changes

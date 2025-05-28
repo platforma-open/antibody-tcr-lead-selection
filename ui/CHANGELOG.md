@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.2.4
+
+### Patch Changes
+
+- b280c5c: Use embedded kalign
+
 ## 1.2.3
 
 ### Patch Changes
