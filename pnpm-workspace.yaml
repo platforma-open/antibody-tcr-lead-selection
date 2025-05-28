@@ -17,7 +17,7 @@ catalog:
   "@platforma-sdk/tengo-builder": ^2.1.5
   "@platforma-sdk/package-builder": ^2.16.0
   "@platforma-sdk/eslint-config": ^1.0.3
-  "@milaboratories/graph-maker": ^1.1.104
+  "@milaboratories/graph-maker": ^1.1.105
 
   '@milaboratories/software-pframes-conv': ^2.2.2
   "@platforma-open/milaboratories.runenv-python-3": ^1.1.7
