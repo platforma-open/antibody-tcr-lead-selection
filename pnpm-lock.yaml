@@ -13,8 +13,8 @@ catalogs:
       specifier: ^2.28.1
       version: 2.28.1
     '@milaboratories/graph-maker':
-      specifier: ^1.1.102
-      version: 1.1.102
+      specifier: ^1.1.104
+      version: 1.1.104
     '@platforma-open/milaboratories.runenv-python-3':
       specifier: ^1.1.7
       version: 1.1.13
@@ -107,7 +107,7 @@ importers:
     dependencies:
       '@milaboratories/graph-maker':
         specifier: 'catalog:'
-        version: 1.1.102(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(typescript@5.5.4)
+        version: 1.1.104(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(typescript@5.5.4)
       '@platforma-sdk/model':
         specifier: 'catalog:'
         version: 1.31.16
@@ -181,7 +181,7 @@ importers:
         version: 3.2.1
       '@milaboratories/graph-maker':
         specifier: 'catalog:'
-        version: 1.1.102(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(typescript@5.5.4)
+        version: 1.1.104(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(typescript@5.5.4)
       '@platforma-open/milaboratories.top-antibodies.model':
         specifier: workspace:*
         version: link:../model
@@ -1101,21 +1101,21 @@ packages:
     resolution: {integrity: sha512-Y4yZOICNawATMrSecHQ5qEw0AE1TWeZJKGODIiW4pva4uEaxv/Fa+86wkuDUQgg5RCo+BORAjNcZ2ZTiCpNqpA==}
     engines: {node: '>=20.0.0'}
 
-  '@milaboratories/graph-maker@1.1.102':
-    resolution: {integrity: sha512-60iLThcnkTFyaOlQ1aKYwg07H6SWkIGyYKjkP6sOESsuY8mH/gFPf3S2gjqAMhBDwG6KlKpxeIAZ6xLU8+dkFQ==}
+  '@milaboratories/graph-maker@1.1.104':
+    resolution: {integrity: sha512-hhCc3s+Yoc+bfg2xLaezlAd+Pf8qWaoIaMBluPdvri3/NXLzkkAdjZAM0JTSm2EttMCZS6ptGHZCbf69S3z3jA==}
 
   '@milaboratories/helpers@1.6.11':
     resolution: {integrity: sha512-TyERmUULB8hvbwqnMOQ14YAPQzVBGpBSLkByYpl3/5vCkf4OndBg+V8XqITHEZkca9y82LVm5IDU0hP7KOCQ9Q==}
     engines: {node: '>=20.10.0'}
 
+  '@milaboratories/miplots4@1.0.101':
+    resolution: {integrity: sha512-/0LaBB7o3wqdnoS/P/E+0Fd2ASbnxwvCAZzJ/ASyD2oFzzi4T6RL77ESjjjnUTXgSc5Q3rxCNhIl9T9QuVAuEA==}
+
   '@milaboratories/miplots4@1.0.97':
     resolution: {integrity: sha512-mq4n/dd8klKDa6R4mTnRh4UgbP6ukWh7FeGyt1N31SAVy5DoYIx0i9GUE3Lugdg5Qkezo/98BV3QzVbOqzqYeg==}
 
-  '@milaboratories/miplots4@1.0.99':
-    resolution: {integrity: sha512-cRDK8G0KCLWT3B9lKsMR66ZWBZ2aHEZ9cJscw6lUXB5tv5FGokVD9q6ywwytlCyvqQuR2x989oMPyzVqRQ+YCw==}
-
-  '@milaboratories/pf-plots@1.1.11':
-    resolution: {integrity: sha512-qZqDLV7Y3UKyr5ts5ICg5jId7R6SZ3AbXYr+mm/pEfqvRDIaxS1T4MXIvbx40iSAEgQ6+79sAKYtAuJeznJdeg==}
+  '@milaboratories/pf-plots@1.1.12':
+    resolution: {integrity: sha512-udUwPyn5FUtcvttWVkiGDmLPZCVPgzWd0MDYa56Nlqj6+mo+2m7AYgJgkFsYqRACqOfOvNoPfA3+JU0227xeDg==}
 
   '@milaboratories/pframes-rs-node@1.0.39':
     resolution: {integrity: sha512-s4MWOw94vAcAtCfi1IWbmyKPbrwneg6tqsf58iWjyP8tCjVvI18P6xpEZbzww3Y/d3Fpa/chWXmA6HTxBYY+7w==}
@@ -6547,12 +6547,12 @@ snapshots:
       utility-types: 3.11.0
       zod: 3.23.8
 
-  '@milaboratories/graph-maker@1.1.102(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(typescript@5.5.4)':
+  '@milaboratories/graph-maker@1.1.104(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(typescript@5.5.4)':
     dependencies:
       '@ag-grid-community/core': 32.3.5
       '@milaboratories/helpers': 1.6.11
-      '@milaboratories/miplots4': 1.0.99(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)
-      '@milaboratories/pf-plots': 1.1.11
+      '@milaboratories/miplots4': 1.0.101(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)
+      '@milaboratories/pf-plots': 1.1.12
       '@platforma-sdk/model': 1.31.16
       '@platforma-sdk/ui-vue': 1.31.16(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(typescript@5.5.4)
       '@types/d3-hierarchy': 3.1.7
@@ -6570,6 +6570,40 @@ snapshots:
       - typescript
 
   '@milaboratories/helpers@1.6.11': {}
+
+  '@milaboratories/miplots4@1.0.101(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)':
+    dependencies:
+      '@d3fc/d3fc-chart': 5.1.9(d3-array@3.2.4)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(d3-scale@4.0.2)(d3-selection@3.0.0)(d3-shape@3.2.0)
+      '@d3fc/d3fc-pointer': 3.0.3(d3-dispatch@3.0.1)(d3-selection@3.0.0)
+      '@d3fc/d3fc-webgl': 3.2.1(d3-scale@4.0.2)(d3-shape@3.2.0)
+      '@stdlib/stats-anova1': 0.2.2
+      '@stdlib/stats-kruskal-test': 0.2.2
+      '@stdlib/stats-ttest': 0.2.2
+      '@stdlib/stats-ttest2': 0.2.2
+      '@stdlib/stats-wilcoxon': 0.2.2
+      '@types/d3-polygon': 3.0.2
+      d3-array: 3.2.4
+      d3-axis: 3.0.0
+      d3-color: 3.1.0
+      d3-format: 3.1.0
+      d3-hierarchy: 3.1.2
+      d3-polygon: 3.0.1
+      d3-quadtree: 3.0.1
+      d3-random: 3.0.1
+      d3-scale: 4.0.2
+      d3-selection: 3.0.0
+      d3-shape: 3.2.0
+      d3-zoom: 3.0.0
+      lodash: 4.17.21
+      rbush: 4.0.1
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+      zod: 3.23.8
+    transitivePeerDependencies:
+      - d3-dispatch
+      - d3-path
+      - d3-scale-chromatic
+      - supports-color
 
   '@milaboratories/miplots4@1.0.97(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)':
     dependencies:
@@ -6605,41 +6639,7 @@ snapshots:
       - d3-scale-chromatic
       - supports-color
 
-  '@milaboratories/miplots4@1.0.99(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)':
-    dependencies:
-      '@d3fc/d3fc-chart': 5.1.9(d3-array@3.2.4)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(d3-scale@4.0.2)(d3-selection@3.0.0)(d3-shape@3.2.0)
-      '@d3fc/d3fc-pointer': 3.0.3(d3-dispatch@3.0.1)(d3-selection@3.0.0)
-      '@d3fc/d3fc-webgl': 3.2.1(d3-scale@4.0.2)(d3-shape@3.2.0)
-      '@stdlib/stats-anova1': 0.2.2
-      '@stdlib/stats-kruskal-test': 0.2.2
-      '@stdlib/stats-ttest': 0.2.2
-      '@stdlib/stats-ttest2': 0.2.2
-      '@stdlib/stats-wilcoxon': 0.2.2
-      '@types/d3-polygon': 3.0.2
-      d3-array: 3.2.4
-      d3-axis: 3.0.0
-      d3-color: 3.1.0
-      d3-format: 3.1.0
-      d3-hierarchy: 3.1.2
-      d3-polygon: 3.0.1
-      d3-quadtree: 3.0.1
-      d3-random: 3.0.1
-      d3-scale: 4.0.2
-      d3-selection: 3.0.0
-      d3-shape: 3.2.0
-      d3-zoom: 3.0.0
-      lodash: 4.17.21
-      rbush: 4.0.1
-      react: 18.3.1
-      react-dom: 18.3.1(react@18.3.1)
-      zod: 3.23.8
-    transitivePeerDependencies:
-      - d3-dispatch
-      - d3-path
-      - d3-scale-chromatic
-      - supports-color
-
-  '@milaboratories/pf-plots@1.1.11':
+  '@milaboratories/pf-plots@1.1.12':
     dependencies:
       '@platforma-sdk/model': 1.31.16
       canonicalize: 2.1.0
