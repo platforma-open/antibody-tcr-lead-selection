@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.2.2
+
+### Patch Changes
+
+- b1e9b63: Wrap PlMultiSequenceAlignment in a modal
+
 ## 1.2.1
 
 ### Patch Changes
