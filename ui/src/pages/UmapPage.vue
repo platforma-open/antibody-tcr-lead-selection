@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import '@milaboratories/graph-maker/styles';
-import { PlAgDataTableToolsPanel, PlBlockPage, PlMultiSequenceAlignment } from '@platforma-sdk/ui-vue';
+import { PlBlockPage, PlBtnGhost, PlMultiSequenceAlignment, PlSlideModal } from '@platforma-sdk/ui-vue';
 import { useApp } from '../app';
 
 import type { GraphMakerProps } from '@milaboratories/graph-maker';
@@ -61,6 +61,7 @@ const selection = ref<PlSelectionModel>({
   selectedKeys: [],
 });
 
+const multipleSequenceAlignmentOpen = ref(false);
 </script>
 
 <template>
@@ -74,17 +75,24 @@ const selection = ref<PlSelectionModel>({
       :default-options="defaultOptions"
     >
       <template #titleLineSlot>
-        <PlAgDataTableToolsPanel>
-          <PlMultiSequenceAlignment
-            v-model="app.model.ui.alignmentModel"
-            :label-column-option-predicate="isLabelColumnOption"
-            :sequence-column-predicate="isSequenceColumn"
-            :linker-column-predicate="isLinkerColumn"
-            :p-frame="app.model.outputs.pf"
-            :selection="selection"
-          />
-        </PlAgDataTableToolsPanel>
+        <PlBtnGhost
+          icon="dna"
+          @click.stop="() => (multipleSequenceAlignmentOpen = true)"
+        >
+          Multiple Sequence Alignment
+        </PlBtnGhost>
       </template>
     </GraphMaker>
+    <PlSlideModal v-model="multipleSequenceAlignmentOpen" width="100%">
+      <template #title>Multiple Sequence Alignment</template>
+      <PlMultiSequenceAlignment
+        v-model="app.model.ui.alignmentModel"
+        :label-column-option-predicate="isLabelColumnOption"
+        :sequence-column-predicate="isSequenceColumn"
+        :linker-column-predicate="isLinkerColumn"
+        :p-frame="app.model.outputs.pf"
+        :selection="selection"
+      />
+    </PlSlideModal>
   </PlBlockPage>
 </template>
