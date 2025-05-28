@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.2.3
+
+### Patch Changes
+
+- 43ca870: Fix umap page
+
 ## 1.2.2
 
 ### Patch Changes
