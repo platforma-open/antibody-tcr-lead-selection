@@ -2,21 +2,21 @@ ll := import("@platforma-sdk/workflow-tengo:ll")
 
 getColumns := func(datasetSpec) {
   return {
-    "axes": [
+    axes: [
       {
-        "column": "clonotypeKey",
-        "spec": datasetSpec.axesSpec[1]
+        column: "clonotypeKey",
+        spec: datasetSpec.axesSpec[1]
       }],
-    "columns": [
+    columns: [
       {
-        "column": "top",
-        "id": "link",
-        "allowNA": false,
-        "spec": {
-          "name": "pl7.app/vdj/sampling-column",
-          "valueType": "Int",
-          "domain": {},
-          "annotations": {
+        column: "top",
+        id: "link",
+        allowNA: false,
+        spec: {
+          name: "pl7.app/vdj/sampling-column",
+          valueType: "Int",
+          domain: {},
+          annotations: {
             "pl7.app/label": "Sampling column",
             "pl7.app/table/visibility": "optional",
             "pl7.app/isSubset": "true"
@@ -24,8 +24,8 @@ getColumns := func(datasetSpec) {
         }
       }
     ],
-    "storageFormat": "Binary",
-    "partitionKeyLength": 0
+    storageFormat: "Binary",
+    partitionKeyLength: 0
   }
 }
 
