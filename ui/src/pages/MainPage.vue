@@ -4,54 +4,47 @@ import type {
   PlSelectionModel,
   PTableColumnSpec,
 } from '@platforma-sdk/model';
-import {
-  plRefsEqual,
-} from '@platforma-sdk/model';
-import type {
-  PlAgDataTableSettings,
-} from '@platforma-sdk/ui-vue';
+import { plRefsEqual } from '@platforma-sdk/model';
+import type { PlAgDataTableSettings } from '@platforma-sdk/ui-vue';
 import {
   PlAgDataTableToolsPanel,
   PlAgDataTableV2,
   PlBlockPage,
   PlBtnGhost,
   PlDropdownRef,
-  PlMaskIcon24,
   PlMultiSequenceAlignment,
   PlNumberField,
   PlSlideModal,
   PlTableFilters,
 } from '@platforma-sdk/ui-vue';
+import { computed, ref } from 'vue';
+import { useApp } from '../app';
 import {
-  computed,
-  ref,
-} from 'vue';
-import {
-  useApp,
-} from '../app';
-import { defaultFilters, isLabelColumnOption, isLinkerColumn, isSequenceColumn } from '../util';
+  defaultFilters,
+  isLabelColumnOption,
+  isLinkerColumn,
+  isSequenceColumn,
+} from '../util';
 import RankList from './components/RankList.vue';
 
 const app = useApp();
 
 const settingsOpen = ref(app.model.args.inputAnchor === undefined);
+const multipleSequenceAlignmentOpen = ref(false);
 
 function setAnchorColumn(ref: PlRef | undefined) {
   app.model.args.inputAnchor = ref;
   app.model.ui.filterModel = {}; // clear filters
-  app.model.ui.title = 'Antibody/TCR Leads - ' + (ref
-    ? app.model.outputs.inputOptions?.find((o) =>
-      plRefsEqual(o.ref, ref),
-    )?.label
-    : '');
+  const datasetName = ref
+    && app.model.outputs.inputOptions?.find((o) => plRefsEqual(o.ref, ref))
+      ?.label;
+  app.model.ui.title = ['Antibody/TCR Leads', datasetName]
+    .filter(Boolean).join(' - ');
 }
 
 const tableSettings = computed<PlAgDataTableSettings>(() => (
   app.model.outputs.table
-    ? {
-        sourceType: 'ptable',
-        model: app.model.outputs.table,
-      }
+    ? { sourceType: 'ptable', model: app.model.outputs.table }
     : undefined
 ));
 
@@ -61,7 +54,6 @@ const selection = ref<PlSelectionModel>({
   axesSpec: [],
   selectedKeys: [],
 });
-
 </script>
 
 <template>
@@ -76,20 +68,18 @@ const selection = ref<PlSelectionModel>({
           :columns="columns"
           :defaults="defaultFilters"
         />
-        <PlMultiSequenceAlignment
-          v-model="app.model.ui.alignmentModel"
-          :label-column-option-predicate="isLabelColumnOption"
-          :sequence-column-predicate="isSequenceColumn"
-          :linker-column-predicate="isLinkerColumn"
-          :p-frame="app.model.outputs.pf"
-          :selection="selection"
-        />
       </PlAgDataTableToolsPanel>
-      <PlBtnGhost @click.stop="() => (settingsOpen = true)">
+      <PlBtnGhost
+        icon="dna"
+        @click.stop="() => (multipleSequenceAlignmentOpen = true)"
+      >
+        Multiple Sequence Alignment
+      </PlBtnGhost>
+      <PlBtnGhost
+        icon="settings"
+        @click.stop="() => (settingsOpen = true)"
+      >
         Settings
-        <template #append>
-          <PlMaskIcon24 name="settings" />
-        </template>
       </PlBtnGhost>
     </template>
     <PlAgDataTableV2
@@ -111,14 +101,29 @@ const selection = ref<PlSelectionModel>({
       />
       <PlNumberField
         v-model="app.model.args.topClonotypes"
-        label="Pick top candidates" :minValue="2" :step="1"
+        label="Pick top candidates"
+        :minValue="2"
+        :step="1"
       >
         <template #tooltip>
-          Choose how many top clonotypes to include, ranked by the columns you selected in the dropdown above.
+          Choose how many top clonotypes to include, ranked by the columns you
+          selected in the dropdown above.
         </template>
       </PlNumberField>
 
-      <RankList/> <!-- @TODO: move to SDK in the future -->
+      <!-- @TODO: move to SDK in the future -->
+      <RankList />
+    </PlSlideModal>
+    <PlSlideModal v-model="multipleSequenceAlignmentOpen" width="100%">
+      <template #title>Multiple Sequence Alignment</template>
+      <PlMultiSequenceAlignment
+        v-model="app.model.ui.alignmentModel"
+        :label-column-option-predicate="isLabelColumnOption"
+        :sequence-column-predicate="isSequenceColumn"
+        :linker-column-predicate="isLinkerColumn"
+        :p-frame="app.model.outputs.pf"
+        :selection="selection"
+      />
     </PlSlideModal>
   </PlBlockPage>
 </template>
