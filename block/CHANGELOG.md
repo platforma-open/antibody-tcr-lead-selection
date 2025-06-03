@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 1.1.12
+
+### Patch Changes
+
+- de50580: Update SDK
+
 ## 1.1.11
 
 ### Patch Changes
