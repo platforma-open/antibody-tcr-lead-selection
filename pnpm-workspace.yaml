@@ -9,15 +9,15 @@ packages:
   - test
 
 catalog:
-  '@platforma-sdk/model': ^1.31.17
-  '@platforma-sdk/ui-vue': ^1.32.0
-  '@platforma-sdk/workflow-tengo': ^4.6.2
-  '@platforma-sdk/block-tools': ^2.5.50
-  '@platforma-sdk/test': ^1.31.18
-  '@platforma-sdk/tengo-builder': ^2.1.5
+  '@platforma-sdk/model': ^1.32.1
+  '@platforma-sdk/ui-vue': ^1.33.1
+  '@platforma-sdk/workflow-tengo': ^4.7.0
+  '@platforma-sdk/block-tools': ^2.5.51
+  '@platforma-sdk/test': ^1.32.11
+  '@platforma-sdk/tengo-builder': ^2.1.6
   '@platforma-sdk/package-builder': ^2.16.0
   '@platforma-sdk/eslint-config': ^1.0.3
-  '@milaboratories/graph-maker': ^1.1.105
+  '@milaboratories/graph-maker': ^1.1.107
 
   '@milaboratories/software-pframes-conv': ^2.2.2
   '@platforma-open/milaboratories.runenv-python-3': ^1.1.7
