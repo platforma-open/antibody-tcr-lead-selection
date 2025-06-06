@@ -21,6 +21,7 @@ export type BlockArgs = {
   inputAnchor?: PlRef;
   topClonotypes?: number;
   rankingOrder: RankingOrder[];
+  rankingOrderDefault?: RankingOrder;
 };
 
 export type UiState = {
@@ -72,6 +73,10 @@ export const model = BlockModel.create()
     alignmentModel: {},
     filterModel: {},
   })
+
+  // Activate "Run" button only after these conditions are satisfied
+  .argsValid((ctx) => (ctx.args.inputAnchor !== undefined),
+  )
 
   .output('inputOptions', (ctx) =>
     ctx.resultPool.getOptions([{

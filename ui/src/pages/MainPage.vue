@@ -9,6 +9,7 @@ import type { PlAgDataTableSettings } from '@platforma-sdk/ui-vue';
 import {
   PlAgDataTableToolsPanel,
   PlAgDataTableV2,
+  PlAlert,
   PlBlockPage,
   PlBtnGhost,
   PlDropdownRef,
@@ -17,7 +18,7 @@ import {
   PlSlideModal,
   PlTableFilters,
 } from '@platforma-sdk/ui-vue';
-import { computed, ref } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useApp } from '../app';
 import {
   defaultFilters,
@@ -47,6 +48,36 @@ const tableSettings = computed<PlAgDataTableSettings>(() => (
     ? { sourceType: 'ptable', model: app.model.outputs.table }
     : undefined
 ));
+
+let defaultRankingLabel = 'Number of Samples';
+watch(() => [app.model.outputs.rankingOptions], (_) => {
+  const sampleNumber = app.model.outputs.rankingOptions?.find((o) => o.label === 'Number of Samples');
+  if (sampleNumber) {
+    defaultRankingLabel = sampleNumber.label;
+    app.model.args.rankingOrderDefault = {
+      value: {
+        anchorRef: sampleNumber.value.anchorRef,
+        anchorName: 'main',
+        column: sampleNumber.value.column,
+      },
+      rankingOrder: 'increasing',
+    };
+  // if we didn't find 'Number of Samples' in ranking options, we just select the first option
+  } else {
+    const firstOption = app.model.outputs.rankingOptions?.[0];
+    if (firstOption) {
+      defaultRankingLabel = firstOption.label;
+      app.model.args.rankingOrderDefault = {
+        value: {
+          anchorRef: firstOption.value.anchorRef,
+          anchorName: 'main',
+          column: firstOption.value.column,
+        },
+        rankingOrder: 'increasing',
+      };
+    }
+  }
+});
 
 const columns = ref<PTableColumnSpec[]>([]);
 
@@ -106,13 +137,16 @@ const selection = ref<PlSelectionModel>({
         :step="1"
       >
         <template #tooltip>
-          Choose how many top clonotypes to include, ranked by the columns you
-          selected in the dropdown above.
+          Choose how many top clonotypes to include, ranked by the columns to be
+          selected in the "Rank by" section below
         </template>
       </PlNumberField>
 
       <!-- @TODO: move to SDK in the future -->
       <RankList />
+      <PlAlert v-if="app.model.args.rankingOrder.length === 0 && app.model.args.topClonotypes !== undefined" type="warn">
+        {{ "Warning: If you don't select any Clonotype Ranking columns to pick the top candidates, '" + defaultRankingLabel + "' will be used by default in increasing order" }}
+      </PlAlert>
     </PlSlideModal>
     <PlSlideModal v-model="multipleSequenceAlignmentOpen" width="100%">
       <template #title>Multiple Sequence Alignment</template>

@@ -106,7 +106,7 @@ watch(() => app.model.args.topClonotypes, (oldValue, newValue) => {
         Rank by:
         <PlTooltip>
           <PlIcon16 name="info" />
-          <template #tooltip> Specify the columns to rank the picked clonotypes by. </template>
+          <template #tooltip> Select columns to use for ranking the clonotypes. If none selected, "Number of Samples" will be used by default. </template>
         </PlTooltip>
       </PlRow>
     </div>
