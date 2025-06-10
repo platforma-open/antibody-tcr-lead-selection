@@ -51,7 +51,7 @@ const tableSettings = computed<PlAgDataTableSettings>(() => (
 
 let defaultRankingLabel = 'Number of Samples';
 watch(() => [app.model.outputs.rankingOptions], (_) => {
-  const sampleNumber = app.model.outputs.rankingOptions?.find((o) => o.label === 'Number of Samples');
+  const sampleNumber = app.model.outputs.rankingOptions?.find((o) => o.label.split(' / ')[0] === 'Number of Samples');
   if (sampleNumber) {
     defaultRankingLabel = sampleNumber.label;
     app.model.args.rankingOrderDefault = {
