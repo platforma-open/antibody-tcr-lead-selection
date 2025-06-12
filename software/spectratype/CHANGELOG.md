@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.spectratype
 
+## 1.3.2
+
+### Patch Changes
+
+- b603873: chore: update deps
+
 ## 1.3.1
 
 ### Patch Changes

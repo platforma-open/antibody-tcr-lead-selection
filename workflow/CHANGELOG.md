@@ -1,5 +1,18 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.4.0
+
+### Minor Changes
+
+- b603873: chore: update deps
+
+### Patch Changes
+
+- Updated dependencies [b603873]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.0.3
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.3.2
+  - @platforma-open/milaboratories.top-antibodies.umap@1.0.3
+
 ## 1.3.1
 
 ### Patch Changes
