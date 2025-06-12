@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 1.1.15
+
+### Patch Changes
+
+- bdff062: chore: revert for MSA
+
 ## 1.1.14
 
 ### Patch Changes

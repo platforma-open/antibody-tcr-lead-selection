@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies",
-  "version": "1.1.14",
+  "version": "1.1.15",
   "scripts": {
     "build": "rm -rf block-pack/* && block-tools pack",
     "mark-stable": "block-tools mark-stable -r 's3://milab-euce1-prod-pkgs-s3-block-registry/pub/releases/?region=eu-central-1'",
