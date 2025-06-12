@@ -8,5 +8,6 @@ log/
 .turbo
 vite.config.*.timestamp-*
 software/**/*.sw.json
-software/*.tgz
+software/**/*.tgz
 .vscode
+*.tgz
