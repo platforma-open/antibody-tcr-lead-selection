@@ -25,7 +25,7 @@ catalogs:
       specifier: ^1.0.3
       version: 1.0.3
     '@platforma-sdk/model':
-      specifier: ^1.33.10
+      specifier: ^1.32.1
       version: 1.33.14
     '@platforma-sdk/package-builder':
       specifier: ^2.16.0
@@ -34,7 +34,7 @@ catalogs:
       specifier: ^2.1.7
       version: 2.1.7
     '@platforma-sdk/test':
-      specifier: ^1.33.10
+      specifier: ^1.32.11
       version: 1.33.14
     '@platforma-sdk/ui-vue':
       specifier: ^1.33.1
