@@ -1,5 +1,18 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.3.0
+
+### Minor Changes
+
+- bf454d4: Default ranking column in case user does not select one
+- 4990fd8: Fix empty top and ranking cases
+
+### Patch Changes
+
+- Updated dependencies [bf454d4]
+- Updated dependencies [4990fd8]
+  - @platforma-open/milaboratories.top-antibodies.model@1.5.0
+
 ## 1.2.4
 
 ### Patch Changes

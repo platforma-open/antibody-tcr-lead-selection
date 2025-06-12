@@ -1,5 +1,12 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.5.0
+
+### Minor Changes
+
+- bf454d4: Default ranking column in case user does not select one
+- 4990fd8: Fix empty top and ranking cases
+
 ## 1.4.0
 
 ### Minor Changes
