@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 1.1.16
+
+### Patch Changes
+
+- 65deb90: chore: fix version
+
 ## 1.1.15
 
 ### Patch Changes
