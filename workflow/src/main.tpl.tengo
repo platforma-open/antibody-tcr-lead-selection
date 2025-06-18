@@ -149,11 +149,15 @@ wf.body(func(args) {
 				}
 			}
 		}
+		cloneTable.mem("16GiB")
+		cloneTable.cpu(1)
 		cloneTable = cloneTable.build()
 
 		// Run sampling script
 		sampleClones := exec.builder().
 			software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.sample-clonotypes:main")).
+			mem("16GiB").
+			cpu(1).
 			addFile("filteredClonotypes.csv", cloneTable).
 			arg("--csv").arg("filteredClonotypes.csv").
 			arg("--n").arg(string(topClonotypes)).
@@ -169,7 +173,8 @@ wf.body(func(args) {
 
 		// Store outputs
 		sampledColsParams := sampledColsConv.getColumns(datasetSpec)
-		sampledColumnsPf := xsv.importFile(topClonotypesCsv, "csv", sampledColsParams)
+		sampledColumnsPf := xsv.importFile(topClonotypesCsv, "csv", sampledColsParams,
+											{cpu: 1, mem: "16GiB"})
 		outputs["sampledRows"] = pframes.exportFrame(sampledColumnsPf)
 	}
 
@@ -228,11 +233,14 @@ wf.body(func(args) {
 		headerName := makeHeaderName(col, "jGene", isSingleCell)
 		cdr3SeqTable.add(col, {header: headerName})
 	}
-
+	cdr3SeqTable.mem("16GiB")
+	cdr3SeqTable.cpu(1)
 	cdr3SeqTableBuilt := cdr3SeqTable.build()
 
 	cdr3VspectratypeCmd := exec.builder().
 		software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.spectratype:main")).
+		mem("16GiB").
+		cpu(1).
 		addFile("cdr3_sequences_input.tsv", cdr3SeqTableBuilt).
 		arg("--input_tsv").arg("cdr3_sequences_input.tsv").
 		arg("--spectratype_tsv").arg("spectratype.tsv").
@@ -256,11 +264,15 @@ wf.body(func(args) {
 
 	// For spectratype structure is [chain][cdr3Length][vGene] -> count
 
-	cdr3VspectratypePf := xsv.importFile(cdr3VspectratypeCmd.getFile("spectratype.tsv"), "tsv", spectratypeConv.getColumns())
+	cdr3VspectratypePf := xsv.importFile(cdr3VspectratypeCmd.getFile("spectratype.tsv"), 
+										"tsv", spectratypeConv.getColumns(),
+										{cpu: 1, mem: "16GiB"})
 	outputs["cdr3VspectratypePf"] = pframes.exportFrame(cdr3VspectratypePf) 
 
 	// For vjUsage structure is [chain][vGene][jGene] -> count
-	vjUsagePf := xsv.importFile(cdr3VspectratypeCmd.getFile("vj_usage.tsv"), "tsv", vjUsageConv.getColumns())
+	vjUsagePf := xsv.importFile(cdr3VspectratypeCmd.getFile("vj_usage.tsv"), 
+								"tsv", vjUsageConv.getColumns(), 
+								{cpu: 1, mem: "16GiB"})
 	outputs["vjUsagePf"] = pframes.exportFrame(vjUsagePf)
 
 	return {
