@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.6.0
+
+### Minor Changes
+
+- d32234f: Support batch system
+
 ## 1.5.0
 
 ### Minor Changes
