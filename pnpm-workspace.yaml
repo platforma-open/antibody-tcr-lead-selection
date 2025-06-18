@@ -11,10 +11,10 @@ packages:
 catalog:
   '@platforma-sdk/model': 1.32.1
   '@platforma-sdk/ui-vue': 1.33.1
-  '@platforma-sdk/workflow-tengo': ^4.7.1
-  '@platforma-sdk/block-tools': ^2.5.52
+  '@platforma-sdk/workflow-tengo': ^4.7.4
+  '@platforma-sdk/block-tools': ^2.5.55
   '@platforma-sdk/test': 1.32.11
-  '@platforma-sdk/tengo-builder': ^2.1.7
+  '@platforma-sdk/tengo-builder': ^2.1.10
   '@platforma-sdk/package-builder': ^2.16.0
   '@platforma-sdk/eslint-config': ^1.0.3
   '@milaboratories/graph-maker': ^1.1.107
@@ -31,7 +31,7 @@ catalog:
 
   'typescript': ~5.5.4
   'tsup': ~8.3.5
-  'turbo': ^2.4.4
+  'turbo': ^2.5.4
 
   'vite': ^6.2.2
   'vitest': ^2.1.8
