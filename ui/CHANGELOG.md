@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.4.0
+
+### Minor Changes
+
+- 4b1a662: Support batch system and small fix
+
 ## 1.3.0
 
 ### Minor Changes
