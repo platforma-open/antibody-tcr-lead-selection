@@ -15,7 +15,9 @@ export const isSequenceColumn = (column: PColumnIdAndSpec) => {
   return isBulkSequence(column.spec) || isSingleCellSequence(column.spec);
 };
 
-export const isLabelColumnOption = (_column: PColumnIdAndSpec) => {
+export const isLabelColumnOption = (column: PColumnIdAndSpec) => {
+  if (column.spec.axesSpec.length === 1 && column.spec.axesSpec[0].name === 'pl7.app/sampleId')
+    return false;
   return true;
 };
 
