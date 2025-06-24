@@ -4,8 +4,8 @@ import type {
   PlSelectionModel,
   PTableColumnSpec,
 } from '@platforma-sdk/model';
-import { plRefsEqual } from '@platforma-sdk/model';
-import type { PlAgDataTableSettings } from '@platforma-sdk/ui-vue';
+import { canonicalizeJson, plRefsEqual } from '@platforma-sdk/model';
+import type { PlDataTableSettingsV2 } from '@platforma-sdk/ui-vue';
 import {
   PlAgDataTableToolsPanel,
   PlAgDataTableV2,
@@ -43,10 +43,14 @@ function setAnchorColumn(ref: PlRef | undefined) {
     .filter(Boolean).join(' - ');
 }
 
-const tableSettings = computed<PlAgDataTableSettings>(() => (
-  app.model.outputs.table
-    ? { sourceType: 'ptable', model: app.model.outputs.table }
-    : undefined
+const tableSettings = computed<PlDataTableSettingsV2>(() => (
+  app.model.args.inputAnchor
+    ? {
+        sourceId: canonicalizeJson(app.model.args.inputAnchor),
+        sheets: [],
+        model: app.model.outputs.table,
+      }
+    : { sourceId: null }
 ));
 
 let defaultRankingLabel = 'Number of Samples';
@@ -119,7 +123,7 @@ const selection = ref<PlSelectionModel>({
       :settings="tableSettings"
       show-columns-panel
       show-export-button
-      @columns-changed="(newColumns) => (columns = newColumns)"
+      @columns-changed="(info) => (columns = info.columns)"
     />
     <PlSlideModal v-model="settingsOpen" :close-on-outside-click="true">
       <template #title>Settings</template>
