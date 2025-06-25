@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.4.1
+
+### Patch Changes
+
+- 44c4b32: PlAgDataTableV2 upgrade
+- Updated dependencies [44c4b32]
+  - @platforma-open/milaboratories.top-antibodies.model@1.5.1
+
 ## 1.4.0
 
 ### Minor Changes
