@@ -3,7 +3,7 @@ import type {
   CreatePlDataTableOps,
   InferOutputsType,
   PFrameHandle,
-  PlDataTableState,
+  PlDataTableStateV2,
   PlMultiSequenceAlignmentModel,
   PlRef,
   PlTableFiltersModel,
@@ -11,6 +11,7 @@ import type {
 import {
   BlockModel,
   createPFrameForGraphs,
+  createPlDataTableStateV2,
   createPlDataTableV2,
   deriveLabels,
 } from '@platforma-sdk/model';
@@ -26,7 +27,7 @@ export type BlockArgs = {
 
 export type UiState = {
   title?: string;
-  tableState: PlDataTableState;
+  tableState: PlDataTableStateV2;
   filterModel: PlTableFiltersModel;
   graphStateUMAP: GraphMakerState;
   cdr3StackedBarPlotState: GraphMakerState;
@@ -42,9 +43,7 @@ export const model = BlockModel.create()
 
   .withUiState<UiState>({
     title: 'Antibody/TCR Leads',
-    tableState: {
-      gridState: {},
-    },
+    tableState: createPlDataTableStateV2(),
     graphStateUMAP: {
       title: 'Clonotype Space UMAP',
       template: 'dots',
@@ -168,12 +167,10 @@ export const model = BlockModel.create()
       };
     }
 
-    const maxAxes = props.reduce((acc, curr) => Math.max(acc, curr.spec.axesSpec.length), 0);
+    if (cols.length === 0) return undefined;
     return createPlDataTableV2(
       ctx,
       cols,
-      // if there are links, we need need to pick one of the links to show all axes in the table
-      (spec) => spec.axesSpec.length == maxAxes,
       ctx.uiState.tableState,
       ops,
     );
