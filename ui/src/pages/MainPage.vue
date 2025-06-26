@@ -4,8 +4,7 @@ import type {
   PlSelectionModel,
   PTableColumnSpec,
 } from '@platforma-sdk/model';
-import { canonicalizeJson, plRefsEqual } from '@platforma-sdk/model';
-import type { PlDataTableSettingsV2 } from '@platforma-sdk/ui-vue';
+import { plRefsEqual } from '@platforma-sdk/model';
 import {
   PlAgDataTableToolsPanel,
   PlAgDataTableV2,
@@ -17,8 +16,9 @@ import {
   PlNumberField,
   PlSlideModal,
   PlTableFilters,
+  usePlDataTableSettingsV2,
 } from '@platforma-sdk/ui-vue';
-import { computed, ref, watch } from 'vue';
+import { ref, watch } from 'vue';
 import { useApp } from '../app';
 import {
   defaultFilters,
@@ -43,15 +43,10 @@ function setAnchorColumn(ref: PlRef | undefined) {
     .filter(Boolean).join(' - ');
 }
 
-const tableSettings = computed<PlDataTableSettingsV2>(() => (
-  app.model.args.inputAnchor
-    ? {
-        sourceId: canonicalizeJson(app.model.args.inputAnchor),
-        sheets: [],
-        model: app.model.outputs.table,
-      }
-    : { sourceId: null }
-));
+const tableSettings = usePlDataTableSettingsV2({
+  sourceId: () => app.model.args.inputAnchor,
+  model: () => app.model.outputs.table,
+});
 
 let defaultRankingLabel = 'Number of Samples';
 watch(() => [app.model.outputs.rankingOptions], (_) => {
