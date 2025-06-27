@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.4.3
+
+### Patch Changes
+
+- 3e10e03: update graph-maker version
+
 ## 1.4.2
 
 ### Patch Changes
