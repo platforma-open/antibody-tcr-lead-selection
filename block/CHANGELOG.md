@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 1.1.22
+
+### Patch Changes
+
+- b55ada4: SDK version bump
+
 ## 1.1.21
 
 ### Patch Changes
