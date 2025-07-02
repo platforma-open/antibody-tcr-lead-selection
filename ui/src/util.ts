@@ -26,7 +26,7 @@ export const isLinkerColumn = (column: PColumnIdAndSpec) => {
 };
 
 export function defaultFilters(tSpec: PTableColumnSpec): (PlTableFilter | undefined) {
-  console.log('defaultFilters spec', tSpec);
+  // console.log(`defaultFilters spec ${JSON.stringify(tSpec, null, 2)}`);
   if (tSpec.type !== 'column') {
     return undefined;
   }
@@ -41,35 +41,45 @@ export function defaultFilters(tSpec: PTableColumnSpec): (PlTableFilter | undefi
     return undefined;
 
   if (spec.valueType === 'String') {
-    const value = JSON.parse(valueString);
-    // should be an array of strings
-    if (!Array.isArray(value)) {
-      console.error('defaultFilters: invalid string filter', valueString);
+    try {
+      const value = JSON.parse(valueString);
+      // should be an array of strings
+      if (!Array.isArray(value)) {
+        console.error('defaultFilters: invalid string filter', valueString);
+        return undefined;
+      }
+      // console.log('defaultFilters: string filter', value);
+      return {
+        type: 'string_equals',
+        reference: value[0], // @TODO: support multiple values
+      };
+    } catch (e) {
+      console.error('defaultFilters: invalid string filter', valueString, e);
       return undefined;
     }
-    console.log('defaultFilters: string filter', value);
-    return {
-      type: 'string_equals',
-      reference: value[0], // @TODO: support multiple values
-    };
   } else {
+    try {
     // Assuming non-String valueType implies a number for 'number_greaterThan'
-    const numericValue = parseFloat(valueString);
-    if (isNaN(numericValue)) {
-      console.error('defaultFilters: invalid numeric value', valueString);
+      const numericValue = parseFloat(valueString);
+      if (isNaN(numericValue)) {
+        console.error('defaultFilters: invalid numeric value', valueString);
+        return undefined;
+      }
+
+      const direction = spec.annotations?.['pl7.app/score/rankingOrder'] ?? 'increasing';
+      if (direction !== 'increasing' && direction !== 'decreasing') {
+        console.error('defaultFilters: invalid ranking order', direction);
+        return undefined;
+      }
+
+      // console.log('defaultFilters: number filter', numericValue, direction);
+      return {
+        type: direction === 'increasing' ? 'number_greaterThanOrEqualTo' : 'number_lessThanOrEqualTo',
+        reference: numericValue,
+      };
+    } catch (e) {
+      console.error('defaultFilters: invalid numeric value', valueString, e);
       return undefined;
     }
-
-    const direction = spec.annotations?.['pl7.app/score/rankingOrder'] ?? 'increasing';
-    if (direction !== 'increasing' && direction !== 'decreasing') {
-      console.error('defaultFilters: invalid ranking order', direction);
-      return undefined;
-    }
-
-    console.log('defaultFilters: number filter', numericValue, direction);
-    return {
-      type: direction === 'increasing' ? 'number_greaterThanOrEqualTo' : 'number_lessThanOrEqualTo',
-      reference: numericValue,
-    };
   }
 };
