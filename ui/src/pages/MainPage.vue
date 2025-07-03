@@ -2,11 +2,9 @@
 import type {
   PlRef,
   PlSelectionModel,
-  PTableColumnSpec,
 } from '@platforma-sdk/model';
 import { plRefsEqual } from '@platforma-sdk/model';
 import {
-  PlAgDataTableToolsPanel,
   PlAgDataTableV2,
   PlAlert,
   PlBlockPage,
@@ -15,7 +13,6 @@ import {
   PlMultiSequenceAlignment,
   PlNumberField,
   PlSlideModal,
-  PlTableFilters,
   usePlDataTableSettingsV2,
 } from '@platforma-sdk/ui-vue';
 import { ref, watch } from 'vue';
@@ -35,7 +32,6 @@ const multipleSequenceAlignmentOpen = ref(false);
 
 function setAnchorColumn(ref: PlRef | undefined) {
   app.model.args.inputAnchor = ref;
-  app.model.ui.filterModel = {}; // clear filters
   const datasetName = ref
     && app.model.outputs.inputOptions?.find((o) => plRefsEqual(o.ref, ref))
       ?.label;
@@ -46,6 +42,7 @@ function setAnchorColumn(ref: PlRef | undefined) {
 const tableSettings = usePlDataTableSettingsV2({
   sourceId: () => app.model.args.inputAnchor,
   model: () => app.model.outputs.table,
+  filtersConfig: ({ column }) => ({ default: defaultFilters(column) }),
 });
 
 let defaultRankingLabel = 'Number of Samples';
@@ -78,8 +75,6 @@ watch(() => [app.model.outputs.rankingOptions], (_) => {
   }
 });
 
-const columns = ref<PTableColumnSpec[]>([]);
-
 const selection = ref<PlSelectionModel>({
   axesSpec: [],
   selectedKeys: [],
@@ -92,13 +87,6 @@ const selection = ref<PlSelectionModel>({
       {{ app.model.ui.title }}
     </template>
     <template #append>
-      <PlAgDataTableToolsPanel>
-        <PlTableFilters
-          v-model="app.model.ui.filterModel"
-          :columns="columns"
-          :defaults="defaultFilters"
-        />
-      </PlAgDataTableToolsPanel>
       <PlBtnGhost
         icon="dna"
         @click.stop="() => (multipleSequenceAlignmentOpen = true)"
@@ -116,9 +104,7 @@ const selection = ref<PlSelectionModel>({
       v-model="app.model.ui.tableState"
       v-model:selection="selection"
       :settings="tableSettings"
-      show-columns-panel
       show-export-button
-      @columns-changed="(info) => (columns = info.columns)"
     />
     <PlSlideModal v-model="settingsOpen" :close-on-outside-click="true">
       <template #title>Settings</template>

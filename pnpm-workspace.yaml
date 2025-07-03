@@ -9,12 +9,12 @@ packages:
   - test
 
 catalog:
-  '@platforma-sdk/model': ^1.37.11
-  '@platforma-sdk/ui-vue': ^1.37.11
-  '@platforma-sdk/workflow-tengo': ^4.8.1
-  '@platforma-sdk/block-tools': ^2.5.59
-  '@platforma-sdk/test': ^1.37.11
-  '@platforma-sdk/tengo-builder': ^2.1.11
+  '@platforma-sdk/model': ^1.38.0
+  '@platforma-sdk/ui-vue': ^1.38.0
+  '@platforma-sdk/workflow-tengo': ^4.9.2
+  '@platforma-sdk/block-tools': ^2.5.61
+  '@platforma-sdk/test': ^1.38.0
+  '@platforma-sdk/tengo-builder': ^2.1.12
   '@platforma-sdk/package-builder': ^2.16.2
   '@platforma-sdk/eslint-config': ^1.0.3
   '@milaboratories/graph-maker': ^1.1.125
@@ -27,9 +27,9 @@ catalog:
   'sass-embedded': ^1.77.8
 
   'vue': ^3.5.13
-  'vue-tsc': ^2.2.8
+  'vue-tsc': ^2.2.10
 
-  'typescript': ~5.5.4
+  'typescript': ~5.6.3
   'tsup': ~8.3.5
   'turbo': ^2.5.4
 

@@ -6,7 +6,6 @@ import type {
   PlDataTableStateV2,
   PlMultiSequenceAlignmentModel,
   PlRef,
-  PlTableFiltersModel,
 } from '@platforma-sdk/model';
 import {
   BlockModel,
@@ -28,7 +27,6 @@ export type BlockArgs = {
 export type UiState = {
   title?: string;
   tableState: PlDataTableStateV2;
-  filterModel: PlTableFiltersModel;
   graphStateUMAP: GraphMakerState;
   cdr3StackedBarPlotState: GraphMakerState;
   vjUsagePlotState: GraphMakerState;
@@ -70,7 +68,6 @@ export const model = BlockModel.create()
       },
     },
     alignmentModel: {},
-    filterModel: {},
   })
 
   // Activate "Run" button only after these conditions are satisfied
@@ -147,27 +144,20 @@ export const model = BlockModel.create()
 
     // we wont compute the workflow output in cases where ctx.args.topClonotypes == undefined
     const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', allowPermanentAbsence: true })?.getPColumns();
-    let ops: CreatePlDataTableOps = {
-      filters: ctx.uiState.filterModel.filters,
-    };
+    let ops: CreatePlDataTableOps = {};
     const cols: Column[] = [];
     if (ctx.args.topClonotypes === undefined) {
       cols.push(...props);
-      ops = {
-        filters: ctx.uiState.filterModel.filters,
-      };
     } else if (sampledRows === undefined) {
       return undefined;
     } else {
       cols.push(...props, ...sampledRows);
       ops = {
-        filters: ctx.uiState.filterModel.filters,
         coreColumnPredicate: (spec) => spec.name === 'pl7.app/vdj/sampling-column',
         coreJoinType: 'inner',
       };
     }
 
-    if (cols.length === 0) return undefined;
     return createPlDataTableV2(
       ctx,
       cols,
