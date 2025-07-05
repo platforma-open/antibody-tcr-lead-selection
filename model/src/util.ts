@@ -1,13 +1,13 @@
 import type {
-  DataInfo,
-  PColumn,
-  PColumnValues,
-  PlRef,
-  PlTableFilter,
-  PTableColumnId,
-  RenderCtx,
-  SUniversalPColumnId,
-  TreeNodeAccessor,
+    DataInfo,
+    PColumn,
+    PColumnValues,
+    PlRef,
+    PlTableFilter,
+    PTableColumnId,
+    RenderCtx,
+    SUniversalPColumnId,
+    TreeNodeAccessor,
 } from '@platforma-sdk/model';
 import type { BlockArgs, UiState } from '.';
 
@@ -33,6 +33,7 @@ export function anchoredColumnId(anchoredColumn: AnchoredColumn): AnchoredColumn
 export type RankingOrder = {
   value?: AnchoredColumnId;
   rankingOrder: 'increasing' | 'decreasing';
+  isExpanded?: boolean;
 };
 
 export type PlTableFiltersDefault = {
