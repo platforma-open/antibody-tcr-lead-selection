@@ -1,5 +1,15 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.6.0
+
+### Minor Changes
+
+- 792dea6: Migrate to PlElementList
+
+### Patch Changes
+
+- f0a7b9b: Upgrade to use latest PlAgDataTableV2 update
+
 ## 1.5.1
 
 ### Patch Changes
