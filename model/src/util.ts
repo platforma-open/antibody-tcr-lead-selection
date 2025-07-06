@@ -31,8 +31,10 @@ export function anchoredColumnId(anchoredColumn: AnchoredColumn): AnchoredColumn
 }
 
 export type RankingOrder = {
+  id?: string;
   value?: AnchoredColumnId;
   rankingOrder: 'increasing' | 'decreasing';
+  isExpanded?: boolean;
 };
 
 export type PlTableFiltersDefault = {
@@ -157,8 +159,10 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefi
     defaultRankingOrder: scores
       .filter((s) => s.column.spec.valueType !== 'String')
       .map((s) => ({
+        id: `default-rank-${s.column.id}`,
         value: anchoredColumnId(s),
         rankingOrder: 'increasing',
+        isExpanded: false,
       })),
   };
 }
