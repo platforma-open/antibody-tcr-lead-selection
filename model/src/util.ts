@@ -1,13 +1,13 @@
 import type {
-    DataInfo,
-    PColumn,
-    PColumnValues,
-    PlRef,
-    PlTableFilter,
-    PTableColumnId,
-    RenderCtx,
-    SUniversalPColumnId,
-    TreeNodeAccessor,
+  DataInfo,
+  PColumn,
+  PColumnValues,
+  PlRef,
+  PlTableFilter,
+  PTableColumnId,
+  RenderCtx,
+  SUniversalPColumnId,
+  TreeNodeAccessor,
 } from '@platforma-sdk/model';
 import type { BlockArgs, UiState } from '.';
 
@@ -159,8 +159,10 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefi
     defaultRankingOrder: scores
       .filter((s) => s.column.spec.valueType !== 'String')
       .map((s) => ({
+        id: `default-rank-${s.column.id}`,
         value: anchoredColumnId(s),
         rankingOrder: 'increasing',
+        isExpanded: false,
       })),
   };
 }
