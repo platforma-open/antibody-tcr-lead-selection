@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import type { PTableColumnId, PlTableFilter } from '@platforma-sdk/model';
-import type { ListOption } from '@platforma-sdk/ui-vue';
+import type { AnchoredColumnId } from '@platforma-open/milaboratories.top-antibodies.model';
+import type { PlTableFilter } from '@platforma-sdk/model';
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from '@platforma-sdk/ui-vue';
 import { ref, watch } from 'vue';
 import { useApp } from '../../app';
@@ -8,7 +8,7 @@ import FilterCard from './FilterCard.vue';
 
 export type FilterEntry = {
   id?: string;
-  column?: PTableColumnId;
+  column?: AnchoredColumnId;
   filter?: PlTableFilter;
   isExpanded?: boolean;
 };
@@ -23,18 +23,18 @@ const generateUniqueId = () => {
   return `filter-${idCounter.value}-${Date.now()}`;
 };
 
-const getColumnLabel = (columnId: PTableColumnId | undefined) => {
-  if (!columnId || columnId.type !== 'column') return 'Set filter';
+const getColumnLabel = (columnId: AnchoredColumnId | undefined) => {
+  if (!columnId) return 'Set filter';
 
-  // Get the column label from filter options
-  const filterOptions = app.model.outputs.filterOptions as ListOption<PTableColumnId>[];
+  // Get the column label from filter options  
+  const filterOptions = app.model.outputs.filterOptions;
   if (!filterOptions) return 'Set filter';
 
-  const option = filterOptions.find((opt) =>
-    opt.value.type === 'column' && opt.value.id === columnId.id,
+  const option = filterOptions.find((opt: any) =>
+    opt.value.column === columnId.column,
   );
 
-  return (option as { label?: string })?.label || 'Set filter';
+  return option?.label || 'Set filter';
 };
 
 const addFilter = () => {
@@ -53,7 +53,7 @@ const addFilter = () => {
 
 const resetToDefaults = () => {
   app.updateArgs((args) => {
-    args.filters = app.model.outputs.defaultFilters?.map((defaultFilter: { column: PTableColumnId; default: PlTableFilter }) => ({
+    args.filters = app.model.outputs.defaultFilters?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter }) => ({
       id: generateUniqueId(),
       column: defaultFilter.column,
       filter: defaultFilter.default,
@@ -92,7 +92,7 @@ watch(() => app.model.outputs.defaultFilters, (newValue) => {
       <template #item-content="{ index }">
         <FilterCard
           v-model="app.model.args.filters[index]"
-          :options="app.model.outputs.filterOptions as ListOption<PTableColumnId>[]"
+          :options="app.model.outputs.filterOptions"
         />
       </template>
     </PlElementList>

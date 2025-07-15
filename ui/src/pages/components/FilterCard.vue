@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import type { PlTableFilter, PTableColumnId } from '@platforma-sdk/model';
-import type { ListOption } from '@platforma-sdk/ui-vue';
+import type { AnchoredColumnId } from '@platforma-open/milaboratories.top-antibodies.model';
+import type { PlTableFilter } from '@platforma-sdk/model';
 import { PlDropdown, PlTextField } from '@platforma-sdk/ui-vue';
 import { computed } from 'vue';
 
 export type FilterEntry = {
   id?: string;
-  column?: PTableColumnId;
+  column?: AnchoredColumnId;
   filter?: PlTableFilter;
   isExpanded?: boolean;
 };
@@ -33,7 +33,7 @@ const model = defineModel<FilterEntry>({
 });
 
 const props = defineProps<{
-  options?: ListOption<PTableColumnId>[];
+  options?: { label: string; value: AnchoredColumnId }[];
 }>();
 
 const filterTypeOptions = [
@@ -49,8 +49,8 @@ const filterTypeOptions = [
   { value: 'string_doesNotContain', label: 'Does not contain' },
 ];
 
-const getFilterTypeOptions = (columnId?: PTableColumnId) => {
-  if (!columnId || columnId.type !== 'column') return filterTypeOptions;
+const getFilterTypeOptions = (columnId?: AnchoredColumnId) => {
+  if (!columnId) return filterTypeOptions;
 
   // This would need to be enhanced to get the actual column spec
   // For now, return all options

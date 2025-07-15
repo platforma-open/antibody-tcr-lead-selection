@@ -4,7 +4,6 @@ import type {
   PColumnValues,
   PlRef,
   PlTableFilter,
-  PTableColumnId,
   RenderCtx,
   SUniversalPColumnId,
   TreeNodeAccessor,
@@ -38,7 +37,7 @@ export type RankingOrder = {
 };
 
 export type PlTableFiltersDefault = {
-  column: PTableColumnId;
+  column: AnchoredColumnId;
   default: PlTableFilter;
 };
 
@@ -148,10 +147,7 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefi
           continue;
         }
         defaultFilters.push({
-          column: {
-            type: 'column',
-            id: score.column.id,
-          },
+          column: anchoredColumnId(score),
           default: {
             type: 'string_equals',
             reference: value[0], // @TODO: support multiple values
@@ -177,10 +173,7 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefi
         }
 
         defaultFilters.push({
-          column: {
-            type: 'column',
-            id: score.column.id,
-          },
+          column: anchoredColumnId(score),
           default: {
             type: direction === 'increasing' ? 'number_greaterThanOrEqualTo' : 'number_lessThanOrEqualTo',
             reference: numericValue,
