@@ -9,6 +9,7 @@ export const isSequenceColumn = (column: PColumnIdAndSpec) => {
     column.domain?.['pl7.app/alphabet'] === 'aminoacid';
   const isSingleCellSequence = (column: PColumnSpec) =>
     column.domain?.['pl7.app/vdj/scClonotypeChain/index'] === 'primary'
+    && column.domain?.['pl7.app/alphabet'] === 'aminoacid'
     // && column.axesSpec.length >= 1
     && column.axesSpec[0].name === 'pl7.app/vdj/scClonotypeKey';
 
