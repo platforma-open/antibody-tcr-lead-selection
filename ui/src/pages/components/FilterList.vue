@@ -26,9 +26,15 @@ const generateUniqueId = () => {
 const getColumnLabel = (columnId: PTableColumnId | undefined) => {
   if (!columnId || columnId.type !== 'column') return 'Set filter';
 
-  // This would need to be enhanced to get the actual column label
-  // For now, return a generic label
-  return 'Set filter';
+  // Get the column label from filter options
+  const filterOptions = app.model.outputs.filterOptions as ListOption<PTableColumnId>[];
+  if (!filterOptions) return 'Set filter';
+
+  const option = filterOptions.find((opt) =>
+    opt.value.type === 'column' && opt.value.id === columnId.id,
+  );
+
+  return (option as { label?: string })?.label || 'Set filter';
 };
 
 const addFilter = () => {

@@ -135,20 +135,61 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefi
   const defaultFilters: PlTableFiltersDefault[] = [];
 
   for (const score of scores) {
-    const value = score.column.spec.annotations?.['pl7.app/vdj/score/default'];
+    const valueString = score.column.spec.annotations?.['pl7.app/score/defaultCutoff'];
+    if (valueString === undefined) continue;
 
-    if (value !== undefined) {
-      const type = score.column.spec.valueType === 'String' ? 'string_equals' : 'number_greaterThan';
-      defaultFilters.push({
-        column: {
-          type: 'column',
-          id: score.column.id,
-        },
-        default: {
-          type: type,
-          reference: value as never,
-        },
-      });
+    const spec = score.column.spec;
+    if (spec.valueType === 'String') {
+      try {
+        const value = JSON.parse(valueString) as string[];
+        // should be an array of strings
+        if (!Array.isArray(value)) {
+          console.error('defaultFilters: invalid string filter', valueString);
+          continue;
+        }
+        defaultFilters.push({
+          column: {
+            type: 'column',
+            id: score.column.id,
+          },
+          default: {
+            type: 'string_equals',
+            reference: value[0], // @TODO: support multiple values
+          },
+        });
+      } catch (e) {
+        console.error('defaultFilters: invalid string filter', valueString, e);
+        continue;
+      }
+    } else {
+      try {
+        // Assuming non-String valueType implies a number
+        const numericValue = parseFloat(valueString);
+        if (isNaN(numericValue)) {
+          console.error('defaultFilters: invalid numeric value', valueString);
+          continue;
+        }
+
+        const direction = spec.annotations?.['pl7.app/score/rankingOrder'] ?? 'increasing';
+        if (direction !== 'increasing' && direction !== 'decreasing') {
+          console.error('defaultFilters: invalid ranking order', direction);
+          continue;
+        }
+
+        defaultFilters.push({
+          column: {
+            type: 'column',
+            id: score.column.id,
+          },
+          default: {
+            type: direction === 'increasing' ? 'number_greaterThanOrEqualTo' : 'number_lessThanOrEqualTo',
+            reference: numericValue,
+          },
+        });
+      } catch (e) {
+        console.error('defaultFilters: invalid numeric value', valueString, e);
+        continue;
+      }
     }
   }
 
