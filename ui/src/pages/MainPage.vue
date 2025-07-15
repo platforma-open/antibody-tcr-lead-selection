@@ -23,6 +23,7 @@ import {
   isLinkerColumn,
   isSequenceColumn,
 } from '../util';
+import FilterList from './components/FilterList.vue';
 import RankList from './components/RankList.vue';
 
 const app = useApp();
@@ -129,6 +130,7 @@ const selection = ref<PlSelectionModel>({
 
       <!-- @TODO: move to SDK in the future -->
       <RankList />
+      <FilterList />
       <PlAlert v-if="app.model.args.rankingOrder.length === 0 && app.model.args.topClonotypes !== undefined" type="warn">
         {{ "Warning: If you don't select any Clonotype Ranking columns to pick the top candidates, '" + defaultRankingLabel + "' will be used by default in increasing order" }}
       </PlAlert>

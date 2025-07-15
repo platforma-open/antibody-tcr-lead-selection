@@ -6,6 +6,8 @@ import type {
   PlDataTableStateV2,
   PlMultiSequenceAlignmentModel,
   PlRef,
+  PlTableFilter,
+  PTableColumnId,
 } from '@platforma-sdk/model';
 import {
   BlockModel,
@@ -17,11 +19,19 @@ import {
 import type { AnchoredColumnId, Column, RankingOrder } from './util';
 import { anchoredColumnId, getColumns } from './util';
 
+export type FilterEntry = {
+  id?: string;
+  column?: PTableColumnId;
+  filter?: PlTableFilter;
+  isExpanded?: boolean;
+};
+
 export type BlockArgs = {
   inputAnchor?: PlRef;
   topClonotypes?: number;
   rankingOrder: RankingOrder[];
   rankingOrderDefault?: RankingOrder;
+  filters: FilterEntry[];
 };
 
 export type UiState = {
@@ -37,6 +47,7 @@ export const model = BlockModel.create()
 
   .withArgs<BlockArgs>({
     rankingOrder: [],
+    filters: [],
   })
 
   .withUiState<UiState>({
@@ -111,6 +122,31 @@ export const model = BlockModel.create()
       ...o,
       value: anchoredColumnId(o.value),
     }));
+  })
+
+  .output('filterOptions', (ctx) => {
+    const columns = getColumns(ctx);
+    if (columns === undefined)
+      return undefined;
+
+    return deriveLabels(
+      columns.props.filter((c) => c.column.spec.annotations?.['pl7.app/isScore'] === 'true'),
+      (c) => c.column.spec,
+    ).map((o) => ({
+      ...o,
+      value: {
+        type: 'column' as const,
+        id: o.value.column.id,
+      },
+    }));
+  })
+
+  .output('defaultFilters', (ctx) => {
+    const columns = getColumns(ctx);
+    if (columns === undefined)
+      return undefined;
+
+    return columns.defaultFilters;
   })
 
   .output('pf', (ctx) => {
