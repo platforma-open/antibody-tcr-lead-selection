@@ -132,6 +132,12 @@ const selection = ref<PlSelectionModel>({
       <PlAlert v-if="app.model.args.rankingOrder.length === 0 && app.model.args.topClonotypes !== undefined" type="warn">
         {{ "Warning: If you don't select any Clonotype Ranking columns to pick the top candidates, '" + defaultRankingLabel + "' will be used by default in increasing order" }}
       </PlAlert>
+      <PlAlert
+        v-if="app.model.args.topClonotypes !== undefined
+          && app.model.args.rankingOrder.some((order) => order.value === undefined)" type="warn"
+      >
+        {{ "Warning: Please remove or assign values to empty ranking columns" }}
+      </PlAlert>
     </PlSlideModal>
     <PlSlideModal v-model="multipleSequenceAlignmentOpen" width="100%">
       <template #title>Multiple Sequence Alignment</template>

@@ -71,7 +71,8 @@ export const model = BlockModel.create()
   })
 
   // Activate "Run" button only after these conditions are satisfied
-  .argsValid((ctx) => (ctx.args.inputAnchor !== undefined),
+  .argsValid((ctx) => (ctx.args.inputAnchor !== undefined
+    && ctx.args.rankingOrder.every((order) => order.value !== undefined)),
   )
 
   .output('inputOptions', (ctx) =>
