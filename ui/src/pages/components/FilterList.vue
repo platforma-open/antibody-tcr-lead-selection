@@ -62,9 +62,9 @@ const resetToDefaults = () => {
   });
 };
 
-// set default filters when inputAnchor is set
-watch(() => app.model.args.inputAnchor, (newValue, oldValue) => {
-  if (oldValue === undefined && newValue !== undefined) {
+// set default filters when becomes available after inputAnchor is set
+watch(() => app.model.outputs.defaultFilters, (newValue) => {
+  if (newValue && app.model.args.inputAnchor && (!app.model.args.filters || app.model.args.filters.length === 0)) {
     resetToDefaults();
   }
 });

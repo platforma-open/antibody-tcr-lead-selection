@@ -48,6 +48,14 @@ watch(() => app.model.args.topClonotypes, (newValue, oldValue) => {
     resetToDefaults();
   }
 });
+
+// Also reset ranking order when inputAnchor changes (dataset changes)
+watch(() => app.model.args.inputAnchor, (newValue, oldValue) => {
+  if (oldValue !== undefined && newValue !== undefined && oldValue !== newValue) {
+    // Dataset changed - reset ranking order
+    resetToDefaults();
+  }
+});
 </script>
 
 <template>

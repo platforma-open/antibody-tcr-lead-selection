@@ -18,7 +18,6 @@ import {
 import { ref, watch } from 'vue';
 import { useApp } from '../app';
 import {
-  defaultFilters,
   isLabelColumnOption,
   isLinkerColumn,
   isSequenceColumn,
@@ -43,7 +42,7 @@ function setAnchorColumn(ref: PlRef | undefined) {
 const tableSettings = usePlDataTableSettingsV2({
   sourceId: () => app.model.args.inputAnchor,
   model: () => app.model.outputs.table,
-  filtersConfig: ({ column }) => ({ default: defaultFilters(column) }),
+  // filtersConfig: ({ column }) => ({ default: defaultFilters(column) }),
 });
 
 let defaultRankingLabel = 'Number of Samples';
