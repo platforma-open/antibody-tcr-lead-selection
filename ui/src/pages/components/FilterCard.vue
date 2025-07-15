@@ -11,6 +11,21 @@ export type FilterEntry = {
   isExpanded?: boolean;
 };
 
+// Define specific filter types to avoid 'as any'
+type NumberFilterType =
+  | 'number_greaterThan'
+  | 'number_greaterThanOrEqualTo'
+  | 'number_lessThan'
+  | 'number_lessThanOrEqualTo'
+  | 'number_equals'
+  | 'number_notEquals';
+
+type StringFilterType =
+  | 'string_equals'
+  | 'string_notEquals'
+  | 'string_contains'
+  | 'string_doesNotContain';
+
 const model = defineModel<FilterEntry>({
   default: {
     filter: { type: 'number_greaterThan', reference: 0 },
@@ -42,12 +57,12 @@ const getFilterTypeOptions = (columnId?: PTableColumnId) => {
   return filterTypeOptions;
 };
 
-const isNumberFilter = (type?: string) => {
-  return type?.startsWith('number_');
+const isNumberFilter = (type?: string): type is NumberFilterType => {
+  return type?.startsWith('number_') ?? false;
 };
 
-const isStringFilter = (type?: string) => {
-  return type?.startsWith('string_');
+const isStringFilter = (type?: string): type is StringFilterType => {
+  return type?.startsWith('string_') ?? false;
 };
 
 const hasReference = (filter: PlTableFilter): filter is PlTableFilter & { reference: string | number } => {
@@ -71,9 +86,9 @@ const setReferenceValue = (filter: PlTableFilter, value: string | number) => {
 
 const createFilter = (type: string): PlTableFilter => {
   if (isNumberFilter(type)) {
-    return { type: type as any, reference: 0 };
+    return { type, reference: 0 };
   } else if (isStringFilter(type)) {
-    return { type: type as any, reference: '' };
+    return { type, reference: '' };
   } else {
     return { type: 'number_greaterThan', reference: 0 };
   }
