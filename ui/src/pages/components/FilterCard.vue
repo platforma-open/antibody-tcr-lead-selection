@@ -6,7 +6,7 @@ import { computed } from 'vue';
 
 export type FilterEntry = {
   id?: string;
-  column?: AnchoredColumnId;
+  value?: AnchoredColumnId;
   filter?: PlTableFilter;
   isExpanded?: boolean;
 };
@@ -127,7 +127,7 @@ const filterType = computed({
 <template>
   <div class="d-flex flex-column gap-6">
     <PlDropdown
-      v-model="model.column"
+      v-model="model.value"
       :options="props.options"
       label="Filter by"
       required
@@ -135,7 +135,7 @@ const filterType = computed({
 
     <PlDropdown
       v-model="filterType"
-      :options="getFilterTypeOptions(model.column)"
+      :options="getFilterTypeOptions(model.value)"
       label="Filter type"
       required
     />

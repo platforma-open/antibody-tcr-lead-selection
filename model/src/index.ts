@@ -20,7 +20,7 @@ import { anchoredColumnId, getColumns } from './util';
 
 export type FilterEntry = {
   id?: string;
-  column?: AnchoredColumnId;
+  value?: AnchoredColumnId;
   filter?: PlTableFilter;
   isExpanded?: boolean;
 };
@@ -81,9 +81,9 @@ export const model = BlockModel.create()
   })
 
   // Activate "Run" button only after these conditions are satisfied
-  .argsValid((ctx) => {
-    return ctx.args.inputAnchor !== undefined && ctx.args.topClonotypes !== undefined;
-  })
+  .argsValid((ctx) => (ctx.args.inputAnchor !== undefined
+    && ctx.args.rankingOrder.every((order) => order.value !== undefined)),
+  )
 
   .output('inputOptions', (ctx) =>
     ctx.resultPool.getOptions([{
@@ -109,7 +109,7 @@ export const model = BlockModel.create()
     return deriveLabels(
       columns.props.filter((c) => c.column.spec.valueType !== 'String'),
       (c) => c.column.spec,
-      { includeNativeLabel: true }
+      { includeNativeLabel: true },
     ).map((o) => ({
       ...o,
       value: anchoredColumnId(o.value),
@@ -124,7 +124,7 @@ export const model = BlockModel.create()
     return deriveLabels(
       columns.props.filter((c) => c.column.spec.annotations?.['pl7.app/isScore'] === 'true'),
       (c) => c.column.spec,
-      { includeNativeLabel: true }
+      { includeNativeLabel: true },
     ).map((o) => ({
       ...o,
       value: anchoredColumnId(o.value),
@@ -137,11 +137,11 @@ export const model = BlockModel.create()
       return undefined;
 
     // Use the first score column as default ranking
-    const scoreColumns = columns.props.filter((c) => 
-      c.column.spec.annotations?.['pl7.app/isScore'] === 'true' && 
-      c.column.spec.valueType !== 'String'
+    const scoreColumns = columns.props.filter((c) =>
+      c.column.spec.annotations?.['pl7.app/isScore'] === 'true'
+      && c.column.spec.valueType !== 'String',
     );
-    
+
     if (scoreColumns.length > 0) {
       return {
         id: `default-rank-${scoreColumns[0].column.id}`,
@@ -152,10 +152,10 @@ export const model = BlockModel.create()
     }
 
     // Fall back to any non-String column (like number of samples, counts, etc.)
-    const numericColumns = columns.props.filter((c) => 
-      c.column.spec.valueType !== 'String'
+    const numericColumns = columns.props.filter((c) =>
+      c.column.spec.valueType !== 'String',
     );
-    
+
     if (numericColumns.length > 0) {
       return {
         id: `default-rank-${numericColumns[0].column.id}`,

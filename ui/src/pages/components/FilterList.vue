@@ -8,7 +8,7 @@ import FilterCard from './FilterCard.vue';
 
 export type FilterEntry = {
   id?: string;
-  column?: AnchoredColumnId;
+  value?: AnchoredColumnId;
   filter?: PlTableFilter;
   isExpanded?: boolean;
 };
@@ -26,11 +26,11 @@ const generateUniqueId = () => {
 const getColumnLabel = (columnId: AnchoredColumnId | undefined) => {
   if (!columnId) return 'Set filter';
 
-  // Get the column label from filter options  
+  // Get the column label from filter options
   const filterOptions = app.model.outputs.filterOptions;
   if (!filterOptions) return 'Set filter';
 
-  const option = filterOptions.find((opt: any) =>
+  const option = filterOptions.find((opt: { value: { column: string }; label: string }) =>
     opt.value.column === columnId.column,
   );
 
@@ -44,7 +44,7 @@ const addFilter = () => {
     }
     args.filters.push({
       id: generateUniqueId(),
-      column: undefined,
+      value: undefined,
       filter: { type: 'number_greaterThan', reference: 0 },
       isExpanded: true, // Auto-expand new items
     });
@@ -55,7 +55,7 @@ const resetToDefaults = () => {
   app.updateArgs((args) => {
     args.filters = app.model.outputs.defaultFilters?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter }) => ({
       id: generateUniqueId(),
-      column: defaultFilter.column,
+      value: defaultFilter.column,
       filter: defaultFilter.default,
       isExpanded: false,
     })) ?? [];
@@ -87,7 +87,7 @@ watch(() => app.model.outputs.defaultFilters, (newValue) => {
       :on-expand="(item: FilterEntry) => item.isExpanded = !item.isExpanded"
     >
       <template #item-title="{ item }">
-        {{ (item as FilterEntry).column ? getColumnLabel((item as FilterEntry).column) : 'Add Filter' }}
+        {{ (item as FilterEntry).value ? getColumnLabel((item as FilterEntry).value) : 'Add Filter' }}
       </template>
       <template #item-content="{ index }">
         <FilterCard

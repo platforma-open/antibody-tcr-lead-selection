@@ -49,13 +49,13 @@ watch(
   (newVal) => {
     // Only add defaults when:
     // 1. topClonotypes is set (section is visible)
-    // 2. filterOptions (score columns) are available  
+    // 2. filterOptions (score columns) are available
     // 3. Defaults haven't been added yet
     if (
-      newVal.topClonotypes &&
-      newVal.filterOptions &&
-      newVal.filterOptions.length > 0 &&
-      !defaultsAdded.value
+      newVal.topClonotypes
+      && newVal.filterOptions
+      && newVal.filterOptions.length > 0
+      && !defaultsAdded.value
     ) {
       // Check if ranking order is currently empty
       const currentRankingOrder = app.model.args.rankingOrder;
@@ -71,13 +71,13 @@ watch(
         defaultsAdded.value = true;
       }
     }
-    
+
     // Reset defaults flag when topClonotypes is cleared
     if (!newVal.topClonotypes) {
       defaultsAdded.value = false;
     }
   },
-  { immediate: true }
+  { immediate: true },
 );
 </script>
 
