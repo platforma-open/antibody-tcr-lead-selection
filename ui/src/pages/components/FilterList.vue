@@ -24,7 +24,7 @@ const generateUniqueId = () => {
 };
 
 const getColumnLabel = (columnId: AnchoredColumnId | undefined) => {
-  const column = app.model.outputs.filterOptions?.find(
+  const column = app.model.outputs.allFilterableOptions?.find(
     (option) => option && option.value.column === columnId?.column,
   );
   return column?.label ?? 'Set filter';
@@ -85,7 +85,7 @@ watch(() => app.model.outputs.defaultFilters, (newValue) => {
       <template #item-content="{ index }">
         <FilterCard
           v-model="app.model.args.filters[index]"
-          :options="app.model.outputs.rankingOptions"
+          :options="app.model.outputs.allFilterableOptions"
         />
       </template>
     </PlElementList>

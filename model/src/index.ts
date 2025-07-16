@@ -136,6 +136,29 @@ export const model = BlockModel.create()
     ).map((o) => ({
       ...o,
       value: anchoredColumnId(o.value),
+      column: o.value.column, // Add column for UI access to spec and discrete values
+    }));
+  })
+
+  .output('allFilterableOptions', (ctx) => {
+    const columns = getColumns(ctx);
+    if (columns === undefined)
+      return undefined;
+
+    return deriveLabels(
+      columns.props.filter((c) => {
+        // Include numeric columns (like ranking)
+        if (c.column.spec.valueType !== 'String') return true;
+        // Include string columns with discrete values (categorical filters)
+        if (c.column.spec.annotations?.['pl7.app/discreteValues']) return true;
+        return false;
+      }),
+      (c) => c.column.spec,
+      { includeNativeLabel: true },
+    ).map((o) => ({
+      ...o,
+      value: anchoredColumnId(o.value),
+      column: o.value.column, // Add column for UI access to spec and discrete values
     }));
   })
 

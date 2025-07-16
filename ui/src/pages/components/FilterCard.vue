@@ -33,7 +33,7 @@ const model = defineModel<FilterEntry>({
 });
 
 const props = defineProps<{
-  options?: { label: string; value: AnchoredColumnId }[];
+  options?: { label: string; value: AnchoredColumnId; column?: { spec: { annotations?: Record<string, string> } } }[];
 }>();
 
 const filterTypeOptions = [
@@ -98,8 +98,8 @@ const referenceValue = computed(() => {
   return String(getReferenceValue(model.value.filter) || '');
 });
 
-const updateReferenceValue = (value: string) => {
-  if (model.value.filter) {
+const updateReferenceValue = (value: string | undefined) => {
+  if (model.value.filter && value !== undefined) {
     setReferenceValue(model.value.filter, value);
   }
 };
@@ -109,8 +109,31 @@ const showNumberInput = computed(() => {
 });
 
 const showStringInput = computed(() => {
-  return model.value.filter && isStringFilter(model.value.filter.type);
+  return model.value.filter && isStringFilter(model.value.filter.type) && !getDiscreteValues();
 });
+
+const showDiscreteDropdown = computed(() => {
+  return model.value.filter && isStringFilter(model.value.filter.type) && getDiscreteValues();
+});
+
+const getDiscreteValues = () => {
+  if (!model.value.value) return null;
+
+  const selectedOption = props.options?.find((opt) =>
+    opt.value.column === model.value.value?.column,
+  );
+
+  if (!selectedOption?.column?.spec?.annotations?.['pl7.app/discreteValues']) {
+    return null;
+  }
+
+  try {
+    const discreteValues = JSON.parse(selectedOption.column.spec.annotations['pl7.app/discreteValues']);
+    return discreteValues.map((val: string) => ({ label: val, value: val }));
+  } catch {
+    return null;
+  }
+};
 
 const filterType = computed({
   get: () => model.value.filter?.type || 'number_greaterThan',
@@ -143,7 +166,16 @@ const filterType = computed({
     <PlTextField
       v-if="showNumberInput"
       :model-value="referenceValue"
-      label="Reference value"
+      label="Value"
+      required
+      @update:model-value="updateReferenceValue"
+    />
+
+    <PlDropdown
+      v-if="showDiscreteDropdown"
+      :model-value="referenceValue"
+      :options="getDiscreteValues()"
+      label="Value"
       required
       @update:model-value="updateReferenceValue"
     />
@@ -151,7 +183,7 @@ const filterType = computed({
     <PlTextField
       v-if="showStringInput"
       :model-value="referenceValue"
-      label="Reference value"
+      label="Value"
       required
       @update:model-value="updateReferenceValue"
     />
