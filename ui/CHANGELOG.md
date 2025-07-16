@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.5.1
+
+### Patch Changes
+
+- 28648b0: MSA updates
+
 ## 1.5.0
 
 ### Minor Changes
