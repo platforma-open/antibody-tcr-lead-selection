@@ -225,7 +225,7 @@ wf.body(func(args) {
 				addFile("filteredClonotypes.csv", filteredCsv).
 				arg("--csv").arg("filteredClonotypes.csv").
 				arg("--n").arg(string(topClonotypes)).
-				arg("--out").arg("sampledClonotypes.csv").
+				arg("--out").arg("sampledClonotypes_top.csv").
 				saveFile("sampledClonotypes_top.csv").
 				printErrStreamToStdout().
 				saveStdoutContent().
