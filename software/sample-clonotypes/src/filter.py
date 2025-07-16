@@ -131,6 +131,9 @@ def main():
     print(f"Initial rows: {df.height}")
     filtered_df = apply_filters(df, filter_map)
     print(f"Rows after filtering: {filtered_df.height}")
+
+    # Add a column named top with value 1
+    filtered_df = filtered_df.with_columns(pl.lit(1).alias("top"))
     
     if filtered_df.height == 0:
         print("Warning: No rows remain after filtering. Creating empty output file.")
@@ -141,7 +144,6 @@ def main():
     # Output filtered data to csv
     filtered_df.write_csv(args.out)
     print(f"Filtered data written to: {args.out}")
-
 
 if __name__ == "__main__":
     main() 

@@ -140,7 +140,7 @@ wf.body(func(args) {
 		}
 
 		// Add ranking columns to table
-		if topClonotypes != undefined && len(args.rankingOrder) > 0 {
+		if len(args.rankingOrder) > 0 {
 			for i, col in args.rankingOrder {
 				cloneTable.add(columns.getColumn(col.value.column), {header: "Col" + string(i)})
 			
@@ -234,18 +234,16 @@ wf.body(func(args) {
 
 			// Save top clonotypes CSV file
 			finalClonotypesCsv = sampleClones.getFile("sampledClonotypes_top.csv")
-
-			// Store outputs
-			sampledColsParams := sampledColsConv.getColumns(datasetSpec)
-			sampledColumnsPf := xsv.importFile(finalClonotypesCsv, "csv", sampledColsParams,
-												{cpu: 1, mem: "16GiB"})
-			outputs["sampledRows"] = pframes.exportFrame(sampledColumnsPf)
 		} else {
-			// Following steps will only be done on filtered clonotypes
+			// No ranking, use filtered data directly, it already contains "top" column
 			finalClonotypesCsv = filteredCsv
-			// Prepare output just with filtered clonotypes
-			outputs["sampledRows"] = pframes.exportFrame(filteredCsv)
 		}
+
+		// Store outputs 
+		sampledColsParams := sampledColsConv.getColumns(datasetSpec)
+		sampledColumnsPf := xsv.importFile(finalClonotypesCsv, "csv", sampledColsParams,
+											{cpu: 1, mem: "16GiB"})
+		outputs["sampledRows"] = pframes.exportFrame(sampledColumnsPf)
 
 	}
 
@@ -318,7 +316,7 @@ wf.body(func(args) {
 		arg("--vj_usage_tsv").arg("vj_usage.tsv") // no dot here
 
 	// Add top clonotypes argument and file to the builder if provided
-	if topClonotypes != undefined {
+	if topClonotypes != undefined || len(args.filters) > 0 {
 		cdr3VspectratypeCmd = cdr3VspectratypeCmd.
 			arg("--final_clonotypes_csv").arg("finalClonotypes.csv").
 			addFile("finalClonotypes.csv", finalClonotypesCsv)

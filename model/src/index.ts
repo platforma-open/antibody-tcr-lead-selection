@@ -101,6 +101,14 @@ export const model = BlockModel.create()
     }], { refsWithEnrichments: true }),
   )
 
+  .output('defaultRankingOrder', (ctx) => {
+    const anchor = ctx.args.inputAnchor;
+    if (anchor === undefined)
+      return undefined;
+
+    return getColumns(ctx)?.defaultRankingOrder;
+  })
+
   .output('rankingOptions', (ctx) => {
     const columns = getColumns(ctx);
     if (columns === undefined)
@@ -217,11 +225,11 @@ export const model = BlockModel.create()
 
     const props = columns.props.map((c) => c.column);
 
-    // we wont compute the workflow output in cases where ctx.args.topClonotypes == undefined
+    // we wont compute the workflow output in cases where ctx.args.topClonotypes == undefined and there are no filters
     const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', allowPermanentAbsence: true })?.getPColumns();
     let ops: CreatePlDataTableOps = {};
     const cols: Column[] = [];
-    if (ctx.args.topClonotypes === undefined) {
+    if (ctx.args.topClonotypes === undefined && ctx.args.filters.length === 0) {
       cols.push(...props);
     } else if (sampledRows === undefined) {
       return undefined;

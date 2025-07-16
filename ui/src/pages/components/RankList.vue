@@ -10,9 +10,6 @@ const app = useApp();
 // Counter for generating unique IDs
 const idCounter = ref(0);
 
-// Track if defaults have been added to avoid re-adding them
-const defaultsAdded = ref(false);
-
 const generateUniqueId = () => {
   idCounter.value += 1;
   return `rank-${idCounter.value}-${Date.now()}`;
@@ -39,46 +36,18 @@ const addRankColumn = () => {
   });
 };
 
-// Add default score columns when ranking section becomes available
-// Only watch topClonotypes and filterOptions to avoid feedback loop
-watch(
-  () => ({
-    topClonotypes: app.model.args.topClonotypes,
-    filterOptions: app.model.outputs.filterOptions, // Score columns
-  }),
-  (newVal) => {
-    // Only add defaults when:
-    // 1. topClonotypes is set (section is visible)
-    // 2. filterOptions (score columns) are available
-    // 3. Defaults haven't been added yet
-    if (
-      newVal.topClonotypes
-      && newVal.filterOptions
-      && newVal.filterOptions.length > 0
-      && !defaultsAdded.value
-    ) {
-      // Check if ranking order is currently empty
-      const currentRankingOrder = app.model.args.rankingOrder;
-      if (!currentRankingOrder || currentRankingOrder.length === 0) {
-        app.updateArgs((args) => {
-          args.rankingOrder = newVal.filterOptions!.map((scoreColumn) => ({
-            id: generateUniqueId(),
-            value: scoreColumn.value,
-            rankingOrder: 'decreasing', // Score columns typically ranked highest first
-            isExpanded: false,
-          }));
-        });
-        defaultsAdded.value = true;
-      }
-    }
+const resetToDefaults = () => {
+  app.updateArgs((args) => {
+    args.rankingOrder = app.model.outputs.defaultRankingOrder ?? [];
+  });
+};
 
-    // Reset defaults flag when topClonotypes is cleared
-    if (!newVal.topClonotypes) {
-      defaultsAdded.value = false;
-    }
-  },
-  { immediate: true },
-);
+// set default ranking order when topClonotypes is set
+watch(() => app.model.args.topClonotypes, (newValue, oldValue) => {
+  if (oldValue === undefined && newValue !== undefined) {
+    resetToDefaults();
+  }
+});
 </script>
 
 <template>

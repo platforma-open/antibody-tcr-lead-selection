@@ -12,11 +12,11 @@ import {
   PlDropdownRef,
   PlMultiSequenceAlignment,
   PlNumberField,
-  PlSlideModal,
   PlSectionSeparator,
+  PlSlideModal,
   usePlDataTableSettingsV2,
 } from '@platforma-sdk/ui-vue';
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 import { useApp } from '../app';
 import {
   isLabelColumnOption,
@@ -44,6 +44,36 @@ const tableSettings = usePlDataTableSettingsV2({
   sourceId: () => app.model.args.inputAnchor,
   model: () => app.model.outputs.table,
   // filtersConfig: ({ column }) => ({ default: defaultFilters(column) }),
+});
+
+let defaultRankingLabel = 'Number of Samples';
+watch(() => [app.model.outputs.rankingOptions], (_) => {
+  const sampleNumber = app.model.outputs.rankingOptions?.find((o) => o.label.split(' / ')[0] === 'Number of Samples');
+  if (sampleNumber) {
+    defaultRankingLabel = sampleNumber.label;
+    app.model.args.rankingOrderDefault = {
+      value: {
+        anchorRef: sampleNumber.value.anchorRef,
+        anchorName: 'main',
+        column: sampleNumber.value.column,
+      },
+      rankingOrder: 'increasing',
+    };
+  // if we didn't find 'Number of Samples' in ranking options, we just select the first option
+  } else {
+    const firstOption = app.model.outputs.rankingOptions?.[0];
+    if (firstOption) {
+      defaultRankingLabel = firstOption.label;
+      app.model.args.rankingOrderDefault = {
+        value: {
+          anchorRef: firstOption.value.anchorRef,
+          anchorName: 'main',
+          column: firstOption.value.column,
+        },
+        rankingOrder: 'increasing',
+      };
+    }
+  }
 });
 
 const selection = ref<PlSelectionModel>({
@@ -113,8 +143,8 @@ const selection = ref<PlSelectionModel>({
 
       <RankList />
 
-      <PlAlert v-if="app.model.args.rankingOrder.length === 0 && app.model.args.topClonotypes !== undefined" type="warn" :style="{ width: '320px' }">
-        {{ "Warning: Please select at least one ranking column to determine which clonotypes to include in the top candidates." }}
+      <PlAlert v-if="app.model.args.rankingOrder.length === 0 && app.model.args.topClonotypes !== undefined" type="warn">
+        {{ "Warning: If you don't select any Clonotype Ranking columns to pick the top candidates, '" + defaultRankingLabel + "' will be used by default in increasing order" }}
       </PlAlert>
       <PlAlert
         v-if="app.model.args.topClonotypes !== undefined
