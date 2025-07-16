@@ -24,17 +24,10 @@ const generateUniqueId = () => {
 };
 
 const getColumnLabel = (columnId: AnchoredColumnId | undefined) => {
-  if (!columnId) return 'Set filter';
-
-  // Get the column label from filter options
-  const filterOptions = app.model.outputs.filterOptions;
-  if (!filterOptions) return 'Set filter';
-
-  const option = filterOptions.find((opt: { value: { column: string }; label: string }) =>
-    opt.value.column === columnId.column,
+  const column = app.model.outputs.filterOptions?.find(
+    (option) => option && option.value.column === columnId?.column,
   );
-
-  return option?.label || 'Set filter';
+  return column?.label ?? 'Set filter';
 };
 
 const addFilter = () => {
@@ -92,7 +85,7 @@ watch(() => app.model.outputs.defaultFilters, (newValue) => {
       <template #item-content="{ index }">
         <FilterCard
           v-model="app.model.args.filters[index]"
-          :options="app.model.outputs.filterOptions"
+          :options="app.model.outputs.rankingOptions"
         />
       </template>
     </PlElementList>

@@ -81,6 +81,10 @@ watch(() => app.model.args.topClonotypes, (newValue, oldValue) => {
       <PlBtnSecondary icon="add" @click="addRankColumn">
         Add Ranking Column
       </PlBtnSecondary>
+
+      <PlBtnSecondary icon="reverse" @click="resetToDefaults">
+        Reset to defaults
+      </PlBtnSecondary>
     </div>
   </div>
 </template>
