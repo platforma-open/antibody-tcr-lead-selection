@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import type {
-  PlRef,
-  PlSelectionModel,
-} from '@platforma-sdk/model';
+import type { PlRef, PlSelectionModel } from '@platforma-sdk/model';
 import { plRefsEqual } from '@platforma-sdk/model';
 import {
   PlAgDataTableV2,
@@ -17,12 +14,7 @@ import {
 } from '@platforma-sdk/ui-vue';
 import { ref, watch } from 'vue';
 import { useApp } from '../app';
-import {
-  defaultFilters,
-  isLabelColumnOption,
-  isLinkerColumn,
-  isSequenceColumn,
-} from '../util';
+import { defaultFilters, isSequenceColumn } from '../util';
 import RankList from './components/RankList.vue';
 
 const app = useApp();
@@ -133,13 +125,15 @@ const selection = ref<PlSelectionModel>({
         {{ "Warning: If you don't select any Clonotype Ranking columns to pick the top candidates, '" + defaultRankingLabel + "' will be used by default in increasing order" }}
       </PlAlert>
     </PlSlideModal>
-    <PlSlideModal v-model="multipleSequenceAlignmentOpen" width="100%">
+    <PlSlideModal
+      v-model="multipleSequenceAlignmentOpen"
+      width="100%"
+      :close-on-outside-click="false"
+    >
       <template #title>Multiple Sequence Alignment</template>
       <PlMultiSequenceAlignment
         v-model="app.model.ui.alignmentModel"
-        :label-column-option-predicate="isLabelColumnOption"
         :sequence-column-predicate="isSequenceColumn"
-        :linker-column-predicate="isLinkerColumn"
         :p-frame="app.model.outputs.pf"
         :selection="selection"
       />
