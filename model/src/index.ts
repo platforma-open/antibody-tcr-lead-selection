@@ -6,7 +6,6 @@ import type {
   PlDataTableStateV2,
   PlMultiSequenceAlignmentModel,
   PlRef,
-  PlTableFilter,
 } from '@platforma-sdk/model';
 import {
   BlockModel,
@@ -15,24 +14,17 @@ import {
   createPlDataTableV2,
   deriveLabels,
 } from '@platforma-sdk/model';
-import type { AnchoredColumnId, Column, RankingOrder, RankingOrderUI } from './util';
+import type { AnchoredColumnId, Column, Filter, FilterUI, RankingOrder, RankingOrderUI } from './util';
 import { anchoredColumnId, getColumns } from './util';
 
 export * from './converters';
-
-export type FilterEntry = {
-  id?: string;
-  value?: AnchoredColumnId;
-  filter?: PlTableFilter;
-  isExpanded?: boolean;
-};
 
 export type BlockArgs = {
   inputAnchor?: PlRef;
   topClonotypes?: number;
   rankingOrder: RankingOrder[];
   rankingOrderDefault?: RankingOrder;
-  filters: FilterEntry[];
+  filters: Filter[];
 };
 
 export type UiState = {
@@ -43,6 +35,7 @@ export type UiState = {
   vjUsagePlotState: GraphMakerState;
   alignmentModel: PlMultiSequenceAlignmentModel;
   rankingOrder: RankingOrderUI[];
+  filters: FilterUI[];
 };
 
 export const model = BlockModel.create()
@@ -82,6 +75,7 @@ export const model = BlockModel.create()
     },
     alignmentModel: {},
     rankingOrder: [],
+    filters: [],
   })
 
   // Activate "Run" button only after these conditions are satisfied
@@ -337,4 +331,4 @@ export const model = BlockModel.create()
 
 export type BlockOutputs = InferOutputsType<typeof model>;
 
-export type { AnchoredColumnId, RankingOrder };
+export type { AnchoredColumnId, Filter, FilterUI, RankingOrder };

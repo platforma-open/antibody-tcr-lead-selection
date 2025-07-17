@@ -39,6 +39,16 @@ export type RankingOrderUI = RankingOrder & {
   isExpanded?: boolean;
 };
 
+export type Filter = {
+  value?: AnchoredColumnId;
+  filter?: PlTableFilter;
+};
+
+export type FilterUI = Filter & {
+  id?: string;
+  isExpanded?: boolean;
+};
+
 export type PlTableFiltersDefault = {
   column: AnchoredColumnId;
   default: PlTableFilter;

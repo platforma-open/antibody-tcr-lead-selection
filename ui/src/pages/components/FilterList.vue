@@ -1,17 +1,10 @@
 <script setup lang="ts">
-import type { AnchoredColumnId } from '@platforma-open/milaboratories.top-antibodies.model';
+import type { AnchoredColumnId, FilterUI } from '@platforma-open/milaboratories.top-antibodies.model';
 import type { PlTableFilter } from '@platforma-sdk/model';
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from '@platforma-sdk/ui-vue';
 import { ref, watch } from 'vue';
 import { useApp } from '../../app';
 import FilterCard from './FilterCard.vue';
-
-export type FilterEntry = {
-  id?: string;
-  value?: AnchoredColumnId;
-  filter?: PlTableFilter;
-  isExpanded?: boolean;
-};
 
 const app = useApp();
 
@@ -31,33 +24,32 @@ const getColumnLabel = (columnId: AnchoredColumnId | undefined) => {
 };
 
 const addFilter = () => {
-  app.updateArgs((args) => {
-    if (!args.filters || !Array.isArray(args.filters)) {
-      args.filters = [];
-    }
-    args.filters.push({
-      id: generateUniqueId(),
-      value: undefined,
-      filter: { type: 'number_greaterThan', reference: 0 },
-      isExpanded: true, // Auto-expand new items
-    });
+  const ui = app.model.ui;
+
+  if (!Array.isArray(ui.filters)) {
+    ui.filters = [];
+  }
+
+  ui.filters.push({
+    id: generateUniqueId(),
+    value: undefined,
+    filter: { type: 'number_greaterThan', reference: 0 },
+    isExpanded: true, // Auto-expand new items
   });
 };
 
 const resetToDefaults = () => {
-  app.updateArgs((args) => {
-    args.filters = app.model.outputs.defaultFilters?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter }) => ({
-      id: generateUniqueId(),
-      value: defaultFilter.column,
-      filter: defaultFilter.default,
-      isExpanded: false,
-    })) ?? [];
-  });
+  app.model.ui.filters = app.model.outputs.defaultFilters?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter }) => ({
+    id: generateUniqueId(),
+    value: defaultFilter.column,
+    filter: defaultFilter.default,
+    isExpanded: false,
+  })) ?? [];
 };
 
 // set default filters when becomes available after inputAnchor is set
 watch(() => app.model.outputs.defaultFilters, (newValue) => {
-  if (newValue && app.model.args.inputAnchor && (!app.model.args.filters || app.model.args.filters.length === 0)) {
+  if (newValue && app.model.args.inputAnchor && (!app.model.ui.filters || app.model.ui.filters.length === 0)) {
     resetToDefaults();
   }
 });
@@ -74,17 +66,17 @@ watch(() => app.model.outputs.defaultFilters, (newValue) => {
     </PlRow>
 
     <PlElementList
-      v-model:items="app.model.args.filters"
-      :get-item-key="(item: FilterEntry) => item.id ?? 0"
-      :is-expanded="(item: FilterEntry) => item.isExpanded === true"
-      :on-expand="(item: FilterEntry) => item.isExpanded = !item.isExpanded"
+      v-model:items="app.model.ui.filters"
+      :get-item-key="(item: FilterUI) => item.id ?? 0"
+      :is-expanded="(item: FilterUI) => item.isExpanded === true"
+      :on-expand="(item: FilterUI) => item.isExpanded = !item.isExpanded"
     >
       <template #item-title="{ item }">
-        {{ (item as FilterEntry).value ? getColumnLabel((item as FilterEntry).value) : 'Add Filter' }}
+        {{ (item as FilterUI).value ? getColumnLabel((item as FilterUI).value) : 'Add Filter' }}
       </template>
       <template #item-content="{ index }">
         <FilterCard
-          v-model="app.model.args.filters[index]"
+          v-model="app.model.ui.filters[index]"
           :options="app.model.outputs.allFilterableOptions"
         />
       </template>

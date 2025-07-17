@@ -1,15 +1,8 @@
 <script setup lang="ts">
-import type { AnchoredColumnId } from '@platforma-open/milaboratories.top-antibodies.model';
+import type { AnchoredColumnId, FilterUI } from '@platforma-open/milaboratories.top-antibodies.model';
 import type { PlTableFilter } from '@platforma-sdk/model';
 import { PlDropdown, PlTextField } from '@platforma-sdk/ui-vue';
 import { computed } from 'vue';
-
-export type FilterEntry = {
-  id?: string;
-  value?: AnchoredColumnId;
-  filter?: PlTableFilter;
-  isExpanded?: boolean;
-};
 
 // Define specific filter types to avoid 'as any'
 type NumberFilterType =
@@ -26,7 +19,7 @@ type StringFilterType =
   | 'string_contains'
   | 'string_doesNotContain';
 
-const model = defineModel<FilterEntry>({
+const model = defineModel<FilterUI>({
   default: {
     filter: { type: 'number_greaterThan', reference: 0 },
   },

@@ -63,14 +63,20 @@ def apply_filter(df, column_name, filter_type, reference_value):
 def apply_filters(df, filter_map):
     """
     Apply all filters specified in the filter_map to the DataFrame.
+    If filter_map is empty, return the input table with a "top" column added with value 1.
     
     Args:
         df: polars DataFrame
         filter_map: dictionary mapping column names to filter specifications
     
     Returns:
-        polars DataFrame with all filters applied
+        polars DataFrame with all filters applied and "top" columns or input table with "top" column if no filters
     """
+    # If filter_map is empty, return input table with "top" column
+    if not filter_map:
+        print("Filter map is empty. Returning input table with 'top' column added.")
+        return df.with_columns(pl.lit(1).alias("top"))
+    
     filtered_df = df.clone()
     initial_rows = filtered_df.height
     
