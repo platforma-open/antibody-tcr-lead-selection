@@ -16,13 +16,19 @@ wf.prepare(func(args){
     
     if len(args.rankingOrder) > 0 {
         for col in args.rankingOrder {
-            bundleBuilder.addAnchor(col.value.anchorName, col.value.anchorRef)
-            bundleBuilder.addSingle(col.value.column)
+            // For cases where the user is selecting the table to filter
+            if col.value != undefined {
+                bundleBuilder.addAnchor(col.value.anchorName, col.value.anchorRef)
+                bundleBuilder.addSingle(col.value.column)
+            }
         }
     } else {
-        bundleBuilder.addAnchor(args.rankingOrderDefault.value.anchorName, 
-                                args.rankingOrderDefault.value.anchorRef)
-        bundleBuilder.addSingle(args.rankingOrderDefault.value.column)
+        // prerun sometimes runs before this variable is ready
+        if args.rankingOrderDefault.value != undefined {
+            bundleBuilder.addAnchor(args.rankingOrderDefault.value.anchorName, 
+                                    args.rankingOrderDefault.value.anchorRef)
+            bundleBuilder.addSingle(args.rankingOrderDefault.value.column)
+        }
     }
 
     // Load filter columns
@@ -119,33 +125,37 @@ wf.body(func(args) {
         // Add ranking columns to table
         if len(args.rankingOrder) > 0 {
             for i, col in args.rankingOrder {
-                cloneTable.add(columns.getColumn(col.value.column), {header: "Col" + string(i)})
+                if col.value != undefined {
+                    cloneTable.add(columns.getColumn(col.value.column), {header: "Col" + string(i)})
+                
+                    // If column does not have main anchor axis we have to include theirs
+                    colsSpec := columns.getSpec(col.value.column)
+                    axesNames := slices.map(colsSpec.axesSpec, func (a) { return a.name})
+                    if !slices.hasElement(axesNames, datasetSpec.axesSpec[1].name) {
+                        for na, ax in colsSpec.axesSpec {
+                            if ax.name != datasetSpec.axesSpec[1].name && !slices.hasElement(addedAxes, ax.name) {
+                                cloneTable.setAxisHeader(ax.name, "cluster_" + string(i) + string(na))
+                            }
+                        }
+                    }	
+                }
+            }
+        } else {
+            if args.rankingOrderDefault.value != undefined {
+                i := 0
+                cloneTable.add(columns.getColumn(args.rankingOrderDefault.value.column), {header: "Col" + string(i)})
             
                 // If column does not have main anchor axis we have to include theirs
-                colsSpec := columns.getSpec(col.value.column)
+                colsSpec := columns.getSpec(args.rankingOrderDefault.value.column)
                 axesNames := slices.map(colsSpec.axesSpec, func (a) { return a.name})
                 if !slices.hasElement(axesNames, datasetSpec.axesSpec[1].name) {
                     for na, ax in colsSpec.axesSpec {
-                        if ax.name != datasetSpec.axesSpec[1].name && !slices.hasElement(addedAxes, ax.name) {
+                        if ax.name != datasetSpec.axesSpec[1].name {
                             cloneTable.setAxisHeader(ax.name, "cluster_" + string(i) + string(na))
                         }
                     }
                 }	
             }
-        } else {
-            i := 0
-            cloneTable.add(columns.getColumn(args.rankingOrderDefault.value.column), {header: "Col" + string(i)})
-        
-            // If column does not have main anchor axis we have to include theirs
-            colsSpec := columns.getSpec(args.rankingOrderDefault.value.column)
-            axesNames := slices.map(colsSpec.axesSpec, func (a) { return a.name})
-            if !slices.hasElement(axesNames, datasetSpec.axesSpec[1].name) {
-                for na, ax in colsSpec.axesSpec {
-                    if ax.name != datasetSpec.axesSpec[1].name {
-                        cloneTable.setAxisHeader(ax.name, "cluster_" + string(i) + string(na))
-                    }
-                }
-            }	
         }
 
         // Get linker columns if needed
