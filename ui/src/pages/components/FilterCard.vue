@@ -148,44 +148,42 @@ const filterType = computed({
 </script>
 
 <template>
-  <div class="d-flex flex-column gap-6">
-    <PlDropdown
-      v-model="model.value"
-      :options="props.options"
-      label="Filter by"
-      required
-    />
+  <PlDropdown
+    v-model="model.value"
+    :options="props.options"
+    label="Filter by"
+    required
+  />
 
-    <PlDropdown
-      v-model="filterType"
-      :options="getFilterTypeOptions(model.value)"
-      label="Filter type"
-      required
-    />
+  <PlDropdown
+    v-model="filterType"
+    :options="getFilterTypeOptions(model.value)"
+    label="Filter type"
+    required
+  />
 
-    <PlTextField
-      v-if="showNumberInput"
-      :model-value="referenceValue"
-      label="Value"
-      required
-      @update:model-value="updateReferenceValue"
-    />
+  <PlTextField
+    v-if="showNumberInput"
+    :model-value="referenceValue"
+    label="Value"
+    required
+    @update:model-value="updateReferenceValue"
+  />
 
-    <PlDropdown
-      v-if="showDiscreteDropdown"
-      :model-value="referenceValue"
-      :options="getDiscreteValues()"
-      label="Value"
-      required
-      @update:model-value="updateReferenceValue"
-    />
+  <PlDropdown
+    v-if="showDiscreteDropdown"
+    :model-value="referenceValue"
+    :options="getDiscreteValues()"
+    label="Value"
+    required
+    @update:model-value="updateReferenceValue"
+  />
 
-    <PlTextField
-      v-if="showStringInput"
-      :model-value="referenceValue"
-      label="Value"
-      required
-      @update:model-value="updateReferenceValue"
-    />
-  </div>
+  <PlTextField
+    v-if="showStringInput"
+    :model-value="referenceValue"
+    label="Value"
+    required
+    @update:model-value="updateReferenceValue"
+  />
 </template>
