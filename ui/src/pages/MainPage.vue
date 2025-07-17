@@ -138,7 +138,7 @@ const selection = ref<PlSelectionModel>({
 
       <RankList />
 
-      <PlAlert v-if="app.model.args.rankingOrder.length === 0 && app.model.args.topClonotypes !== undefined" type="warn">
+      <PlAlert v-if="app.model.ui.rankingOrder.length === 0 && app.model.args.topClonotypes !== undefined" type="warn">
         {{ "Warning: If you don't select any Clonotype Ranking columns to pick the top candidates, '" + defaultRankingLabel + "' will be used by default in increasing order" }}
       </PlAlert>
       <PlAlert
