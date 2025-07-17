@@ -6,6 +6,7 @@ import type {
   PlDataTableStateV2,
   PlMultiSequenceAlignmentModel,
   PlRef,
+  PlTableFilter,
 } from '@platforma-sdk/model';
 import {
   BlockModel,
@@ -19,11 +20,19 @@ import { anchoredColumnId, getColumns } from './util';
 
 export * from './converters';
 
+export type FilterEntry = {
+  id?: string;
+  value?: AnchoredColumnId;
+  filter?: PlTableFilter;
+  isExpanded?: boolean;
+};
+
 export type BlockArgs = {
   inputAnchor?: PlRef;
   topClonotypes?: number;
   rankingOrder: RankingOrder[];
   rankingOrderDefault?: RankingOrder;
+  filters: FilterEntry[];
 };
 
 export type UiState = {
@@ -40,6 +49,7 @@ export const model = BlockModel.create()
 
   .withArgs<BlockArgs>({
     rankingOrder: [],
+    filters: [],
   })
 
   .withUiState<UiState>({
@@ -75,7 +85,8 @@ export const model = BlockModel.create()
   })
 
   // Activate "Run" button only after these conditions are satisfied
-  .argsValid((ctx) => (ctx.args.inputAnchor !== undefined),
+  .argsValid((ctx) => (ctx.args.inputAnchor !== undefined
+    && ctx.args.rankingOrder.every((order) => order.value !== undefined)),
   )
 
   .output('inputOptions', (ctx) =>
@@ -110,10 +121,105 @@ export const model = BlockModel.create()
     return deriveLabels(
       columns.props.filter((c) => c.column.spec.valueType !== 'String'),
       (c) => c.column.spec,
+      { includeNativeLabel: true },
     ).map((o) => ({
       ...o,
       value: anchoredColumnId(o.value),
     }));
+  })
+
+  .output('filterOptions', (ctx) => {
+    const columns = getColumns(ctx);
+    if (columns === undefined)
+      return undefined;
+
+    return deriveLabels(
+      columns.props.filter((c) => c.column.spec.annotations?.['pl7.app/isScore'] === 'true'),
+      (c) => c.column.spec,
+      { includeNativeLabel: true },
+    ).map((o) => ({
+      ...o,
+      value: anchoredColumnId(o.value),
+      column: o.value.column, // Add column for UI access to spec and discrete values
+    }));
+  })
+
+  .output('allFilterableOptions', (ctx) => {
+    const columns = getColumns(ctx);
+    if (columns === undefined)
+      return undefined;
+
+    return deriveLabels(
+      columns.props.filter((c) => {
+        // Include numeric columns (like ranking)
+        if (c.column.spec.valueType !== 'String') return true;
+        // Include string columns with discrete values (categorical filters)
+        if (c.column.spec.annotations?.['pl7.app/discreteValues']) return true;
+        return false;
+      }),
+      (c) => c.column.spec,
+      { includeNativeLabel: true },
+    ).map((o) => ({
+      ...o,
+      value: anchoredColumnId(o.value),
+      column: o.value.column, // Add column for UI access to spec and discrete values
+    }));
+  })
+
+  .output('rankingOrderDefault', (ctx) => {
+    const columns = getColumns(ctx);
+    if (columns === undefined)
+      return undefined;
+
+    // Use the first score column as default ranking
+    const scoreColumns = columns.props.filter((c) =>
+      c.column.spec.annotations?.['pl7.app/isScore'] === 'true'
+      && c.column.spec.valueType !== 'String',
+    );
+
+    if (scoreColumns.length > 0) {
+      return {
+        id: `default-rank-${scoreColumns[0].column.id}`,
+        value: anchoredColumnId(scoreColumns[0]),
+        rankingOrder: 'decreasing', // highest scores first
+        isExpanded: false,
+      };
+    }
+
+    // Fall back to any non-String column (like number of samples, counts, etc.)
+    const numericColumns = columns.props.filter((c) =>
+      c.column.spec.valueType !== 'String',
+    );
+
+    if (numericColumns.length > 0) {
+      return {
+        id: `default-rank-${numericColumns[0].column.id}`,
+        value: anchoredColumnId(numericColumns[0]),
+        rankingOrder: 'decreasing', // highest counts first
+        isExpanded: false,
+      };
+    }
+
+    // Last resort: use any available column
+    if (columns.props.length > 0) {
+      return {
+        id: `default-rank-${columns.props[0].column.id}`,
+        value: anchoredColumnId(columns.props[0]),
+        rankingOrder: 'increasing', // default for string columns
+        isExpanded: false,
+      };
+    }
+
+    // Should never reach here if columns exist
+    return undefined;
+  })
+
+  .output('defaultFilters', (ctx) => {
+    const columns = getColumns(ctx);
+    if (columns === undefined)
+      return undefined;
+
+    return columns.defaultFilters;
   })
 
   .output('pf', (ctx) => {
@@ -139,6 +245,10 @@ export const model = BlockModel.create()
     return createPFrameForGraphs(ctx, pCols);
   })
 
+// .output('test', (ctx) => {
+//   return ctx.prerun?.resolve({ field: 'filteredClonotypes', assertFieldType: 'Input', allowPermanentAbsence: true })?.getDataAsJson();
+// })
+
   .output('table', (ctx) => {
     const columns = getColumns(ctx);
     if (columns === undefined)
@@ -146,16 +256,23 @@ export const model = BlockModel.create()
 
     const props = columns.props.map((c) => c.column);
 
-    // we wont compute the workflow output in cases where ctx.args.topClonotypes == undefined
+    // Get filtered clonotypes from prerun
+    const filteredClonotypes = ctx.prerun?.resolve({ field: 'filteredClonotypesPf', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
+    // Get sampled rows from workflow output (if ranking was applied)
     const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', allowPermanentAbsence: true })?.getPColumns();
+
     let ops: CreatePlDataTableOps = {};
     const cols: Column[] = [];
-    if (ctx.args.topClonotypes === undefined) {
+
+    // Case where we just opened the block (no filters, no ranking)
+    if (ctx.args.topClonotypes === undefined && filteredClonotypes === undefined) {
       cols.push(...props);
-    } else if (sampledRows === undefined) {
+    } else if (filteredClonotypes === undefined) { // case where we have changed parameters but not hit run
       return undefined;
     } else {
-      cols.push(...props, ...sampledRows);
+      // Use sampled rows if available (ranking applied), otherwise use filtered clonotypes
+      const dataCols = sampledRows ?? filteredClonotypes;
+      cols.push(...props, ...dataCols);
       ops = {
         coreColumnPredicate: (spec) => spec.name === 'pl7.app/vdj/sampling-column',
         coreJoinType: 'inner',
@@ -191,9 +308,16 @@ export const model = BlockModel.create()
 
     // @TODO: if umap size is > 2 !
 
+    // Get filtered clonotypes from prerun
+    const filteredClonotypes = ctx.prerun?.resolve({ field: 'filteredClonotypes', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
+
+    // Get sampled rows from workflow output (if ranking was applied)
     const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', allowPermanentAbsence: true })?.getPColumns();
 
-    return createPFrameForGraphs(ctx, [...umap, ...(sampledRows ?? [])]);
+    // Use sampled rows if available (ranking applied), otherwise use filtered clonotypes
+    const dataCols = sampledRows ?? filteredClonotypes;
+
+    return createPFrameForGraphs(ctx, [...umap, ...(dataCols ?? [])]);
   })
 
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)

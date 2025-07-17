@@ -9,12 +9,16 @@ import {
   PlDropdownRef,
   PlMultiSequenceAlignment,
   PlNumberField,
+  PlSectionSeparator,
   PlSlideModal,
   usePlDataTableSettingsV2,
 } from '@platforma-sdk/ui-vue';
 import { ref, watch } from 'vue';
 import { useApp } from '../app';
-import { defaultFilters, isSequenceColumn } from '../util';
+import {
+  isSequenceColumn,
+} from '../util';
+import FilterList from './components/FilterList.vue';
 import RankList from './components/RankList.vue';
 
 const app = useApp();
@@ -34,7 +38,7 @@ function setAnchorColumn(ref: PlRef | undefined) {
 const tableSettings = usePlDataTableSettingsV2({
   sourceId: () => app.model.args.inputAnchor,
   model: () => app.model.outputs.table,
-  filtersConfig: ({ column }) => ({ default: defaultFilters(column) }),
+  // filtersConfig: ({ column }) => ({ default: defaultFilters(column) }),
 });
 
 let defaultRankingLabel = 'Number of Samples';
@@ -97,18 +101,31 @@ const selection = ref<PlSelectionModel>({
       v-model:selection="selection"
       :settings="tableSettings"
       show-export-button
+      disable-filters-panel
     />
     <PlSlideModal v-model="settingsOpen" :close-on-outside-click="true">
       <template #title>Settings</template>
+
+      <!-- First element: Select dataset -->
       <PlDropdownRef
         :options="app.model.outputs.inputOptions"
         :model-value="app.model.args.inputAnchor"
+        :style="{ width: '320px' }"
         label="Select dataset"
         clearable
+        required
         @update:model-value="setAnchorColumn"
       />
+
+      <!-- Clonotype filtering section -->
+      <PlSectionSeparator>Clonotype filtering</PlSectionSeparator>
+      <FilterList />
+
+      <!-- Clonotype sampling section -->
+      <PlSectionSeparator>Clonotype sampling</PlSectionSeparator>
       <PlNumberField
         v-model="app.model.args.topClonotypes"
+        :style="{ width: '320px' }"
         label="Pick top candidates"
         :minValue="2"
         :step="1"
@@ -119,10 +136,17 @@ const selection = ref<PlSelectionModel>({
         </template>
       </PlNumberField>
 
-      <!-- @TODO: move to SDK in the future -->
       <RankList />
+
       <PlAlert v-if="app.model.args.rankingOrder.length === 0 && app.model.args.topClonotypes !== undefined" type="warn">
         {{ "Warning: If you don't select any Clonotype Ranking columns to pick the top candidates, '" + defaultRankingLabel + "' will be used by default in increasing order" }}
+      </PlAlert>
+      <PlAlert
+        v-if="app.model.args.topClonotypes !== undefined
+          && app.model.args.rankingOrder.some((order) => order.value === undefined)" type="warn"
+        :style="{ width: '320px' }"
+      >
+        {{ "Warning: Please remove or assign values to empty ranking columns" }}
       </PlAlert>
     </PlSlideModal>
     <PlSlideModal
