@@ -141,6 +141,8 @@ wf.body(func(args) {
                 }
             }
         } else {
+            // @TODO: this is a temporal patch for issue where rankingOrderDefault 
+            // are not defined by the time prerun works
             if args.rankingOrderDefault.value != undefined {
                 i := 0
                 cloneTable.add(columns.getColumn(args.rankingOrderDefault.value.column), {header: "Col" + string(i)})
