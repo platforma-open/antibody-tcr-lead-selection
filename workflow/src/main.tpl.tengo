@@ -191,13 +191,12 @@ wf.body(func(args) {
 		datasetSpec: datasetSpec
 	})
 	
-	// Get the filtered clonotypes from the template result
-	filteredClonotypesPf := filterResult.output("filteredClonotypes", 24 * 60 * 60 * 1000)
-	
-	// Convert p-frame to CSV for downstream processing
-	sampledColsParams := sampledColsConv.getColumns(datasetSpec)
-	finalClonotypesCsv := xsv.exportFrame(filteredClonotypesPf, "csv", {},
-										{cpu: 1, mem: "16GiB"})
+	        // Get the filtered clonotypes P-frame and CSV from the template result
+        filteredClonotypesPf := filterResult.output("filteredClonotypes", 24 * 60 * 60 * 1000)
+        finalClonotypesCsv := filterResult.output("filteredCsv", 24 * 60 * 60 * 1000)
+
+        // Get sampling params for later use
+        sampledColsParams := sampledColsConv.getColumns(datasetSpec)
 
 	if topClonotypes != undefined {
 

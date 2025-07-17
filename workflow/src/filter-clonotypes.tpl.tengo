@@ -8,7 +8,7 @@ render := import("@platforma-sdk/workflow-tengo:render")
 sampledColsConv := import(":sampled-cols-conv")
 json := import("json")
 
-self.defineOutputs("filteredClonotypes")
+self.defineOutputs("filteredClonotypes", "filteredCsv")
 
 self.body(func(inputs) {
 
@@ -47,6 +47,7 @@ self.body(func(inputs) {
                                         {cpu: 1, mem: "16GiB"})
 
     return {
-        filteredClonotypes: pframes.exportFrame(sampledColumnsPf)
+        filteredClonotypes: pframes.exportFrame(sampledColumnsPf),
+        filteredCsv: filteredCsv
     }
 }) 
