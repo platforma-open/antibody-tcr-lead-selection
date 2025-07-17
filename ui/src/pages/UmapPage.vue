@@ -7,7 +7,7 @@ import type { GraphMakerProps } from '@milaboratories/graph-maker';
 import { GraphMaker } from '@milaboratories/graph-maker';
 import type { PlSelectionModel } from '@platforma-sdk/model';
 import { ref } from 'vue';
-import { isLabelColumnOption, isLinkerColumn, isSequenceColumn } from '../util';
+import { isSequenceColumn } from '../util';
 
 const app = useApp();
 
@@ -83,13 +83,15 @@ const multipleSequenceAlignmentOpen = ref(false);
         </PlBtnGhost>
       </template>
     </GraphMaker>
-    <PlSlideModal v-model="multipleSequenceAlignmentOpen" width="100%">
+    <PlSlideModal
+      v-model="multipleSequenceAlignmentOpen"
+      width="100%"
+      :close-on-outside-click="false"
+    >
       <template #title>Multiple Sequence Alignment</template>
       <PlMultiSequenceAlignment
         v-model="app.model.ui.alignmentModel"
-        :label-column-option-predicate="isLabelColumnOption"
         :sequence-column-predicate="isSequenceColumn"
-        :linker-column-predicate="isLinkerColumn"
         :p-frame="app.model.outputs.pf"
         :selection="selection"
       />

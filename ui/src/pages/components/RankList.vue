@@ -23,23 +23,22 @@ const getMetricLabel = (value: AnchoredColumnId | undefined) => {
 };
 
 const addRankColumn = () => {
-  app.updateArgs((args) => {
-    if (!args.rankingOrder || !Array.isArray(args.rankingOrder)) {
-      args.rankingOrder = [];
-    }
-    args.rankingOrder.push({
-      id: generateUniqueId(),
-      value: undefined,
-      rankingOrder: 'increasing',
-      isExpanded: true, // Auto-expand new items
-    });
+  const ui = app.model.ui;
+
+  if (!Array.isArray(ui.rankingOrder)) {
+    ui.rankingOrder = [];
+  }
+
+  ui.rankingOrder.push({
+    id: generateUniqueId(),
+    value: undefined,
+    rankingOrder: 'increasing',
+    isExpanded: true, // Auto-expand new items
   });
 };
 
 const resetToDefaults = () => {
-  app.updateArgs((args) => {
-    args.rankingOrder = app.model.outputs.defaultRankingOrder ?? [];
-  });
+  app.model.ui.rankingOrder = app.model.outputs.defaultRankingOrder ?? [];
 };
 
 // set default ranking order when topClonotypes is set
@@ -61,7 +60,7 @@ watch(() => app.model.args.topClonotypes, (newValue, oldValue) => {
     </PlRow>
 
     <PlElementList
-      v-model:items="app.model.args.rankingOrder"
+      v-model:items="app.model.ui.rankingOrder"
       :get-item-key="(item) => item.id ?? 0"
       :is-expanded="(item) => item.isExpanded === true"
       :on-expand="(item) => item.isExpanded = !item.isExpanded"
@@ -71,7 +70,7 @@ watch(() => app.model.args.topClonotypes, (newValue, oldValue) => {
       </template>
       <template #item-content="{ index }">
         <RankCard
-          v-model="app.model.args.rankingOrder[index]"
+          v-model="app.model.ui.rankingOrder[index]"
           :options="app.model.outputs.rankingOptions"
         />
       </template>

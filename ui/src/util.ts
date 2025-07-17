@@ -16,16 +16,6 @@ export const isSequenceColumn = (column: PColumnIdAndSpec) => {
   return isBulkSequence(column.spec) || isSingleCellSequence(column.spec);
 };
 
-export const isLabelColumnOption = (column: PColumnIdAndSpec) => {
-  if (column.spec.axesSpec.length === 1 && column.spec.axesSpec[0].name === 'pl7.app/sampleId')
-    return false;
-  return true;
-};
-
-export const isLinkerColumn = (column: PColumnIdAndSpec) => {
-  return column.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true';
-};
-
 export function defaultFilters(tSpec: PTableColumnSpec): (PlTableFilter | undefined) {
   // console.log(`defaultFilters spec ${JSON.stringify(tSpec, null, 2)}`);
   if (tSpec.type !== 'column') {

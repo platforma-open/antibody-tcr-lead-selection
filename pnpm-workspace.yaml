@@ -9,8 +9,8 @@ packages:
   - test
 
 catalog:
-  '@platforma-sdk/model': ^1.38.0
-  '@platforma-sdk/ui-vue': ^1.38.0
+  '@platforma-sdk/model': ^1.40.0
+  '@platforma-sdk/ui-vue': ^1.40.0
   '@platforma-sdk/workflow-tengo': ^4.9.2
   '@platforma-sdk/block-tools': ^2.5.61
   '@platforma-sdk/test': ^1.38.0
@@ -21,8 +21,6 @@ catalog:
 
   '@milaboratories/software-pframes-conv': ^2.2.2
   '@platforma-open/milaboratories.runenv-python-3': ^1.1.16
-
-  '@biowasm/aioli': ~3.2.1
 
   'sass-embedded': ^1.77.8
 

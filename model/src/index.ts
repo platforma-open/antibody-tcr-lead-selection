@@ -15,8 +15,10 @@ import {
   createPlDataTableV2,
   deriveLabels,
 } from '@platforma-sdk/model';
-import type { AnchoredColumnId, Column, RankingOrder } from './util';
+import type { AnchoredColumnId, Column, RankingOrder, RankingOrderUI } from './util';
 import { anchoredColumnId, getColumns } from './util';
+
+export * from './converters';
 
 export type FilterEntry = {
   id?: string;
@@ -40,6 +42,7 @@ export type UiState = {
   cdr3StackedBarPlotState: GraphMakerState;
   vjUsagePlotState: GraphMakerState;
   alignmentModel: PlMultiSequenceAlignmentModel;
+  rankingOrder: RankingOrderUI[];
 };
 
 export const model = BlockModel.create()
@@ -78,6 +81,7 @@ export const model = BlockModel.create()
       },
     },
     alignmentModel: {},
+    rankingOrder: [],
   })
 
   // Activate "Run" button only after these conditions are satisfied

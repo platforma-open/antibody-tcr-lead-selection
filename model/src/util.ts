@@ -30,9 +30,12 @@ export function anchoredColumnId(anchoredColumn: AnchoredColumn): AnchoredColumn
 }
 
 export type RankingOrder = {
-  id?: string;
   value?: AnchoredColumnId;
   rankingOrder: 'increasing' | 'decreasing';
+};
+
+export type RankingOrderUI = RankingOrder & {
+  id?: string;
   isExpanded?: boolean;
 };
 

@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies.ui",
-  "version": "1.5.0",
+  "version": "1.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,20 +11,21 @@
     "test": "vitest"
   },
   "dependencies": {
-    "@platforma-open/milaboratories.top-antibodies.model": "workspace:*",
-    "@platforma-sdk/ui-vue": "catalog:",
-    "@platforma-sdk/model": "catalog:",
     "@milaboratories/graph-maker": "catalog:",
-    "vue": "catalog:",
-    "@biowasm/aioli": "catalog:",
-    "sass-embedded": "catalog:"
+    "@platforma-open/milaboratories.top-antibodies.model": "workspace:*",
+    "@platforma-sdk/model": "catalog:",
+    "@platforma-sdk/ui-vue": "catalog:",
+    "@types/lodash.debounce": "^4.0.9",
+    "lodash.debounce": "^4.0.8",
+    "sass-embedded": "catalog:",
+    "vue": "catalog:"
   },
   "devDependencies": {
+    "@platforma-sdk/eslint-config": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",
     "vitest": "catalog:",
-    "vue-tsc": "catalog:",
-    "@platforma-sdk/eslint-config": "catalog:"
+    "vue-tsc": "catalog:"
   }
 }

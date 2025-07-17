@@ -1,5 +1,22 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.6.0
+
+### Minor Changes
+
+- 456ba67: Use ui state for ranking metadata
+
+### Patch Changes
+
+- Updated dependencies [456ba67]
+  - @platforma-open/milaboratories.top-antibodies.model@1.7.0
+
+## 1.5.1
+
+### Patch Changes
+
+- 28648b0: MSA updates
+
 ## 1.5.0
 
 ### Minor Changes

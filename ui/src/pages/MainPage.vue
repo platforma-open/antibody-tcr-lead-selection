@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import type {
-  PlRef,
-  PlSelectionModel,
-} from '@platforma-sdk/model';
+import type { PlRef, PlSelectionModel } from '@platforma-sdk/model';
 import { plRefsEqual } from '@platforma-sdk/model';
 import {
   PlAgDataTableV2,
@@ -19,8 +16,6 @@ import {
 import { ref, watch } from 'vue';
 import { useApp } from '../app';
 import {
-  isLabelColumnOption,
-  isLinkerColumn,
   isSequenceColumn,
 } from '../util';
 import FilterList from './components/FilterList.vue';
@@ -154,13 +149,15 @@ const selection = ref<PlSelectionModel>({
         {{ "Warning: Please remove or assign values to empty ranking columns" }}
       </PlAlert>
     </PlSlideModal>
-    <PlSlideModal v-model="multipleSequenceAlignmentOpen" width="100%">
+    <PlSlideModal
+      v-model="multipleSequenceAlignmentOpen"
+      width="100%"
+      :close-on-outside-click="false"
+    >
       <template #title>Multiple Sequence Alignment</template>
       <PlMultiSequenceAlignment
         v-model="app.model.ui.alignmentModel"
-        :label-column-option-predicate="isLabelColumnOption"
         :sequence-column-predicate="isSequenceColumn"
-        :linker-column-predicate="isLinkerColumn"
         :p-frame="app.model.outputs.pf"
         :selection="selection"
       />

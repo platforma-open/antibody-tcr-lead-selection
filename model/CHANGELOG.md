@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.7.0
+
+### Minor Changes
+
+- 456ba67: Use ui state for ranking metadata
+
 ## 1.6.0
 
 ### Minor Changes
