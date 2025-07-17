@@ -24,8 +24,8 @@
     "meta": {
       "title": "Antibody/TCR Lead Selection",
       "logo": "file:../logos/block-logo.png",
-      "url": "https://github.com/milaboratory/platforma-top-antibodies",
-      "docs": "https://github.com/milaboratory/platforma-top-antibodies/docs",
+      "url": "https://github.com/platforma-open/antibody-tcr-lead-selection",
+      "docs": "https://github.com/platforma-open/antibody-tcr-lead-selection/docs",
       "support": "mailto:support@milaboratories.com",
       "description": "Pick top antibody/TCR lead candidates based on various scoring metrics.",
       "longDescription": "file:../docs/description.md",
