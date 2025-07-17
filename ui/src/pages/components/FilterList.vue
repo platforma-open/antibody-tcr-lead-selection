@@ -48,11 +48,15 @@ const resetToDefaults = () => {
 };
 
 // set default filters when becomes available after inputAnchor is set
-watch(() => app.model.outputs.defaultFilters, (newValue) => {
-  if (newValue && app.model.args.inputAnchor && (!app.model.ui.filters || app.model.ui.filters.length === 0)) {
+// Only set defaults if topClonotypes is not set (user hasn't configured filtering yet)
+watch(() => app.model.outputs.defaultFilters, (newValue, oldValue) => {
+  if (oldValue === undefined && newValue !== undefined
+    && app.model.args.inputAnchor
+    && (!app.model.ui.filters || app.model.ui.filters.length === 0)) {
     resetToDefaults();
   }
 });
+
 </script>
 
 <template>
