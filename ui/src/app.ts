@@ -29,6 +29,7 @@ export const sdkPlugin = defineApp(model, (app) => {
   );
 
   return {
+    progress: () => app.model.outputs.calculating,
     routes: {
       '/': () => MainPage,
       '/umap': () => UmapPage,

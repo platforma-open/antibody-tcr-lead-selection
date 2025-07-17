@@ -247,7 +247,11 @@ export const model = BlockModel.create()
     const props = columns.props.map((c) => c.column);
 
     // Get filtered/sampled rows from prerun
-    const sampledRows = ctx.prerun?.resolve({ field: 'sampledRows', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
+    const sampledRows = ctx.prerun?.resolve({
+      field: 'sampledRows',
+      assertFieldType: 'Input',
+      allowPermanentAbsence: true,
+    })?.getPColumns();
 
     let ops: CreatePlDataTableOps = {};
     const cols: Column[] = [];
@@ -270,7 +274,14 @@ export const model = BlockModel.create()
       ctx.uiState.tableState,
       ops,
     );
-  })
+  }, { retentive: true })
+
+  .output('calculating', (ctx) => ctx.args.inputAnchor !== undefined
+    && ctx.prerun?.resolve({
+      field: 'sampledRows',
+      assertFieldType: 'Input',
+      allowPermanentAbsence: true,
+    }) === undefined)
 
   // Use UMAP output from ctx from clonotype-space block
   .output('umapPf', (ctx): PFrameHandle | undefined => {
