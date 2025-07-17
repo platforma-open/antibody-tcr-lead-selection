@@ -23,6 +23,8 @@ wf.prepare(func(args){
             }
         }
     } else {
+        // @TODO: this is a temporal patch for issue where rankingOrderDefault 
+        // are not defined by the time prerun works
         // prerun sometimes runs before this variable is ready
         if args.rankingOrderDefault.value != undefined {
             bundleBuilder.addAnchor(args.rankingOrderDefault.value.anchorName, 
