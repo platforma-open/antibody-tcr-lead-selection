@@ -191,12 +191,13 @@ wf.body(func(args) {
 		datasetSpec: datasetSpec
 	})
 	
-	        // Get the filtered clonotypes P-frame and CSV from the template result
-        filteredClonotypesPf := filterResult.output("filteredClonotypes", 24 * 60 * 60 * 1000)
-        finalClonotypesCsv := filterResult.output("filteredCsv", 24 * 60 * 60 * 1000)
+	// Get the filtered clonotypes P-frame and CSV from the template result
+	filteredClonotypesPf := filterResult.output("filteredClonotypes", 24 * 60 * 60 * 1000)
+	finalClonotypesCsv := filterResult.output("filteredCsv", 24 * 60 * 60 * 1000)
+	noFilters := filterResult.output("noFilters", 24 * 60 * 60 * 1000)
 
-        // Get sampling params for later use
-        sampledColsParams := sampledColsConv.getColumns(datasetSpec)
+	// Get sampling params for later use
+	sampledColsParams := sampledColsConv.getColumns(datasetSpec)
 
 	if topClonotypes != undefined {
 
@@ -223,7 +224,7 @@ wf.body(func(args) {
 		sampledColumnsPf := xsv.importFile(finalClonotypesCsv, "csv", sampledColsParams,
 											{cpu: 1, mem: "16GiB"})
 		outputs["sampledRows"] = pframes.exportFrame(sampledColumnsPf)
-	} else {
+	} else if noFilters == false {
 		// No ranking needed, use filtered data directly
 		outputs["sampledRows"] = pframes.exportFrame(filteredClonotypesPf)
 	}

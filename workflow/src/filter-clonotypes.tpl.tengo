@@ -8,13 +8,15 @@ render := import("@platforma-sdk/workflow-tengo:render")
 sampledColsConv := import(":sampled-cols-conv")
 json := import("json")
 
-self.defineOutputs("filteredClonotypes", "filteredCsv")
+self.defineOutputs("filteredClonotypes", "filteredCsv", "noFilters")
 
 self.body(func(inputs) {
 
     cloneTable := inputs.cloneTable
     datasetSpec := inputs.datasetSpec
     filterMap := inputs.filterMap
+
+    outputs := {}
     
     // Run filtering script
     filterResult := exec.builder().
@@ -34,13 +36,19 @@ self.body(func(inputs) {
     // Save filtered CSV file
     filteredCsv := filterResult.getFile("filteredClonotypes.csv")
 
+    // Add a panic argument checking if filterMap is empty
+    outputs["noFilters"] = false
+    if len(filterMap) == 0 {
+        outputs["noFilters"] = true
+    }
+
     // Store outputs 
     sampledColsParams := sampledColsConv.getColumns(datasetSpec)
     sampledColumnsPf := xsv.importFile(filteredCsv, "csv", sampledColsParams,
                                         {cpu: 1, mem: "16GiB"})
 
-    return {
-        filteredClonotypes: pframes.exportFrame(sampledColumnsPf),
-        filteredCsv: filteredCsv
-    }
+    outputs["filteredClonotypes"] = pframes.exportFrame(sampledColumnsPf)
+    outputs["filteredCsv"] = filteredCsv
+
+    return outputs
 }) 
