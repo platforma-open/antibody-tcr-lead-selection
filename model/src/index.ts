@@ -252,7 +252,8 @@ export const model = BlockModel.create()
     const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', allowPermanentAbsence: true })?.getPColumns();
     let ops: CreatePlDataTableOps = {};
     const cols: Column[] = [];
-    if (ctx.args.topClonotypes === undefined && ctx.args.filters.length === 0) {
+    // Case where we just opened the block
+    if (ctx.args.topClonotypes === undefined && sampledRows === undefined) {
       cols.push(...props);
     } else if (sampledRows === undefined) {
       return undefined;
