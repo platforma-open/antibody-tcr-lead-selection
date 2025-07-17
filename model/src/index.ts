@@ -239,10 +239,6 @@ export const model = BlockModel.create()
     return createPFrameForGraphs(ctx, pCols);
   })
 
-// .output('test', (ctx) => {
-//   return ctx.prerun?.resolve({ field: 'filteredClonotypes', assertFieldType: 'Input', allowPermanentAbsence: true })?.getDataAsJson();
-// })
-
   .output('table', (ctx) => {
     const columns = getColumns(ctx);
     if (columns === undefined)
@@ -250,23 +246,18 @@ export const model = BlockModel.create()
 
     const props = columns.props.map((c) => c.column);
 
-    // Get filtered clonotypes from prerun
-    const filteredClonotypes = ctx.prerun?.resolve({ field: 'filteredClonotypesPf', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
-    // Get sampled rows from workflow output (if ranking was applied)
-    const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', allowPermanentAbsence: true })?.getPColumns();
+    // Get filtered/sampled rows from prerun
+    const sampledRows = ctx.prerun?.resolve({ field: 'sampledRows', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
 
     let ops: CreatePlDataTableOps = {};
     const cols: Column[] = [];
 
     // Case where we just opened the block (no filters, no ranking)
-    if (ctx.args.topClonotypes === undefined && filteredClonotypes === undefined) {
+    if (sampledRows === undefined) { // case where we have changed parameters but not hit run
       cols.push(...props);
-    } else if (filteredClonotypes === undefined) { // case where we have changed parameters but not hit run
-      return undefined;
     } else {
       // Use sampled rows if available (ranking applied), otherwise use filtered clonotypes
-      const dataCols = sampledRows ?? filteredClonotypes;
-      cols.push(...props, ...dataCols);
+      cols.push(...props, ...sampledRows);
       ops = {
         coreColumnPredicate: (spec) => spec.name === 'pl7.app/vdj/sampling-column',
         coreJoinType: 'inner',

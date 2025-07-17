@@ -6,7 +6,7 @@ assets := import("@platforma-sdk/workflow-tengo:assets")
 pframes := import("@platforma-sdk/workflow-tengo:pframes")
 slices := import("@platforma-sdk/workflow-tengo:slices")
 
-filterClonotypesTpl := assets.importTemplate(":filter-clonotypes")
+filterAndSampleTpl := assets.importTemplate(":filter-and-sample")
 
 wf.prepare(func(args){
 	// We need a table with cluster ID (optional) | clonotype id | selected ranking columns
@@ -168,9 +168,10 @@ wf.body(func(args) {
         cloneTable = cloneTable.build()
 
         // Use ender.create to call the filter-clonotypes template
-        filterResult := render.create(filterClonotypesTpl, {
+        filterResult := render.create(filterAndSampleTpl, {
             inputAnchor: args.inputAnchor,
             cloneTable: cloneTable,
+            topClonotypes: args.topClonotypes,
             rankingOrder: args.rankingOrder,
             rankingOrderDefault: args.rankingOrderDefault,
             filters: args.filters,
@@ -179,7 +180,7 @@ wf.body(func(args) {
         })
         
         // Get the filtered clonotypes from the template result
-        outputs["filteredClonotypesPf"] = filterResult.output("filteredClonotypes", 24 * 60 * 60 * 1000)
+        outputs["sampledRows"] = filterResult.output("sampledRows", 24 * 60 * 60 * 1000)
     }
 
 	return {

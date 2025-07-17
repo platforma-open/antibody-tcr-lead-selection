@@ -10,7 +10,11 @@ import UsagePage from './pages/UsagePage.vue';
 export const sdkPlugin = defineApp(model, (app) => {
   watch(
     () => app.model.ui.rankingOrder,
-    debounce((value) => convertRankingOrderUI(toRaw(value ?? [])), 500),
+    debounce((value) => {
+      app.updateArgs((args) => {
+        args.rankingOrder = convertRankingOrderUI(toRaw(value ?? []));
+      });
+    }, 500),
     { immediate: true, deep: true },
   );
 

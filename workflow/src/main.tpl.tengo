@@ -10,7 +10,7 @@ vjUsageConv := import(":pf-vj-usage-conv")
 slices := import("@platforma-sdk/workflow-tengo:slices")
 render := import("@platforma-sdk/workflow-tengo:render")
 
-filterClonotypesTpl := assets.importTemplate(":filter-clonotypes")
+filterAndSampleTpl := assets.importTemplate(":filter-and-sample")
 
 // Set prerun template for clonotype filtering
 wf.setPreRun(assets.importTemplate(":prerun"))
@@ -181,53 +181,21 @@ wf.body(func(args) {
 	cloneTable = cloneTable.build()
 
 	// Use ender.create to call the filter-clonotypes template
-	filterResult := render.create(filterClonotypesTpl, {
+	filterResult := render.create(filterAndSampleTpl, {
 		inputAnchor: args.inputAnchor,
 		cloneTable: cloneTable,
 		rankingOrder: args.rankingOrder,
 		rankingOrderDefault: args.rankingOrderDefault,
 		filters: args.filters,
 		filterMap: filterMap,
-		datasetSpec: datasetSpec
+		datasetSpec: datasetSpec,
+		topClonotypes: args.topClonotypes
 	})
 	
 	// Get the filtered clonotypes P-frame and CSV from the template result
-	filteredClonotypesPf := filterResult.output("filteredClonotypes", 24 * 60 * 60 * 1000)
-	finalClonotypesCsv := filterResult.output("filteredCsv", 24 * 60 * 60 * 1000)
-	noFilters := filterResult.output("noFilters", 24 * 60 * 60 * 1000)
-
-	// Get sampling params for later use
-	sampledColsParams := sampledColsConv.getColumns(datasetSpec)
-
-	if topClonotypes != undefined {
-
-		////////// Top Clonotypes Sampling //////////
-		// Run sampling script on filtered data
-		sampleClones := exec.builder().
-			software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.sample-clonotypes:main")).
-			mem("16GiB").
-			cpu(1).
-			addFile("filteredClonotypes.csv", finalClonotypesCsv).
-			arg("--csv").arg("filteredClonotypes.csv").
-			arg("--n").arg(string(topClonotypes)).
-			arg("--out").arg("sampledClonotypes_top.csv").
-			saveFile("sampledClonotypes_top.csv").
-			printErrStreamToStdout().
-			saveStdoutContent().
-			cache(24 * 60 * 60 * 1000).
-			run()
-
-		// Save top clonotypes CSV file
-		finalClonotypesCsv = sampleClones.getFile("sampledClonotypes_top.csv")
-		
-		// Store outputs 
-		sampledColumnsPf := xsv.importFile(finalClonotypesCsv, "csv", sampledColsParams,
-											{cpu: 1, mem: "16GiB"})
-		outputs["sampledRows"] = pframes.exportFrame(sampledColumnsPf)
-	} else if noFilters == false {
-		// No ranking needed, use filtered data directly
-		outputs["sampledRows"] = pframes.exportFrame(filteredClonotypesPf)
-	}
+	finalClonotypesCsv := filterResult.output("finalClonotypesCsv", 24 * 60 * 60 * 1000)
+	// outputs["sampledRows"] = filterResult.output("sampledRows", 24 * 60 * 60 * 1000)
+	
 	////////// CDR3 Length Calculation //////////
 	
 	cdr3SeqTable := pframes.tsvFileBuilder()
