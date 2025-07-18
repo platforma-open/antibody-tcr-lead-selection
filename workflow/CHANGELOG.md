@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.8.2
+
+### Patch Changes
+
+- f25cad6: Fix slices typo in main workflow
+
 ## 1.8.1
 
 ### Patch Changes
