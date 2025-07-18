@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.8.0
+
+### Minor Changes
+
+- a435169: Move filters to settings and add prerun
+
 ## 1.7.0
 
 ### Minor Changes

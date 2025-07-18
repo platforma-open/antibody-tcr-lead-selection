@@ -1,5 +1,17 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.8.0
+
+### Minor Changes
+
+- a435169: Move filters to settings and add prerun
+
+### Patch Changes
+
+- Updated dependencies [a435169]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.1.0
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.4.0
+
 ## 1.7.0
 
 ### Minor Changes

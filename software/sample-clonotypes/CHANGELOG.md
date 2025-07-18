@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 1.1.0
+
+### Minor Changes
+
+- a435169: Move filters to settings and add prerun
+
 ## 1.0.3
 
 ### Patch Changes

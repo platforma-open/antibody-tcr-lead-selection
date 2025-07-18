@@ -1,5 +1,16 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.7.0
+
+### Minor Changes
+
+- a435169: Move filters to settings and add prerun
+
+### Patch Changes
+
+- Updated dependencies [a435169]
+  - @platforma-open/milaboratories.top-antibodies.model@1.8.0
+
 ## 1.6.0
 
 ### Minor Changes
