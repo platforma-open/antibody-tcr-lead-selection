@@ -1,4 +1,4 @@
-import { convertRankingOrderUI, model } from '@platforma-open/milaboratories.top-antibodies.model';
+import { convertFilterUI, convertRankingOrderUI, model } from '@platforma-open/milaboratories.top-antibodies.model';
 import { defineApp } from '@platforma-sdk/ui-vue';
 import debounce from 'lodash.debounce';
 import { toRaw, watch } from 'vue';
@@ -10,11 +10,26 @@ import UsagePage from './pages/UsagePage.vue';
 export const sdkPlugin = defineApp(model, (app) => {
   watch(
     () => app.model.ui.rankingOrder,
-    debounce((value) => convertRankingOrderUI(toRaw(value ?? [])), 500),
+    debounce((value) => {
+      app.updateArgs((args) => {
+        args.rankingOrder = convertRankingOrderUI(toRaw(value ?? []));
+      });
+    }, 500),
+    { immediate: true, deep: true },
+  );
+
+  watch(
+    () => app.model.ui.filters,
+    debounce((value) => {
+      app.updateArgs((args) => {
+        args.filters = convertFilterUI(toRaw(value ?? []));
+      });
+    }, 500),
     { immediate: true, deep: true },
   );
 
   return {
+    progress: () => app.model.outputs.calculating,
     routes: {
       '/': () => MainPage,
       '/umap': () => UmapPage,

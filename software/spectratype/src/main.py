@@ -5,8 +5,8 @@ import argparse
 # Spectratype output file will have chain, cdr3Length, vGene, and count columns
 # V/J usage output file will have chain, vGene, jGene, and count columns
 
-# An optional input file can be provided: topClonotypes.csv 
-# It will have cluster_0,clonotypeKey,top columns (top is 1) and only top clonotypes are included in the file
+# An optional input file can be provided: final_clonotypes.csv 
+# It will have cluster_0,clonotypeKey,top columns (top is 1) and only final clonotypes are included in the file
 
 def main():
     parser = argparse.ArgumentParser(description="Calculate CDR3 lengths and output in long format.")
@@ -16,22 +16,22 @@ def main():
                        help="Output TSV file with chain, cdr3Length, vGene, and count columns.")
     parser.add_argument("--vj_usage_tsv", required=True,
                         help="Output TSV file with vGene, jGene, and count columns for V/J gene usage.")
-    parser.add_argument("--top_clonotypes_csv", required=False,
-                        help="Input CSV file with top clonotypes to calculate spectratype and V/J gene usage only on top clonotypes.")
+    parser.add_argument("--final_clonotypes_csv", required=False,
+                        help="Input CSV file with top/filtered clonotypes to calculate spectratype and V/J gene usage only on them.")
     args = parser.parse_args()
 
     # Read input data
     df = pd.read_csv(args.input_tsv, sep="\t", dtype=str)
 
-    # Read top clonotypes if provided
-    if args.top_clonotypes_csv:
-        top_clonotypes = pd.read_csv(args.top_clonotypes_csv, sep=",", dtype=str)
+    # Read final clonotypes if provided
+    if args.final_clonotypes_csv:
+        final_clonotypes = pd.read_csv(args.final_clonotypes_csv, sep=",", dtype=str)
     else:
-        top_clonotypes = None
+        final_clonotypes = None
 
-    # Merge with top clonotypes using clonotypeKey if provided
-    if top_clonotypes is not None:
-        df = pd.merge(df, top_clonotypes, on='clonotypeKey', how='inner')
+    # Merge with final clonotypes using clonotypeKey if provided
+    if final_clonotypes is not None:
+        df = pd.merge(df, final_clonotypes, on='clonotypeKey', how='inner')
 
     # Transform data to long format
     df_long = pd.wide_to_long(
@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
 # Example usage:
 # python software/spectratype/src/main.py --input_tsv cdr3_sequences_input.tsv  --output_tsv 'cdr3_lengths.tsv' --vj_usage_tsv vj_usage.tsv
-# python software/spectratype/src/main.py --input_tsv cdr3_sequences_input.tsv  --output_tsv 'cdr3_lengths.tsv' --vj_usage_tsv vj_usage.tsv --top_clonotypes_csv topClonotypes.csv
+# python software/spectratype/src/main.py --input_tsv cdr3_sequences_input.tsv  --output_tsv 'cdr3_lengths.tsv' --vj_usage_tsv vj_usage.tsv --final_clonotypes_csv topClonotypes.csv
 
 # You can check the if the output is correct with:
 # awk '{ print length($2), $2 }' cdr3_sequences_input.tsv |sort -n -k1,1 | less
