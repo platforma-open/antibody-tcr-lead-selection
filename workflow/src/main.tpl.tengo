@@ -121,7 +121,7 @@ wf.body(func(args) {
 					for na, ax in colsSpec.axesSpec {
 						if ax.name != datasetSpec.axesSpec[1].name {
 							cloneTable.setAxisHeader(ax.name, "cluster_" + string(i) + string(na))
-							addedAxes = slices.append(addedAxes, ax.name)
+							addedAxes = append(addedAxes, ax.name)
 						}
 					}
 				}	
