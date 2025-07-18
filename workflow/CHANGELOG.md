@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.8.1
+
+### Patch Changes
+
+- 7397001: Remove typo
+
 ## 1.8.0
 
 ### Minor Changes
