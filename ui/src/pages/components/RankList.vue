@@ -32,7 +32,7 @@ const addRankColumn = () => {
   ui.rankingOrder.push({
     id: generateUniqueId(),
     value: undefined,
-    rankingOrder: 'increasing',
+    rankingOrder: 'decreasing',
     isExpanded: true, // Auto-expand new items
   });
 };

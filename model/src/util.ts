@@ -208,7 +208,7 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefi
       .map((s) => ({
         id: `default-rank-${s.column.id}`,
         value: anchoredColumnId(s),
-        rankingOrder: 'increasing',
+        rankingOrder: 'decreasing',
         isExpanded: false,
       })),
   };

@@ -33,7 +33,7 @@ const props = defineProps<{
     required
   >
     <template #tooltip>
-      Increasing to pick candidates with higher column values, decreasing to pick candidates with lower values.
+      Decreasing to pick candidates with higher column values, increasing to pick candidates with lower values.
     </template>
   </PlDropdown>
 </template>
