@@ -110,6 +110,7 @@ wf.body(func(args) {
 	// AnchoredColumnId {anchorRef: PlRef, anchorName: string, column: SUniversalPColumnId (unique column id)}
 	addedAxes := [] // Keep track of axes that are added to the table to prevent duplicates
 	filterMap := {} // Map column headers to filter criteria
+	rankingMap := {} // Map column headers to ranking order (increasing/decreasing)
 	if len(args.filters) > 0 {
 		for i, filter in args.filters {
 			if filter.value != undefined {
@@ -138,6 +139,8 @@ wf.body(func(args) {
 	if len(args.rankingOrder) > 0 {
 		for i, col in args.rankingOrder {
 			cloneTable.add(columns.getColumn(col.value.column), {header: "Col" + string(i)})
+			// Store ranking order for this column
+			rankingMap["Col" + string(i)] = col.rankingOrder
 		
 			// If column does not have main anchor axis we have to include theirs (columns coming from clustering blocks for example)
 			colsSpec := columns.getSpec(col.value.column)
@@ -153,6 +156,8 @@ wf.body(func(args) {
 	} else {
 		i := 0
 		cloneTable.add(columns.getColumn(args.rankingOrderDefault.value.column), {header: "Col" + string(i)})
+		// Store default ranking order
+		rankingMap["Col" + string(i)] = args.rankingOrderDefault.rankingOrder
 	
 		// If column does not have main anchor axis we have to include theirs
 		colsSpec := columns.getSpec(args.rankingOrderDefault.value.column)
@@ -207,6 +212,7 @@ wf.body(func(args) {
 		rankingOrderDefault: args.rankingOrderDefault,
 		filters: args.filters,
 		filterMap: filterMap,
+		rankingMap: rankingMap,
 		datasetSpec: datasetSpec,
 		topClonotypes: args.topClonotypes
 	})

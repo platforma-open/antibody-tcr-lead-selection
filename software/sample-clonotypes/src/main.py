@@ -5,6 +5,7 @@ import polars as pl
 import re
 import os
 import time
+import json
 
 
 def parse_arguments():
@@ -12,7 +13,40 @@ def parse_arguments():
     parser.add_argument("--csv", required=True, help="Path to input CSV file")
     parser.add_argument("--n", type=int, required=True, help="Number of top rows to output")
     parser.add_argument("--out", required=True, help="Path to output CSV file")
+    parser.add_argument("--ranking-map", type=str, help='JSON string specifying ranking direction for each column, e.g., {"Col0":"decreasing","Col1":"increasing"}')
     return parser.parse_args()
+
+
+def parse_ranking_map(ranking_map_str, col_columns):
+    """Parse and validate the ranking map JSON string."""
+    if not ranking_map_str:
+        # Default behavior: all columns decreasing
+        default_map = {col: "decreasing" for col in col_columns}
+        if col_columns:  # Only print if there are ranking columns
+            print(f"Using default ranking directions: {default_map}")
+        return default_map
+    
+    try:
+        ranking_map = json.loads(ranking_map_str)
+    except json.JSONDecodeError as e:
+        print(f"Error: Invalid JSON in ranking-map: {e}")
+        return None
+    
+    # Validate the ranking map
+    valid_directions = ["increasing", "decreasing"]
+    for col, direction in ranking_map.items():
+        if direction not in valid_directions:
+            print(f"Error: Invalid direction '{direction}' for column '{col}'. Must be 'increasing' or 'decreasing'.")
+            return None
+        if col not in col_columns:
+            print(f"Warning: Column '{col}' in ranking-map not found in data. Ignoring.")
+    
+    # Fill in missing columns with default (decreasing)
+    complete_map = {col: "decreasing" for col in col_columns}
+    complete_map.update({col: direction for col, direction in ranking_map.items() if col in col_columns})
+    
+    print(f"Using ranking directions: {complete_map}")
+    return complete_map
 
 
 def validate_column_format(df):
@@ -35,10 +69,11 @@ def validate_column_format(df):
     return col_columns, cluster_size_columns
 
 
-def rank_rows(df, col_columns, cluster_columns, cluster_size_columns):
+def rank_rows(df, col_columns, cluster_columns, cluster_size_columns, ranking_map):
     if not cluster_columns:
         # If no cluster column, rank as before
-        return df.sort(col_columns, descending=True)
+        col_descending = [ranking_map[col] == "decreasing" for col in col_columns]
+        return df.sort(col_columns, descending=col_descending)
     
     # Use the first cluster column found
     cluster_col = cluster_columns[0]
@@ -47,9 +82,11 @@ def rank_rows(df, col_columns, cluster_columns, cluster_size_columns):
     if cluster_size_columns:
         cluster_size_col = cluster_size_columns[0]
         print(f"Using existing cluster size column: {cluster_size_col}")
-        # Single sort operation: by existing cluster size (desc), then by ranking columns (desc)
+        # Single sort operation: by existing cluster size (desc), then by ranking columns (custom directions)
         sort_columns = [cluster_size_col] + col_columns
-        sort_descending = [True] + [True] * len(col_columns)
+        # Cluster size always descending, then follow ranking map for Col columns
+        col_descending = [ranking_map[col] == "decreasing" for col in col_columns]
+        sort_descending = [True] + col_descending
         sorted_df = df.sort(sort_columns, descending=sort_descending)
         return sorted_df
     else:
@@ -60,9 +97,11 @@ def rank_rows(df, col_columns, cluster_columns, cluster_size_columns):
         # Join with original data to add cluster sizes
         df_with_sizes = df.join(group_sizes, on=cluster_col)
         
-        # Single sort operation: by cluster size (desc), then by ranking columns (desc)
+        # Single sort operation: by cluster size (desc), then by ranking columns (custom directions)
         sort_columns = ["_cluster_size"] + col_columns
-        sort_descending = [True] + [True] * len(col_columns)
+        # Cluster size always descending, then follow ranking map for Col columns
+        col_descending = [ranking_map[col] == "decreasing" for col in col_columns]
+        sort_descending = [True] + col_descending
         
         sorted_df = df_with_sizes.sort(sort_columns, descending=sort_descending)
         
@@ -150,6 +189,12 @@ def main():
     validation_time = time.time() - validation_start
     print(f"✓ Validation: {validation_time:.3f}s (found {len(cluster_columns)} cluster columns, {len(col_columns)} ranking columns, {len(cluster_size_columns)} cluster size columns)")
     
+    # Parse ranking map
+    ranking_map = parse_ranking_map(args.ranking_map, col_columns)
+    if ranking_map is None:
+        print("Error: Invalid ranking-map provided. Exiting.")
+        return
+    
     # No mode announcement needed - matches original pandas script
     
     # Ranking step
@@ -159,7 +204,7 @@ def main():
         ranked_df = df.clone()
     else:
         # Rank rows
-        ranked_df = rank_rows(df, col_columns, cluster_columns, cluster_size_columns)
+        ranked_df = rank_rows(df, col_columns, cluster_columns, cluster_size_columns, ranking_map)
     ranking_time = time.time() - ranking_start
     print(f"✓ Ranking: {ranking_time:.3f}s")
     
