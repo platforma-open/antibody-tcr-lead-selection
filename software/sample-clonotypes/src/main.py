@@ -142,10 +142,9 @@ def select_top_n(df, n, cluster_columns):
         
         round_num += 1
     
-    # Concatenate all selected rows and add ranked order
+    # Concatenate all selected rows
     if selected_rows:
         result = pl.concat(selected_rows)
-        result = result.with_columns(pl.arange(1, result.height + 1).alias("ranked_order"))
         return result
     else:
         return df.head(0)
@@ -211,6 +210,8 @@ def main():
     # Select top N rows
     selection_start = time.time()
     top_n = select_top_n(ranked_df, args.n, cluster_columns)
+    # Always add ranked_order column after selection (like original pandas implementation)
+    top_n = top_n.with_columns(pl.arange(1, top_n.height + 1).alias("ranked_order"))
     selection_time = time.time() - selection_start
     print(f"✓ Selection: {selection_time:.3f}s (selected {top_n.height} clonotypes)")
 
