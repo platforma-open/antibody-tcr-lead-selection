@@ -180,7 +180,7 @@ export const model = BlockModel.create()
       };
     }
 
-    // Fall back to any non-String column (like number of samples, counts, etc.)
+    // Fall back to any non-string column (like number of samples, counts, etc.)
     const numericColumns = columns.props.filter((c) =>
       c.column.spec.valueType !== 'String',
     );

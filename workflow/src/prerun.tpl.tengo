@@ -182,7 +182,7 @@ wf.body(func(args) {
         cloneTable = cloneTable.build()
 
         // Use ender.create to call the filter-clonotypes template
-        filterResult := render.create(filterAndSampleTpl, {
+        filterSampleResult := render.create(filterAndSampleTpl, {
             inputAnchor: args.inputAnchor,
             cloneTable: cloneTable,
             topClonotypes: args.topClonotypes,
@@ -194,7 +194,7 @@ wf.body(func(args) {
         })
         
         // Get the filtered clonotypes from the template result
-        outputs["sampledRows"] = filterResult.output("sampledRows", 24 * 60 * 60 * 1000)
+        outputs["sampledRows"] = filterSampleResult.output("sampledRows", 24 * 60 * 60 * 1000)
     }
 
 	return {

@@ -1,4 +1,4 @@
-// Template for clonotype filtering
+// Template for clonotype filtering and sampling
 self := import("@platforma-sdk/workflow-tengo:tpl")
 exec := import("@platforma-sdk/workflow-tengo:exec")
 assets := import("@platforma-sdk/workflow-tengo:assets")
@@ -39,7 +39,7 @@ self.body(func(inputs) {
     filteredClonotypesCsv := filterResult.getFile("filteredClonotypes.csv")
 
     // Store outputs 
-    sampledColsParams := sampledColsConv.getColumns(datasetSpec, false)
+    sampledColsParams := sampledColsConv.getColumns(datasetSpec, false) // No ranking column
     filteredClonotypesPf := xsv.importFile(filteredClonotypesCsv, "csv", sampledColsParams,
                                         {cpu: 1, mem: "16GiB"})
 
@@ -69,7 +69,7 @@ self.body(func(inputs) {
 		finalClonotypesCsv = sampleClones.getFile("sampledClonotypes_top.csv")
 		
 		// Store outputs 
-        sampledColsParams := sampledColsConv.getColumns(datasetSpec, true)
+        sampledColsParams := sampledColsConv.getColumns(datasetSpec, true) // Add ranking column
 		sampledColumnsPf := xsv.importFile(finalClonotypesCsv, "csv", sampledColsParams,
 											{cpu: 1, mem: "16GiB"})
 		outputs["sampledRows"] = pframes.exportFrame(sampledColumnsPf)
