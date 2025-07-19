@@ -180,7 +180,7 @@ export const model = BlockModel.create()
       };
     }
 
-    // Fall back to any non-String column (like number of samples, counts, etc.)
+    // Fall back to any non-string column (like number of samples, counts, etc.)
     const numericColumns = columns.props.filter((c) =>
       c.column.spec.valueType !== 'String',
     );
@@ -304,16 +304,10 @@ export const model = BlockModel.create()
 
     // @TODO: if umap size is > 2 !
 
-    // Get filtered clonotypes from prerun
-    const filteredClonotypes = ctx.prerun?.resolve({ field: 'filteredClonotypes', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
+    // Get sampled rows from workflow prerun output (if ranking was applied)
+    const sampledRows = ctx.prerun?.resolve({ field: 'sampledRows', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
 
-    // Get sampled rows from workflow output (if ranking was applied)
-    const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', allowPermanentAbsence: true })?.getPColumns();
-
-    // Use sampled rows if available (ranking applied), otherwise use filtered clonotypes
-    const dataCols = sampledRows ?? filteredClonotypes;
-
-    return createPFrameForGraphs(ctx, [...umap, ...(dataCols ?? [])]);
+    return createPFrameForGraphs(ctx, [...umap, ...(sampledRows ?? [])]);
   })
 
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)

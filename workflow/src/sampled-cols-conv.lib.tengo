@@ -1,14 +1,7 @@
 ll := import("@platforma-sdk/workflow-tengo:ll")
 
-getColumns := func(datasetSpec) {
-  return {
-    axes: [
-      {
-        column: "clonotypeKey",
-        spec: datasetSpec.axesSpec[1]
-      }],
-    columns: [
-      {
+getColumns := func(datasetSpec, addRanking) {
+  columns := [{
         column: "top",
         id: "link",
         allowNA: false,
@@ -22,8 +15,31 @@ getColumns := func(datasetSpec) {
             "pl7.app/isSubset": "true"
           }
         }
-      }
-    ],
+      }]
+  if addRanking {
+    columns = columns + [{
+        column: "ranked_order",
+        spec: {
+          name: "pl7.app/vdj/ranking-order",
+          valueType: "Int",
+          domain: {},
+          annotations: {
+            "pl7.app/label": "Rank",
+            "pl7.app/table/visibility": "optional",
+            "pl7.app/isSubset": "true"
+          }
+        }
+      }]
+  }
+
+
+  return {
+    axes: [
+      {
+        column: "clonotypeKey",
+        spec: datasetSpec.axesSpec[1]
+      }],
+    columns: columns,
     storageFormat: "Binary",
     partitionKeyLength: 0
   }

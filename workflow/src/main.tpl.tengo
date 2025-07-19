@@ -4,7 +4,6 @@ exec := import("@platforma-sdk/workflow-tengo:exec")
 assets:= import("@platforma-sdk/workflow-tengo:assets")
 xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
 pframes := import("@platforma-sdk/workflow-tengo:pframes")
-sampledColsConv := import(":sampled-cols-conv")
 spectratypeConv := import(":pf-spectratype-conv")
 vjUsageConv := import(":pf-vj-usage-conv")
 slices := import("@platforma-sdk/workflow-tengo:slices")
@@ -88,23 +87,23 @@ wf.body(func(args) {
 	// Input arguments
 	columns := args.columns
 	datasetSpec := columns.getSpec(args.inputAnchor)
-	
 	topClonotypes := args.topClonotypes
 
-	// Needed conditional variables
+	// Needed conditional variable
 	isSingleCell := datasetSpec.axesSpec[1].name == "pl7.app/vdj/scClonotypeKey"
 	
-	// output containers 
+	// Output container
 	outputs := {}
 
-	// Get filtered clonotypes from prerun
-	// Build clonotype table
+	// Build clonotype table csv for filtering script
 	cloneTable := pframes.csvFileBuilder() 
 	cloneTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
 
-	// Add Filters to table
-	addedAxes := []
-	filterMap := {}
+	// Add filter columns to table
+	// Filter structure {id: UI id, value: AnchoredColumnId, filter: Filter criteria, isExpanded: boolean (UI state)}
+	// AnchoredColumnId {anchorRef: PlRef, anchorName: string, column: SUniversalPColumnId (unique column id)}
+	addedAxes := [] // Keep track of axes that are added to the table to prevent duplicates
+	filterMap := {} // Map column headers to filter criteria
 	if len(args.filters) > 0 {
 		for i, filter in args.filters {
 			if filter.value != undefined {
@@ -114,9 +113,9 @@ wf.body(func(args) {
 				// Store reference value and filter type associated to this column
 				filterMap["Filter_" + string(i)] = filter.filter
 			
-				// If column does not have main anchor axis we have to include theirs
+				// If column does not have main anchor axis we have to include theirs (columns coming from clustering blocks for example)
 				colsSpec := columns.getSpec(filter.value.column)
-				axesNames := slices.map(colsSpec.axesSpec, func (a) { return a.name})
+				axesNames := slices.map(colsSpec.axesSpec, func (a) {return a.name})
 				if !slices.hasElement(axesNames, datasetSpec.axesSpec[1].name) {
 					for na, ax in colsSpec.axesSpec {
 						if ax.name != datasetSpec.axesSpec[1].name {
@@ -134,12 +133,12 @@ wf.body(func(args) {
 		for i, col in args.rankingOrder {
 			cloneTable.add(columns.getColumn(col.value.column), {header: "Col" + string(i)})
 		
-			// If column does not have main anchor axis we have to include theirs
+			// If column does not have main anchor axis we have to include theirs (columns coming from clustering blocks for example)
 			colsSpec := columns.getSpec(col.value.column)
-			axesNames := slices.map(colsSpec.axesSpec, func (a) { return a.name})
+			axesNames := slices.map(colsSpec.axesSpec, func (a) {return a.name})
 			if !slices.hasElement(axesNames, datasetSpec.axesSpec[1].name) {
 				for na, ax in colsSpec.axesSpec {
-					if ax.name != datasetSpec.axesSpec[1].name && !slices.hasElement(addedAxes, ax.name) {
+					if ax.name != datasetSpec.axesSpec[1].name && !slices.hasElement(addedAxes, ax.name) { // Prevent duplicates
 						cloneTable.setAxisHeader(ax.name, "cluster_" + string(i) + string(na))
 					}
 				}
@@ -161,8 +160,8 @@ wf.body(func(args) {
 		}	
 	}
 
-	// Get linker columns if needed
-	linkerAxisSpec := {}
+	// Add linker columns when needed
+	linkerAxisSpec := {} // Map cluster axis names to specs. Is it needed????
 	if len(columns.getColumns("linkers")) > 0 {
 		for i, col in columns.getColumns("linkers") {
 			if datasetSpec.axesSpec[1].name == col.spec.axesSpec[1].name {
@@ -180,8 +179,8 @@ wf.body(func(args) {
 	cloneTable.cpu(1)
 	cloneTable = cloneTable.build()
 
-	// Use ender.create to call the filter-clonotypes template
-	filterResult := render.create(filterAndSampleTpl, {
+	// Use render.create to call the filtering and sampling clonotypes template
+	filterSampleResult := render.create(filterAndSampleTpl, {
 		inputAnchor: args.inputAnchor,
 		cloneTable: cloneTable,
 		rankingOrder: args.rankingOrder,
@@ -192,9 +191,9 @@ wf.body(func(args) {
 		topClonotypes: args.topClonotypes
 	})
 	
-	// Get the filtered clonotypes P-frame and CSV from the template result
-	finalClonotypesCsv := filterResult.output("finalClonotypesCsv", 24 * 60 * 60 * 1000)
-	// outputs["sampledRows"] = filterResult.output("sampledRows", 24 * 60 * 60 * 1000)
+	// Get the filtered and sampled clonotypes P-frame and CSV from the template result
+	finalClonotypesCsv := filterSampleResult.output("finalClonotypesCsv", 24 * 60 * 60 * 1000)
+	// outputs["sampledRows"] = filterSampleResult.output("sampledRows", 24 * 60 * 60 * 1000)
 	
 	////////// CDR3 Length Calculation //////////
 	
@@ -217,15 +216,15 @@ wf.body(func(args) {
 			chain := col.spec.domain["pl7.app/vdj/scClonotypeChain"]  // e.g., "A", "B"
 			receptor := col.spec.axesSpec[0].domain["pl7.app/vdj/receptor"]  // e.g., "IG", "TCRAB", "TCRGD"
 			chainLabel := chainMapping[receptor][chain]
-			return baseHeaderName + "." + chainLabel
+			return baseHeaderName + "." + chainLabel // e.g., "cdr3Sequence.Heavy"
 		} else {
 			// For bulk, if chain info is available (e.g. IGH, IGK, IGL)
 			chainFromDomain := col.spec.axesSpec[0].domain["pl7.app/vdj/chain"] // e.g. "IGH", "IGK"
 			if chainFromDomain != undefined {
-				return baseHeaderName + "." + chainFromDomain
+				return baseHeaderName + "." + chainFromDomain // e.g., "cdr3Sequence.IGH"
 			}
 		}
-		return baseHeaderName // Default header for bulk
+		return baseHeaderName
 	};
 
 	// Process CDR3 sequences
@@ -251,6 +250,7 @@ wf.body(func(args) {
 		headerName := makeHeaderName(col, "jGene", isSingleCell)
 		cdr3SeqTable.add(col, {header: headerName})
 	}
+
 	cdr3SeqTable.mem("16GiB")
 	cdr3SeqTable.cpu(1)
 	cdr3SeqTableBuilt := cdr3SeqTable.build()
@@ -280,7 +280,7 @@ wf.body(func(args) {
 		run()
 
 
-	// For spectratype structure is [chain][cdr3Length][vGene] -> count
+	// Spectratype PFrame structure is [chain][cdr3Length][vGene] -> count
 
 	cdr3VspectratypePf := xsv.importFile(cdr3VspectratypeCmd.getFile("spectratype.tsv"), 
 										"tsv", spectratypeConv.getColumns(),

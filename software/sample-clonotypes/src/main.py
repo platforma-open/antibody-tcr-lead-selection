@@ -143,6 +143,9 @@ def main():
     selection_time = time.time() - selection_start
     print(f"✓ Selection: {selection_time:.3f}s (selected {len(top_n)} clonotypes)")
 
+    # Add ranked order column after selection (index 1)
+    top_n['ranked_order'] = range(1, len(top_n) + 1)
+
     # Create and output simplified version with top clonotypes only
     output_start = time.time()
     if cluster_columns:
@@ -150,12 +153,14 @@ def main():
         simplified_df = pd.DataFrame({
             cluster_col: top_n[cluster_col],
             'clonotypeKey': top_n['clonotypeKey'],
-            'top': 1
+            'top': 1,
+            'ranked_order': top_n['ranked_order']
         })
     else:
         simplified_df = pd.DataFrame({
             'clonotypeKey': top_n['clonotypeKey'],
-            'top': 1
+            'top': 1,
+            'ranked_order': top_n['ranked_order']
         })
     
     # Output simplified version to main output file
