@@ -1,5 +1,16 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.9.0
+
+### Minor Changes
+
+- b499ab2: Add rank column
+
+### Patch Changes
+
+- Updated dependencies [b499ab2]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.2.0
+
 ## 1.8.2
 
 ### Patch Changes

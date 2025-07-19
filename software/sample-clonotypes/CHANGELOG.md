@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 1.2.0
+
+### Minor Changes
+
+- b499ab2: Add rank column
+
 ## 1.1.0
 
 ### Minor Changes

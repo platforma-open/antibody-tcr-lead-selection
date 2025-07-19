@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.9.0
+
+### Minor Changes
+
+- b499ab2: Add rank column
+
 ## 1.8.0
 
 ### Minor Changes
