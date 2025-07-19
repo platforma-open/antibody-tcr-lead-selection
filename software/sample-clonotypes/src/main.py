@@ -28,10 +28,14 @@ def validate_column_format(df):
                         key=lambda x: int(x[3:]))
     print("Found Col* columns:", col_columns)
     
-    return col_columns
+    # Check for cluster size columns
+    cluster_size_columns = [col for col in df.columns if re.match(r'^clusterSize\.\d+$', col)]
+    print("Found cluster size columns:", cluster_size_columns)
+    
+    return col_columns, cluster_size_columns
 
 
-def rank_rows(df, col_columns, cluster_columns):
+def rank_rows(df, col_columns, cluster_columns, cluster_size_columns):
     if not cluster_columns:
         # If no cluster column, rank as before
         return df.sort(col_columns, descending=True)
@@ -39,20 +43,31 @@ def rank_rows(df, col_columns, cluster_columns):
     # Use the first cluster column found
     cluster_col = cluster_columns[0]
     
-    # Get group sizes for ordering clusters by size
-    group_sizes = df.group_by(cluster_col).agg(pl.count().alias("_cluster_size"))
-    
-    # Join with original data to add cluster sizes
-    df_with_sizes = df.join(group_sizes, on=cluster_col)
-    
-    # Single sort operation: by cluster size (desc), then by ranking columns (desc)
-    sort_columns = ["_cluster_size"] + col_columns
-    sort_descending = [True] + [True] * len(col_columns)
-    
-    sorted_df = df_with_sizes.sort(sort_columns, descending=sort_descending)
-    
-    # Remove temporary column and return
-    return sorted_df.drop("_cluster_size")
+    # Use existing cluster size column if available, otherwise calculate
+    if cluster_size_columns:
+        cluster_size_col = cluster_size_columns[0]
+        print(f"Using existing cluster size column: {cluster_size_col}")
+        # Single sort operation: by existing cluster size (desc), then by ranking columns (desc)
+        sort_columns = [cluster_size_col] + col_columns
+        sort_descending = [True] + [True] * len(col_columns)
+        sorted_df = df.sort(sort_columns, descending=sort_descending)
+        return sorted_df
+    else:
+        print("No cluster size column found, calculating from data")
+        # Get group sizes for ordering clusters by size
+        group_sizes = df.group_by(cluster_col).agg(pl.count().alias("_cluster_size"))
+        
+        # Join with original data to add cluster sizes
+        df_with_sizes = df.join(group_sizes, on=cluster_col)
+        
+        # Single sort operation: by cluster size (desc), then by ranking columns (desc)
+        sort_columns = ["_cluster_size"] + col_columns
+        sort_descending = [True] + [True] * len(col_columns)
+        
+        sorted_df = df_with_sizes.sort(sort_columns, descending=sort_descending)
+        
+        # Remove temporary column and return
+        return sorted_df.drop("_cluster_size")
 
 
 def select_top_n(df, n, cluster_columns):
@@ -128,10 +143,12 @@ def main():
 
     # Check for cluster columns and validate
     validation_start = time.time()
-    cluster_columns = [col for col in df.columns if re.match(r'^cluster_\d+$', col)]
-    col_columns = validate_column_format(df)
+    # Support both old format (cluster_*) and new format (clusterAxis_*)
+    cluster_columns = ([col for col in df.columns if re.match(r'^cluster_\d+$', col)] + 
+                      [col for col in df.columns if re.match(r'^clusterAxis_\d+_\d+$', col)])
+    col_columns, cluster_size_columns = validate_column_format(df)
     validation_time = time.time() - validation_start
-    print(f"✓ Validation: {validation_time:.3f}s (found {len(cluster_columns)} cluster columns, {len(col_columns)} ranking columns)")
+    print(f"✓ Validation: {validation_time:.3f}s (found {len(cluster_columns)} cluster columns, {len(col_columns)} ranking columns, {len(cluster_size_columns)} cluster size columns)")
     
     # No mode announcement needed - matches original pandas script
     
@@ -142,7 +159,7 @@ def main():
         ranked_df = df.clone()
     else:
         # Rank rows
-        ranked_df = rank_rows(df, col_columns, cluster_columns)
+        ranked_df = rank_rows(df, col_columns, cluster_columns, cluster_size_columns)
     ranking_time = time.time() - ranking_start
     print(f"✓ Ranking: {ranking_time:.3f}s")
     

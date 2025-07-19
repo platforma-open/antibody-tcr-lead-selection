@@ -51,6 +51,12 @@ wf.prepare(func(args){
         partialAxesMatch: true
     }, "linkers")
 
+    // Add cluster size columns from clustering blocks
+    bundleBuilder.addMulti({
+        name: "pl7.app/vdj/clustering/clusterSize",
+        partialAxesMatch: true
+    }, "clusterSizes")
+
     // Add CDR3 sequences
 	bundleBuilder.addMulti({
 		axes: [{ anchor: "main", idx: 1 }], // Clonotype axis
@@ -177,6 +183,20 @@ wf.body(func(args) {
                 }
             }
         }
+
+        // Add cluster size columns if available
+        if len(columns.getColumns("clusterSizes")) > 0 {
+            for i, col in columns.getColumns("clusterSizes") {
+                cloneTable.add(col, {header: "clusterSize." + string(i)})
+                // Add the cluster axis header
+                for axisIdx, axis in col.spec.axesSpec {
+                    if axis.name != datasetSpec.axesSpec[1].name {
+                        cloneTable.setAxisHeader(axis.name, "clusterAxis_" + string(i) + "_" + string(axisIdx))
+                    }
+                }
+            }
+        }
+
         cloneTable.mem("16GiB")
         cloneTable.cpu(1)
         cloneTable = cloneTable.build()
