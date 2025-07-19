@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import argparse
-import pandas as pd
+import polars as pl
 import re
 import os
 import time
@@ -16,7 +16,7 @@ def parse_arguments():
 
 
 def validate_column_format(df):
-    print("Found columns:", df.columns.tolist())
+    print("Found columns:", df.columns)
     
     # Check for clonotypeKey column
     if 'clonotypeKey' not in df.columns:
@@ -34,26 +34,25 @@ def validate_column_format(df):
 def rank_rows(df, col_columns, cluster_columns):
     if not cluster_columns:
         # If no cluster column, rank as before
-        return df.sort_values(by=col_columns, ascending=False)
+        return df.sort(col_columns, descending=True)
     
     # Use the first cluster column found
     cluster_col = cluster_columns[0]
     
     # Get group sizes for ordering clusters by size
-    group_sizes = df[cluster_col].value_counts()
+    group_sizes = df.group_by(cluster_col).agg(pl.count().alias("_cluster_size"))
     
-    # Create a temporary column with cluster sizes for sorting
-    df_temp = df.copy()
-    df_temp['_cluster_size'] = df_temp[cluster_col].map(group_sizes)
+    # Join with original data to add cluster sizes
+    df_with_sizes = df.join(group_sizes, on=cluster_col)
     
     # Single sort operation: by cluster size (desc), then by ranking columns (desc)
-    sorted_df = df_temp.sort_values(
-        by=['_cluster_size'] + col_columns, 
-        ascending=[False] + [False] * len(col_columns)
-    )
+    sort_columns = ["_cluster_size"] + col_columns
+    sort_descending = [True] + [True] * len(col_columns)
+    
+    sorted_df = df_with_sizes.sort(sort_columns, descending=sort_descending)
     
     # Remove temporary column and return
-    return sorted_df.drop('_cluster_size', axis=1)
+    return sorted_df.drop("_cluster_size")
 
 
 def select_top_n(df, n, cluster_columns):
@@ -64,8 +63,8 @@ def select_top_n(df, n, cluster_columns):
     # Use the first cluster column found
     cluster_col = cluster_columns[0]
     
-    # Get unique groups
-    groups = df[cluster_col].unique()
+    # Get unique groups - exactly like pandas
+    groups = df[cluster_col].unique(maintain_order=True).to_list()
     
     # Round-robin sampling: take top 1 from each cluster, then top 2, etc.
     selected_rows = []
@@ -76,9 +75,11 @@ def select_top_n(df, n, cluster_columns):
         for group in groups:
             if len(selected_rows) >= n:
                 break
-            group_df = df[df[cluster_col] == group]
-            if round_num < len(group_df):
-                selected_rows.append(group_df.iloc[round_num])
+            # Filter on-the-fly like pandas: df[df[cluster_col] == group]
+            group_df = df.filter(pl.col(cluster_col) == group)
+            if round_num < group_df.height:
+                # Get row at round_num position like pandas: group_df.iloc[round_num]
+                selected_rows.append(group_df.slice(round_num, 1))
                 added_in_round = True
         
         # If no rows were added in this round, all clusters are exhausted
@@ -87,7 +88,13 @@ def select_top_n(df, n, cluster_columns):
         
         round_num += 1
     
-    return pd.DataFrame(selected_rows)
+    # Concatenate all selected rows and add ranked order
+    if selected_rows:
+        result = pl.concat(selected_rows)
+        result = result.with_columns(pl.arange(1, result.height + 1).alias("ranked_order"))
+        return result
+    else:
+        return df.head(0)
 
 
 def main():
@@ -99,24 +106,24 @@ def main():
     # Load CSV - try both comma and tab separated
     load_start = time.time()
     try:
-        df = pd.read_csv(args.csv, sep=',')
+        df = pl.read_csv(args.csv, separator=',')
     except:
         try:
-            df = pd.read_csv(args.csv, sep='\t')
+            df = pl.read_csv(args.csv, separator='\t')
         except Exception as e:
             print(f"Error reading file: {e}")
             return
     
     load_time = time.time() - load_start
-    print(f"✓ Data loading: {load_time:.3f}s ({len(df):,} rows, {len(df.columns)} columns)")
+    print(f"✓ Data loading: {load_time:.3f}s ({df.height:,} rows, {len(df.columns)} columns)")
 
     # Validate N
     if args.n <= 0:
         print("Error: N must be a positive integer.")
         return
-    if args.n > len(df):
-        print(f"Error: N ({args.n}) is greater than the number of rows in the table ({len(df)}).")
-        args.n = len(df)
+    if args.n > df.height:
+        print(f"Error: N ({args.n}) is greater than the number of rows in the table ({df.height}).")
+        args.n = df.height
         # return
 
     # Check for cluster columns and validate
@@ -126,11 +133,13 @@ def main():
     validation_time = time.time() - validation_start
     print(f"✓ Validation: {validation_time:.3f}s (found {len(cluster_columns)} cluster columns, {len(col_columns)} ranking columns)")
     
+    # No mode announcement needed - matches original pandas script
+    
     # Ranking step
     ranking_start = time.time()
     if not col_columns:
         print("WARNING: User didn't provide ranking columns, selection will be done in table order")
-        ranked_df = df.copy()
+        ranked_df = df.clone()
     else:
         # Rank rows
         ranked_df = rank_rows(df, col_columns, cluster_columns)
@@ -141,30 +150,27 @@ def main():
     selection_start = time.time()
     top_n = select_top_n(ranked_df, args.n, cluster_columns)
     selection_time = time.time() - selection_start
-    print(f"✓ Selection: {selection_time:.3f}s (selected {len(top_n)} clonotypes)")
-
-    # Add ranked order column after selection (index 1)
-    top_n['ranked_order'] = range(1, len(top_n) + 1)
+    print(f"✓ Selection: {selection_time:.3f}s (selected {top_n.height} clonotypes)")
 
     # Create and output simplified version with top clonotypes only
     output_start = time.time()
     if cluster_columns:
         cluster_col = cluster_columns[0]
-        simplified_df = pd.DataFrame({
+        simplified_df = pl.DataFrame({
             cluster_col: top_n[cluster_col],
             'clonotypeKey': top_n['clonotypeKey'],
-            'top': 1,
+            'top': [1] * top_n.height,
             'ranked_order': top_n['ranked_order']
         })
     else:
-        simplified_df = pd.DataFrame({
+        simplified_df = pl.DataFrame({
             'clonotypeKey': top_n['clonotypeKey'],
-            'top': 1,
+            'top': [1] * top_n.height,
             'ranked_order': top_n['ranked_order']
         })
     
     # Output simplified version to main output file
-    simplified_df.to_csv(args.out, index=False)
+    simplified_df.write_csv(args.out)
     output_time = time.time() - output_start
     print(f"✓ Output: {output_time:.3f}s (wrote to {args.out})")
     
