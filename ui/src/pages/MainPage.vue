@@ -52,7 +52,7 @@ watch(() => [app.model.outputs.rankingOptions], (_) => {
         anchorName: 'main',
         column: sampleNumber.value.column,
       },
-      rankingOrder: 'increasing',
+      rankingOrder: 'decreasing',
     };
   // if we didn't find 'Number of Samples' in ranking options, we just select the first option
   } else {
@@ -65,7 +65,7 @@ watch(() => [app.model.outputs.rankingOptions], (_) => {
           anchorName: 'main',
           column: firstOption.value.column,
         },
-        rankingOrder: 'increasing',
+        rankingOrder: 'decreasing',
       };
     }
   }
@@ -139,7 +139,7 @@ const selection = ref<PlSelectionModel>({
       <RankList />
 
       <PlAlert v-if="app.model.ui.rankingOrder.length === 0 && app.model.args.topClonotypes !== undefined" type="warn">
-        {{ "Warning: If you don't select any Clonotype Ranking columns to pick the top candidates, '" + defaultRankingLabel + "' will be used by default in increasing order" }}
+        {{ "Warning: If you don't select any Clonotype Ranking columns to pick the top candidates, '" + defaultRankingLabel + "' will be used by default in decreasing order" }}
       </PlAlert>
       <PlAlert
         v-if="app.model.args.topClonotypes !== undefined
