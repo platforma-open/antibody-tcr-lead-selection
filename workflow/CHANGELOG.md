@@ -1,5 +1,16 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.10.0
+
+### Minor Changes
+
+- c282203: Improved block performance. Fixed increasing ranking order and cluster size ranking
+
+### Patch Changes
+
+- Updated dependencies [c282203]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.3.0
+
 ## 1.9.0
 
 ### Minor Changes

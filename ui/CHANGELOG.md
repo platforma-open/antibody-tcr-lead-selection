@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.8.0
+
+### Minor Changes
+
+- c282203: Improved block performance. Fixed increasing ranking order and cluster size ranking
+
 ## 1.7.1
 
 ### Patch Changes

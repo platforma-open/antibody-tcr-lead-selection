@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 1.3.0
+
+### Minor Changes
+
+- c282203: Improved block performance. Fixed increasing ranking order and cluster size ranking
+
 ## 1.2.0
 
 ### Minor Changes
