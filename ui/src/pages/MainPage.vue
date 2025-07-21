@@ -75,6 +75,11 @@ const selection = ref<PlSelectionModel>({
   axesSpec: [],
   selectedKeys: [],
 });
+
+function updateAffinitySelected() {
+  app.model.args.affinitySelected = selection.value.selectedKeys
+    .map((x) => String(x[0]));
+}
 </script>
 
 <template>
@@ -83,6 +88,11 @@ const selection = ref<PlSelectionModel>({
       {{ app.model.ui.title }}
     </template>
     <template #append>
+      <PlBtnGhost
+        @click.stop="updateAffinitySelected"
+      >
+        Affinity Prediction
+      </PlBtnGhost>
       <PlBtnGhost
         icon="dna"
         @click.stop="() => (multipleSequenceAlignmentOpen = true)"

@@ -25,6 +25,14 @@ export type BlockArgs = {
   rankingOrder: RankingOrder[];
   rankingOrderDefault?: RankingOrder;
   filters: Filter[];
+  // Affinity prediction
+  affinitySelected?: string[];
+  antigenSequence?: string;
+  cpu?: number;
+  haddockSampling: number;
+  haddockSeleTop: number;
+  haddockFinalTop: number;
+  haddockTopClusters: number;
 };
 
 export type UiState = {
@@ -43,6 +51,10 @@ export const model = BlockModel.create()
   .withArgs<BlockArgs>({
     rankingOrder: [],
     filters: [],
+    haddockSampling: 1000,
+    haddockSeleTop: 200,
+    haddockFinalTop: 10,
+    haddockTopClusters: 10,
   })
 
   .withUiState<UiState>({
@@ -80,7 +92,8 @@ export const model = BlockModel.create()
 
   // Activate "Run" button only after these conditions are satisfied
   .argsValid((ctx) => (ctx.args.inputAnchor !== undefined
-    && ctx.args.rankingOrder.every((order) => order.value !== undefined)),
+    && ctx.args.rankingOrder.every((order) => order.value !== undefined)
+    && ctx.args.affinitySelected !== undefined),
   )
 
   .output('inputOptions', (ctx) =>
@@ -320,6 +333,7 @@ export const model = BlockModel.create()
       { type: 'link', href: '/umap', label: 'Clonotype Space' },
       { type: 'link', href: '/spectratype', label: 'CDR3 V Spectratype' },
       { type: 'link', href: '/usage', label: 'V/J gene usage' },
+      { type: 'link', href: '/affinity', label: 'Affinity Prediction' },
     ];
   })
 
