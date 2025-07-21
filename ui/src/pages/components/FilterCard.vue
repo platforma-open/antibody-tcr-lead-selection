@@ -21,12 +21,16 @@ type StringFilterType =
 
 const model = defineModel<FilterUI>({
   default: {
-    filter: { type: 'number_greaterThan', reference: 0 },
+    filter: undefined,
   },
 });
 
 const props = defineProps<{
-  options?: { label: string; value: AnchoredColumnId; column?: { spec: { annotations?: Record<string, string> } } }[];
+  options?: {
+    label: string;
+    value: AnchoredColumnId;
+    column?: { spec: { valueType?: string; annotations?: Record<string, string> } };
+  }[];
 }>();
 
 const filterTypeOptions = [
@@ -43,11 +47,27 @@ const filterTypeOptions = [
 ];
 
 const getFilterTypeOptions = (columnId?: AnchoredColumnId) => {
-  if (!columnId) return filterTypeOptions;
+  if (!columnId) {
+    return filterTypeOptions;
+  }
 
-  // This would need to be enhanced to get the actual column spec
-  // For now, return all options
-  return filterTypeOptions;
+  const selectedOption = props.options?.find(
+    (opt) => opt.value.column === columnId.column,
+  );
+
+  if (!selectedOption?.column?.spec?.valueType) {
+    // Fallback to all options if spec is not available
+    return filterTypeOptions;
+  }
+
+  const { valueType } = selectedOption.column.spec;
+
+  if (valueType === 'String') {
+    return filterTypeOptions.filter((opt) => opt.value.startsWith('string_'));
+  } else {
+    // Assuming other types (e.g., 'Double', 'Integer', 'Long') are numeric
+    return filterTypeOptions.filter((opt) => opt.value.startsWith('number_'));
+  }
 };
 
 const isNumberFilter = (type?: string): type is NumberFilterType => {
@@ -77,18 +97,18 @@ const setReferenceValue = (filter: PlTableFilter, value: string | number) => {
   }
 };
 
-const createFilter = (type: string): PlTableFilter => {
+const createFilter = (type: string): PlTableFilter | undefined => {
   if (isNumberFilter(type)) {
     return { type, reference: 0 };
   } else if (isStringFilter(type)) {
     return { type, reference: '' };
   } else {
-    return { type: 'number_greaterThan', reference: 0 };
+    return undefined;
   }
 };
 
 const referenceValue = computed(() => {
-  return String(getReferenceValue(model.value.filter) || '');
+  return String(getReferenceValue(model.value.filter) ?? '');
 });
 
 const updateReferenceValue = (value: string | undefined) => {
@@ -129,13 +149,9 @@ const getDiscreteValues = () => {
 };
 
 const filterType = computed({
-  get: () => model.value.filter?.type || 'number_greaterThan',
+  get: () => model.value.filter?.type,
   set: (value: string) => {
-    if (!model.value.filter) {
-      model.value.filter = createFilter(value);
-    } else {
-      model.value.filter = createFilter(value);
-    }
+    model.value.filter = createFilter(value);
   },
 });
 </script>

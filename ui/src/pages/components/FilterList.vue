@@ -24,18 +24,12 @@ const getColumnLabel = (columnId: AnchoredColumnId | undefined) => {
 };
 
 const addFilter = () => {
-  const ui = app.model.ui;
-
-  if (!Array.isArray(ui.filters)) {
-    ui.filters = [];
-  }
-
-  ui.filters.push({
-    id: generateUniqueId(),
-    value: undefined,
-    filter: { type: 'number_greaterThan', reference: 0 },
+  const newFilter: FilterUI = {
+    id: `filter-${Date.now()}`,
+    filter: undefined,
     isExpanded: true, // Auto-expand new items
-  });
+  };
+  app.model.ui.filters.push(newFilter);
 };
 
 const resetToDefaults = () => {

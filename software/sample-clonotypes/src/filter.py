@@ -90,16 +90,18 @@ def apply_filters(df, filter_map):
     # Apply filters 
     for column_name in filter_columns:
         filter_spec = filter_map[column_name]
-        
-        filter_type = filter_spec["type"]
-        reference_value = filter_spec["reference"]
-        
-        # Apply the filter
-        filtered_df = apply_filter(filtered_df, column_name, filter_type, reference_value)
-        
-        rows_after_filter = filtered_df.height
-        print(f"Filter '{column_name}' {filter_type} {reference_value}: {initial_rows} -> {rows_after_filter} rows")
-        initial_rows = rows_after_filter
+
+        # Only proceed if filter has been defined
+        if filter_spec:
+            filter_type = filter_spec["type"]
+            reference_value = filter_spec["reference"]
+            
+            # Apply the filter
+            filtered_df = apply_filter(filtered_df, column_name, filter_type, reference_value)
+            
+            rows_after_filter = filtered_df.height
+            print(f"Filter '{column_name}' {filter_type} {reference_value}: {initial_rows} -> {rows_after_filter} rows")
+            initial_rows = rows_after_filter
     
     return filtered_df
 
