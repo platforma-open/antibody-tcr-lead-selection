@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.umap
 
+## 1.1.0
+
+### Minor Changes
+
+- c4927c6: Update python package versions
+
 ## 1.0.3
 
 ### Patch Changes

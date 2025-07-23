@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 1.4.0
+
+### Minor Changes
+
+- c4927c6: Update python package versions
+
 ## 1.3.0
 
 ### Minor Changes
