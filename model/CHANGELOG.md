@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.9.1
+
+### Patch Changes
+
+- 878a86a: Update packages versions
+
 ## 1.9.0
 
 ### Minor Changes
