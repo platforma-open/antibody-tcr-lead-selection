@@ -28,11 +28,14 @@ export type BlockArgs = {
   // Affinity prediction
   affinitySelected?: string[];
   antigenSequence?: string;
+  mem?: number;
   cpu?: number;
-  haddockSampling: number;
-  haddockSeleTop: number;
-  haddockFinalTop: number;
-  haddockTopClusters: number;
+  haddockParams: {
+    haddockSampling: number;
+    haddockSeleTop: number;
+    haddockFinalTop: number;
+    haddockTopClusters: number;
+  };
 };
 
 export type UiState = {
@@ -51,10 +54,12 @@ export const model = BlockModel.create()
   .withArgs<BlockArgs>({
     rankingOrder: [],
     filters: [],
-    haddockSampling: 1000,
-    haddockSeleTop: 200,
-    haddockFinalTop: 10,
-    haddockTopClusters: 10,
+    haddockParams: {
+      haddockSampling: 1000,
+      haddockSeleTop: 200,
+      haddockFinalTop: 10,
+      haddockTopClusters: 10,
+    },
   })
 
   .withUiState<UiState>({

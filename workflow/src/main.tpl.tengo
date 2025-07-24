@@ -4,12 +4,20 @@ exec := import("@platforma-sdk/workflow-tengo:exec")
 assets:= import("@platforma-sdk/workflow-tengo:assets")
 xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
 pframes := import("@platforma-sdk/workflow-tengo:pframes")
-spectratypeConv := import(":pf-spectratype-conv")
-vjUsageConv := import(":pf-vj-usage-conv")
 slices := import("@platforma-sdk/workflow-tengo:slices")
 render := import("@platforma-sdk/workflow-tengo:render")
+pt := import("@platforma-sdk/workflow-tengo:pt")
+text := import("text")
+
+spectratypeConv := import(":pf-spectratype-conv")
+vjUsageConv := import(":pf-vj-usage-conv")
+
+annotationParser := import(":annotation-parser")
 
 filterAndSampleTpl := assets.importTemplate(":filter-and-sample")
+antigenModellingTpl := assets.importTemplate(":antigen-modelling")
+affinityTpl := assets.importTemplate(":affinity")
+
 
 // Set prerun template for clonotype filtering
 wf.setPreRun(assets.importTemplate(":prerun"))
@@ -82,6 +90,26 @@ wf.prepare(func(args){
 			"pl7.app/vdj/reference": "JGene"
 		}
 	}, "JGenes")
+
+	// Add whole VDJ sequence column
+	bundleBuilder.addMulti({
+		axes: [{ anchor: "main", idx: 1 }], // Clonotype axis
+		name: "pl7.app/vdj/sequence",
+		domain: {
+			"pl7.app/vdj/feature": "VDJRegionInFrame"
+		}
+	}, "VDJRegionInFrame")
+
+	// AAd feature mapping columns
+	bundleBuilder.addMulti({
+		axes: [{ anchor: "main", idx: 1 }], // Clonotype axis
+		name: "pl7.app/vdj/sequence/annotation",
+		domain: {
+			"pl7.app/alphabet": "aminoacid",
+			"pl7.app/sequence/annotation/type": "CDRs",
+			"pl7.app/vdj/feature": "VDJRegionInFrame"
+		}
+	}, "seqAnnotations")
     
     return {
         columns: bundleBuilder.build()
@@ -318,6 +346,126 @@ wf.body(func(args) {
 								"tsv", vjUsageConv.getColumns(), 
 								{cpu: 1, mem: "16GiB"})
 	outputs["vjUsagePf"] = pframes.exportFrame(vjUsagePf)
+
+
+	///////////////////// Affinity Prediction /////////////////////
+	// Build whole data table csv
+	wholeSeqTable := pframes.tsvFileBuilder() 
+	wholeSeqTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
+
+	// Add whole sequence column 
+	chainMap := ["A", "B"]
+	addedColumns := []
+	for i, col in columns.getColumns("VDJRegionInFrame") {
+		wholeSeqTable.add(col, {header: "VDJRegionInFrame." + chainMap[i]})
+		addedColumns = append(addedColumns, "VDJRegionInFrame." + chainMap[i])
+	}
+	// Add annotation column
+	for i, col in columns.getColumns("seqAnnotations") {
+		wholeSeqTable.add(col, {header: "seqAnnotations." + chainMap[i]})
+		addedColumns = append(addedColumns, "seqAnnotations." + chainMap[i])
+	}
+	wholeSeqTable.mem("16GiB")
+	wholeSeqTable.cpu(1)
+	wholeSeqTable = wholeSeqTable.build()
+
+
+	//////////// get selected clonotype's information
+	ptw := pt.workflow()
+	// Load sequences file
+	df_sequences := ptw.frame(wholeSeqTable, {xsvType: "tsv"})
+	// Load clonotypes list from string
+	csvContent := "clonotypeKey\n" + text.join(args.affinitySelected, "\n")
+	df_clonotypes := ptw.frame(csvContent, {xsvType: "tsv"})
+	// Filter by join
+	filteredDf := df_sequences.join(df_clonotypes, {how: "inner", on: "clonotypeKey"})
+	// Save file content
+	filteredDf.saveContent("selectedSequences.tsv")
+	ptablerResult := ptw.run()
+
+	//////////// parse to json and run processes im parallel
+	// 1. Dynamically build the list of columns that will be encoded into each JSON object.
+	jsonLineColumns := []
+	for col in addedColumns {
+		jsonLineColumns = append(jsonLineColumns, {
+			column: col,      // The name of the column in the source TSV
+			type: "String"    // The type for parsing the value from the TSV
+		})
+	}
+
+	// 2. Define the parameters for the parseToJson function.
+	//    This will create a single new P-Column named 'jsonData'.
+	params := {
+		axes: [
+			{ column: "clonotypeKey", spec: datasetSpec.axesSpec[1] }
+		],
+		columns: [
+			{
+				kind: "json-line",
+				id: "jsonData", // This is the identifier for the new P-Column being created.
+				
+				// This is the correct way to define the PColumnSpec: as a map.
+				spec: {
+					// A unique, namespaced name for the new P-Column.
+					name: "pl7.app/jsonData",
+					
+					// For kind: "json-line", this MUST be "String".
+					valueType: "String",
+					
+					annotations: {}
+				},
+
+				// This is the list of columns from the TSV to include in the JSON object.
+				columns: jsonLineColumns
+			}
+		]
+	}
+
+	// 3. Call parseToJson to perform the conversion.
+	parsedResult := pframes.parseToJson(ptablerResult.getFileContent("selectedSequences.tsv"), params)
+
+	// 4. Run antigen modelling
+	filterSampleResult := render.create(antigenModellingTpl, {
+		inputAnchor: args.inputAnchor,
+		cloneTable: cloneTable,
+		rankingOrder: args.rankingOrder,
+		rankingOrderDefault: args.rankingOrderDefault,
+		filters: args.filters,
+		filterMap: filterMap,
+		rankingMap: rankingMap,
+		datasetSpec: datasetSpec,
+		topClonotypes: args.topClonotypes
+	})
+
+	// 5. Run in parallel rest of affinity prediction
+	targetOutputs := [{
+		type: "Resource",
+		name: "antibodyPdb",
+		spec: {
+			kind: "PColumn",
+			name: "pl7.app/log",
+			valueType: "Log"
+		}
+	}]
+
+    result := pframes.processColumn(
+        parsedResult.output("jsonData"),
+        affinityTpl,
+        targetOutputs,
+        {
+            extra: {
+                haddockParams: args.haddockParams
+            },
+			// Use metaExtra for arguments whose change shouldn't affect deduplication
+			metaExtra: {
+				cpu: args.cpu,
+				mem: args.mem
+			}
+        }
+    )
+
+	antibodyPdb := result.output("antibodyPdb")
+	outputs["antibodyPdb"] = antibodyPdb
 
 	return {
 		outputs: outputs,

@@ -1,0 +1,57 @@
+// Template for abodybuilder 2
+self := import("@platforma-sdk/workflow-tengo:tpl")
+exec := import("@platforma-sdk/workflow-tengo:exec")
+assets := import("@platforma-sdk/workflow-tengo:assets")
+pframes := import("@platforma-sdk/workflow-tengo:pframes")
+xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
+json := import("json")
+
+self.defineOutputs("antibodyPdb")
+
+
+self.body(func(inputs) {
+	// The input 'selSeqContent' contains a string with an escaped JSON object.
+	// e.g., "{\"VDJRegionInFrame.A\":\"...\",\"seqAnnotations.A\":\"...\"}"
+	selSeqContent := inputs.__value__
+
+	// Parse this string into a usable Tengo map.
+	dataMap := json.decode(selSeqContent)
+
+	// Access the data from the map using keys.
+	vdjRegionA := dataMap["VDJRegionInFrame.A"]
+	seqAnnotationsA := dataMap["seqAnnotations.A"]
+	vdjRegionB := dataMap["VDJRegionInFrame.B"]
+	seqAnnotationsB := dataMap["seqAnnotations.B"]
+
+	// Now we will execute each step in a subtemplate
+
+	
+
+	haddockParams := inputs.haddockParams
+
+	
+    abodyBuilderCmd := exec.builder().
+		software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.abodybuilder-2:main")).
+		mem("8GiB").
+		cpu(1).
+		arg("--h-sequence").arg(vdjRegionA)
+
+	// Bulk mode or special cases of single-cell where B chain is missing
+	if vdjRegionB != undefined {
+		abodyBuilderCmd.arg("--l-sequence").arg(vdjRegionB)
+	}
+
+	abodyBuilderCmd = abodyBuilderCmd.
+		arg("--output-path").arg(".").
+		arg("--output-file").arg("abodyBuilder.pdb").
+        saveFile("abodyBuilder.pdb").
+		printErrStreamToStdout().
+		saveStdoutContent().
+		cache(24 * 60 * 60 * 1000).
+		run()
+
+    antibodyPdb := abodyBuilderCmd.getFile("abodyBuilder.pdb")
+
+    return {
+        antibodyPdb: antibodyPdb    }
+})

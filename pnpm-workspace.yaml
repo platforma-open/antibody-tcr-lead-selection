@@ -2,6 +2,8 @@ packages:
   - software/sample-clonotypes
   - software/umap
   - software/spectratype
+  - software/abodybuilder-2
+  - software/esmfold-v1
   - workflow
   - model
   - ui
@@ -9,15 +11,15 @@ packages:
   - test
 
 catalog:
-  '@platforma-sdk/model': ^1.40.0
-  '@platforma-sdk/ui-vue': ^1.40.0
-  '@platforma-sdk/workflow-tengo': ^4.9.2
-  '@platforma-sdk/block-tools': ^2.5.61
-  '@platforma-sdk/test': ^1.38.0
-  '@platforma-sdk/tengo-builder': ^2.1.12
+  '@platforma-sdk/model': ^1.41.6
+  '@platforma-sdk/ui-vue': ^1.41.17
+  '@platforma-sdk/workflow-tengo': ^4.14.1
+  '@platforma-sdk/block-tools': ^2.5.74
+  '@platforma-sdk/test': ^1.41.18
+  '@platforma-sdk/tengo-builder': ^2.1.13
   '@platforma-sdk/package-builder': ^2.16.2
   '@platforma-sdk/eslint-config': ^1.0.3
-  '@milaboratories/graph-maker': ^1.1.125
+  '@milaboratories/graph-maker': ^1.1.137
 
   '@milaboratories/software-pframes-conv': ^2.2.2
   '@platforma-open/milaboratories.runenv-python-3': ^1.1.16

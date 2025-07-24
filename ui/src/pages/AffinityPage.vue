@@ -50,7 +50,7 @@ const tableSettings = usePlDataTableSettingsV2({
       <!-- Clonotype filtering section -->
       <PlAccordionSection label="Docking parameters (HADDOCK3)">
         <PlNumberField
-          v-model="app.model.args.haddockSampling"
+          v-model="app.model.args.haddockParams.haddockSampling"
           label="Haddock sampling"
           :minValue="1"
           :step="1"
@@ -62,7 +62,7 @@ const tableSettings = usePlDataTableSettingsV2({
           </template>
         </PlNumberField>
         <PlNumberField
-          v-model="app.model.args.haddockSeleTop"
+          v-model="app.model.args.haddockParams.haddockSeleTop"
           label="Haddock selection top"
           :minValue="1"
           :step="1"
@@ -74,7 +74,7 @@ const tableSettings = usePlDataTableSettingsV2({
           </template>
         </PlNumberField>
         <PlNumberField
-          v-model="app.model.args.haddockTopClusters"
+          v-model="app.model.args.haddockParams.haddockTopClusters"
           label="Haddock top clusters"
           :minValue="1"
           :step="1"
@@ -86,7 +86,7 @@ const tableSettings = usePlDataTableSettingsV2({
           </template>
         </PlNumberField>
         <PlNumberField
-          v-model="app.model.args.haddockFinalTop"
+          v-model="app.model.args.haddockParams.haddockFinalTop"
           label="Haddock final top"
           :minValue="1"
           :step="1"
