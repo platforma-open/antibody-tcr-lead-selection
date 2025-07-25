@@ -188,7 +188,7 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefi
         defaultFilters.push({
           column: anchoredColumnId(score),
           default: {
-            type: direction === 'increasing' ? 'number_greaterThanOrEqualTo' : 'number_lessThanOrEqualTo',
+            type: direction === 'increasing' ? 'number_lessThanOrEqualTo' : 'number_greaterThanOrEqualTo',
             reference: numericValue,
           },
         });
