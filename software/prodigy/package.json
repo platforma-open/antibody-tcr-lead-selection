@@ -1,5 +1,5 @@
 {
-  "name": "@platforma-open/milaboratories.top-antibodies.haddock-3",
+  "name": "@platforma-open/milaboratories.top-antibodies.prodigy",
   "version": "1.0.0",
   "type": "module",
   "description": "Block Software",
@@ -27,7 +27,7 @@
       "main": {
         "binary": {
           "artifact": "main",
-          "cmd": [ "python", "{pkg}/haddock.py" ]
+          "cmd": [ "python", "{pkg}/prodigy-affinity.py" ]
         }
       }
     }

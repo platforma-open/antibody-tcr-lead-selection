@@ -4,6 +4,8 @@ packages:
   - software/spectratype
   - software/abodybuilder-2
   - software/esmfold-v1
+  - software/haddock-3
+  - software/prodigy
   - workflow
   - model
   - ui

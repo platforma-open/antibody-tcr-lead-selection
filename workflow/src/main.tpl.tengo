@@ -12,10 +12,8 @@ text := import("text")
 spectratypeConv := import(":pf-spectratype-conv")
 vjUsageConv := import(":pf-vj-usage-conv")
 
-annotationParser := import(":annotation-parser")
-
 filterAndSampleTpl := assets.importTemplate(":filter-and-sample")
-antigenModellingTpl := assets.importTemplate(":antigen-modelling")
+antigenModellingTpl := assets.importTemplate(":antigen-modelling-esmfold")
 affinityTpl := assets.importTemplate(":affinity")
 
 
@@ -349,123 +347,136 @@ wf.body(func(args) {
 
 
 	///////////////////// Affinity Prediction /////////////////////
-	// Build whole data table csv
-	wholeSeqTable := pframes.tsvFileBuilder() 
-	wholeSeqTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
+	if args.antigenSequence != undefined && args.affinitySelected != undefined && len(args.affinitySelected) > 0 {
 
-	// Add whole sequence column 
-	chainMap := ["A", "B"]
-	addedColumns := []
-	for i, col in columns.getColumns("VDJRegionInFrame") {
-		wholeSeqTable.add(col, {header: "VDJRegionInFrame." + chainMap[i]})
-		addedColumns = append(addedColumns, "VDJRegionInFrame." + chainMap[i])
-	}
-	// Add annotation column
-	for i, col in columns.getColumns("seqAnnotations") {
-		wholeSeqTable.add(col, {header: "seqAnnotations." + chainMap[i]})
-		addedColumns = append(addedColumns, "seqAnnotations." + chainMap[i])
-	}
-	wholeSeqTable.mem("16GiB")
-	wholeSeqTable.cpu(1)
-	wholeSeqTable = wholeSeqTable.build()
+		// Build whole data table csv
+		wholeSeqTable := pframes.tsvFileBuilder() 
+		wholeSeqTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
 
-
-	//////////// get selected clonotype's information
-	ptw := pt.workflow()
-	// Load sequences file
-	df_sequences := ptw.frame(wholeSeqTable, {xsvType: "tsv"})
-	// Load clonotypes list from string
-	csvContent := "clonotypeKey\n" + text.join(args.affinitySelected, "\n")
-	df_clonotypes := ptw.frame(csvContent, {xsvType: "tsv"})
-	// Filter by join
-	filteredDf := df_sequences.join(df_clonotypes, {how: "inner", on: "clonotypeKey"})
-	// Save file content
-	filteredDf.saveContent("selectedSequences.tsv")
-	ptablerResult := ptw.run()
-
-	//////////// parse to json and run processes im parallel
-	// 1. Dynamically build the list of columns that will be encoded into each JSON object.
-	jsonLineColumns := []
-	for col in addedColumns {
-		jsonLineColumns = append(jsonLineColumns, {
-			column: col,      // The name of the column in the source TSV
-			type: "String"    // The type for parsing the value from the TSV
-		})
-	}
-
-	// 2. Define the parameters for the parseToJson function.
-	//    This will create a single new P-Column named 'jsonData'.
-	params := {
-		axes: [
-			{ column: "clonotypeKey", spec: datasetSpec.axesSpec[1] }
-		],
-		columns: [
-			{
-				kind: "json-line",
-				id: "jsonData", // This is the identifier for the new P-Column being created.
-				
-				// This is the correct way to define the PColumnSpec: as a map.
-				spec: {
-					// A unique, namespaced name for the new P-Column.
-					name: "pl7.app/jsonData",
-					
-					// For kind: "json-line", this MUST be "String".
-					valueType: "String",
-					
-					annotations: {}
-				},
-
-				// This is the list of columns from the TSV to include in the JSON object.
-				columns: jsonLineColumns
-			}
-		]
-	}
-
-	// 3. Call parseToJson to perform the conversion.
-	parsedResult := pframes.parseToJson(ptablerResult.getFileContent("selectedSequences.tsv"), params)
-
-	// 4. Run antigen modelling
-	filterSampleResult := render.create(antigenModellingTpl, {
-		inputAnchor: args.inputAnchor,
-		cloneTable: cloneTable,
-		rankingOrder: args.rankingOrder,
-		rankingOrderDefault: args.rankingOrderDefault,
-		filters: args.filters,
-		filterMap: filterMap,
-		rankingMap: rankingMap,
-		datasetSpec: datasetSpec,
-		topClonotypes: args.topClonotypes
-	})
-
-	// 5. Run in parallel rest of affinity prediction
-	targetOutputs := [{
-		type: "Resource",
-		name: "antibodyPdb",
-		spec: {
-			kind: "PColumn",
-			name: "pl7.app/log",
-			valueType: "Log"
+		// Add whole sequence column 
+		//@TODO: This block assumes chains are A (heavy) and B (ligth). Check other possibilities
+		// A and B usage in affinity template
+		addedColumns := []
+		for i, col in columns.getColumns("VDJRegionInFrame") {
+			chainId := col.spec.domain["pl7.app/vdj/scClonotypeChain"]
+			wholeSeqTable.add(col, {header: "VDJRegionInFrame." + chainId})
+			addedColumns = append(addedColumns, "VDJRegionInFrame." + chainId)
 		}
-	}]
+		// Add annotation column
+		for i, col in columns.getColumns("seqAnnotations") {
+			chainId := col.spec.domain["pl7.app/vdj/scClonotypeChain"]	
+			wholeSeqTable.add(col, {header: "seqAnnotations." + chainId})
+			addedColumns = append(addedColumns, "seqAnnotations." + chainId)
+		}
+		wholeSeqTable.mem("16GiB")
+		wholeSeqTable.cpu(1)
+		wholeSeqTable = wholeSeqTable.build()
 
-    result := pframes.processColumn(
-        parsedResult.output("jsonData"),
-        affinityTpl,
-        targetOutputs,
-        {
-            extra: {
-                haddockParams: args.haddockParams
-            },
-			// Use metaExtra for arguments whose change shouldn't affect deduplication
-			metaExtra: {
-				cpu: args.cpu,
-				mem: args.mem
+		// Run antigen modelling
+		antigenModellingResult := render.create(antigenModellingTpl, {
+			antigenSequence: args.antigenSequence
+		})
+		antigenPdb := antigenModellingResult.output("antigenPdb")
+		cleanAntigenPdb := antigenModellingResult.output("cleanAntigenPdb")
+		outputs["antigenPdb"] = antigenPdb
+		outputs["cleanAntigenPdb"] = cleanAntigenPdb
+
+		//////////// get selected clonotype's information
+		ptw := pt.workflow()
+		// Load sequences file
+		df_sequences := ptw.frame(wholeSeqTable, {xsvType: "tsv"})
+		// Load clonotypes list from string
+		csvContent := "clonotypeKey\n" + text.join(args.affinitySelected, "\n")
+		df_clonotypes := ptw.frame(csvContent, {xsvType: "tsv"})
+		// Filter by join
+		filteredDf := df_sequences.join(df_clonotypes, {how: "inner", on: "clonotypeKey"})
+		// Save file content
+		filteredDf.saveContent("selectedSequences.tsv")
+		ptablerResult := ptw.run()
+
+		//////////// parse to json and run processes im parallel
+		// 1. Dynamically build the list of columns that will be encoded into each JSON object.
+		jsonLineColumns := []
+		for col in addedColumns {
+			jsonLineColumns = append(jsonLineColumns, {
+				column: col,      // The name of the column in the source TSV
+				type: "String"    // The type for parsing the value from the TSV
+			})
+		}
+
+		// 2. Define the parameters for the parseToJson function.
+		//    This will create a single new P-Column named 'jsonData'.
+		params := {
+			axes: [
+				{ column: "clonotypeKey", spec: datasetSpec.axesSpec[1] }
+			],
+			columns: [
+				{
+					kind: "json-line",
+					id: "jsonData", // This is the identifier for the new P-Column being created.
+					
+					// This is the correct way to define the PColumnSpec: as a map.
+					spec: {
+						// A unique, namespaced name for the new P-Column.
+						name: "pl7.app/jsonData",
+						
+						// For kind: "json-line", this MUST be "String".
+						valueType: "String",
+						
+						annotations: {}
+					},
+
+					// This is the list of columns from the TSV to include in the JSON object.
+					columns: jsonLineColumns
+				}
+			]
+		}
+
+		// 3. Call parseToJson to perform the conversion.
+		parsedResult := pframes.parseToJson(ptablerResult.getFileContent("selectedSequences.tsv"), params)
+
+		// 4. Run in parallel rest of affinity prediction
+		targetOutputs := [{
+			type: "Resource",
+			name: "antibodyPdb"
+		},
+		{
+			type: "Resource",
+			name: "dockedPdbRefs"
+		},
+		{
+			type: "Resource",
+			name: "affinityOutputFull"
+		},
+		{
+			type: "Resource",
+			name: "affinityOutputBest"
+		},
+		{
+			type: "Resource",
+			name: "affinityOutputPdb"
+		}]
+
+		result := pframes.processColumn(
+			parsedResult.output("jsonData"),
+			affinityTpl,
+			targetOutputs,
+			{
+				extra: {
+					haddockParams: args.haddockParams,
+					cleanAntigenPdb: cleanAntigenPdb
+				},
+				// Use metaExtra for arguments whose change shouldn't affect deduplication
+				metaExtra: {
+					cpu: args.cpu,
+					mem: args.mem
+				}
 			}
-        }
-    )
+		)
 
-	antibodyPdb := result.output("antibodyPdb")
-	outputs["antibodyPdb"] = antibodyPdb
+		antibodyPdb := result.output("antibodyPdb")
+		outputs["antibodyPdb"] = antibodyPdb
+	}
 
 	return {
 		outputs: outputs,

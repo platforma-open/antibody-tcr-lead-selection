@@ -12,7 +12,6 @@ from biobb_pdb_tools.pdb_tools.biobb_pdb_merge import biobb_pdb_merge
 from biobb_pdb_tools.pdb_tools.biobb_pdb_reres import biobb_pdb_reres
 from biobb_pdb_tools.pdb_tools.biobb_pdb_chain import biobb_pdb_chain
 from biobb_pdb_tools.pdb_tools.biobb_pdb_chainxseg import biobb_pdb_chainxseg
-from biobb_pdb_tools.pdb_tools.biobb_pdb_tidy import biobb_pdb_tidy
 from biobb_haddock.haddock_restraints.haddock3_restrain_bodies import haddock3_restrain_bodies
 from biobb_haddock.haddock.haddock3_run import haddock3_run
 
@@ -170,67 +169,13 @@ def merge_and_clean_chains_biobb(input_h_pdb: str, input_l_pdb: str, output_file
                 os.remove(file_path)
 
 
-def process_antigen_biobb(input_file: str, output_file: str):
-    """
-    Processes a PDB file using a biobb_pdb_tools pipeline.
 
-    Args:
-        input_file: The path to the source PDB file.
-        output_file: The path to write the final PDB output.
-    """
-    print(f"Processing {input_file} using BioBBs...")
-
-    # Define paths for the intermediate files for each step
-    temp_path_1 = "tmp_1_tidy_initial.pdb"
-    temp_path_2 = "tmp_2_keepcoord.pdb"
-    temp_path_3 = "tmp_3_chain.pdb"
-    temp_path_4 = "tmp_4_chainxseg.pdb"
-    
-    intermediate_files = [temp_path_1, temp_path_2, temp_path_3, temp_path_4]
-
-    try:
-        # Step 1: pdb_tidy -strict (Initial tidy)
-        prop_tidy_strict = {'strict': True}
-        biobb_pdb_tidy(input_file_path=input_file,
-                       output_file_path=temp_path_1,
-                       properties=prop_tidy_strict)
-
-        # Step 2: pdb_keepcoord
-        biobb_pdb_keepcoord(input_file_path=temp_path_1,
-                            output_file_path=temp_path_2)
-
-        # Step 3: pdb_chain -B
-        prop_chain = {'chain': 'B'}
-        biobb_pdb_chain(input_file_path=temp_path_2,
-                        output_file_path=temp_path_3,
-                        properties=prop_chain)
-
-        # Step 4: pdb_chainxseg
-        biobb_pdb_chainxseg(input_file_path=temp_path_3,
-                            output_file_path=temp_path_4)
-
-        # Step 5: pdb_tidy -strict (Final tidy)
-        biobb_pdb_tidy(input_file_path=temp_path_4,
-                       output_file_path=output_file,
-                       properties=prop_tidy_strict)
-
-        print(f"Successfully created {output_file}")
-
-    except Exception as e:
-        print(f"An error occurred: {e}")
-    
-    finally:
-        # Step 6: Clean up all the intermediate files
-        print("Cleaning up intermediate files...")
-        for file_path in intermediate_files:
-            if os.path.exists(file_path):
-                os.remove(file_path)
 
 # Function to generate the run.toml file
 def generate_toml_file(config_file: str, finalAntibodyPDB: str, 
                        cleanAntigenPDB: str, unambigAntibody: str, 
                        nCPU: int, sampling: int, haddockSeleTop: int, 
-                       haddockTopClusters: int, heavyCdrs: list[tuple[int, int]], 
+                       haddockFinalTop: int, heavyCdrs: list[tuple[int, int]], 
                        lightCdrs: list[tuple[int, int]]):
 
 
@@ -295,7 +240,7 @@ unambig_fname = "{unambigAntibody}"
 [clustfcc]
 
 [seletopclusts]
-top_models = {haddockTopClusters}
+top_models = {haddockFinalTop}
 
 # ====================================================================
 """
@@ -401,15 +346,15 @@ def main(args):
     
     # Unpack arguments
     input_pdb_file = args.input_pdb_file
-    input_antigen_pdb_file = args.input_antigen_pdb_file
+    cleanAntigenPDB = args.input_antigen_pdb_file
     nCPU = args.n_cpu
     offset = args.offset
     annotationHeavy = args.annotation_heavy
     annotationLight = args.annotation_light
     sampling = args.sampling
     haddockSeleTop = args.haddock_sele_top
-    haddockTopClusters = args.haddock_top_clusters
-    model_dir = args.model_dir
+    haddockFinalTop = args.haddock_top_clusters
+    output_dir = args.output_dir
 
     # Output file names #
     finalAntibodyPDB = 'HL_clean.pdb'
@@ -429,9 +374,6 @@ def main(args):
     # Merge and clean the chains
     merge_and_clean_chains_biobb('H.pdb', 'L.pdb', finalAntibodyPDB)
 
-    # Prepare antigen structure for docking
-    process_antigen_biobb(input_antigen_pdb_file, cleanAntigenPDB)
-
     # Generate distance restraints to keep bodies together
     haddock3_restrain_bodies(input_structure_path=finalAntibodyPDB,
                             output_tbl_path=unambigAntibody)
@@ -443,7 +385,7 @@ def main(args):
     # Prepare the run file
     generate_toml_file(config_file, finalAntibodyPDB, cleanAntigenPDB, 
                        unambigAntibody, nCPU, sampling, haddockSeleTop, 
-                       haddockTopClusters, heavyCdrs, lightCdrs)
+                       haddockFinalTop, heavyCdrs, lightCdrs)
 
     # Docking #
     print("\n--- Starting Haddock docking run ---")
@@ -458,7 +400,7 @@ def main(args):
     )
 
     # Get final pdb files #
-    extract_final_pdbs(haddock_output_zip_path, model_dir)
+    extract_final_pdbs(haddock_output_zip_path, output_dir)
     print("\n--- Pipeline finished successfully ---")
 
 
@@ -466,18 +408,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="Haddock docking pipeline script.")
     
     # Required arguments
-    parser.add_argument("--input_pdb_file", required=True, help="Path to the antibody PDB file.")
-    parser.add_argument("--input_antigen_pdb_file", required=True, help="Path to the antigen PDB file.")
-    parser.add_argument("--annotation_heavy", required=True, help="Annotation string for the heavy chain (e.g., '1:P+8|2:1E+8|3:2N+L').")
-    parser.add_argument("--annotation_light", required=True, help="Annotation string for the light chain (e.g., '1:P+8|2:1E+3|3:2G+C').")
+    parser.add_argument("--input-pdb-file", required=True, help="Path to the antibody PDB file.")
+    parser.add_argument("--input-antigen-pdb-file", required=True, help="Path to the antigen PDB file.")
+    parser.add_argument("--annotation-heavy", required=True, help="Annotation string for the heavy chain (e.g., '1:P+8|2:1E+8|3:2N+L').")
+    parser.add_argument("--annotation-light", required=True, help="Annotation string for the light chain (e.g., '1:P+8|2:1E+3|3:2G+C').")
     parser.add_argument("--offset", type=int, required=True, help="Residue offset for the light chain.")
     
     # Optional arguments with defaults
-    parser.add_argument("--n_cpu", type=int, default=8, help="Number of CPUs to use. (default: 8)")
+    parser.add_argument("--n-cpu", type=int, default=8, help="Number of CPUs to use. (default: 8)")
     parser.add_argument("--sampling", type=int, default=1000, help="Haddock rigidbody sampling parameter. (default: 1000)")
-    parser.add_argument("--haddock_sele_top", type=int, default=200, help="Haddock seletop parameter. (default: 200)")
-    parser.add_argument("--haddock_top_clusters", type=int, default=10, help="Haddock seletopclusts parameter. (default: 10)")
-    parser.add_argument("--output_dir", default='./dockedModels', help="Output directory for the final PDB models. (default: ./dockedModels)")
+    parser.add_argument("--haddock-sele-top", type=int, default=200, help="Haddock seletop parameter. (default: 200)")
+    parser.add_argument("--haddock-top-clusters", type=int, default=10, help="Haddock seletopclusts parameter. (default: 10)")
+    parser.add_argument("--output-dir", default='./dockedModels', help="Output directory for the final PDB models. (default: ./dockedModels)")
     
     # input_pdb_file = '/home/jmendieta/temporal/affinityPipelineHaddock/output/abodyBuilder.pdb'
     # input_antigen_pdb_file = '/home/jmendieta/temporal/affinityPipelineHaddock/output/esmfold_antibody.pdb'
@@ -489,8 +431,8 @@ if __name__ == '__main__':
 
     # sampling = 1000
     # haddockSeleTop = 200
-    # haddockTopClusters = 10
-    # model_dir = './dockedModels'
+    # haddockFinalTop = 10
+    # output_dir = './dockedModels'
 
     # python /Users/julen/Downloads/haddock.py \
     # --input_pdb_file "/home/jmendieta/temporal/affinityPipelineHaddock/output/abodyBuilder.pdb" \
@@ -500,7 +442,7 @@ if __name__ == '__main__':
     # --offset 127 \
     # --n_cpu 8 \
     # --sampling 5 \
-    # --model_dir "./docking_results"
+    # --output_dir "./docking_results"
     # --haddock_sele_top 2 \
     # --haddock_top_clusters 1 \
     # --output_dir "./docking_results"

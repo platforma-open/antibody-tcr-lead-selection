@@ -1,1 +1,2 @@
-pip install transformers
+transformers==4.53.2
+conda install -c bioconda "biobb_pdb_tools>=5.1.0"

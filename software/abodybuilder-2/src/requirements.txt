@@ -1,1 +1,6 @@
-pip install ImmuneBuilder
+OpenMM==8.3.0
+conda install -c conda-forge pdbfixer
+conda install -c bioconda hmmer=3.3.2 -y
+conda install -c bioconda anarci
+torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+ImmuneBuilder==1.2

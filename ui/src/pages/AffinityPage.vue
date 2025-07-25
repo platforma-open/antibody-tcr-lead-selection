@@ -58,7 +58,8 @@ const tableSettings = usePlDataTableSettingsV2({
           placeholder="1000"
         >
           <template #tooltip>
-            Number of rigidbody docking models to generate for HADDOCK3 docking.
+            Number of rigidbody docking models to generate for HADDOCK3 docking. It is recommended to adapt
+            the sampling parameter to be a multiple of the number of available cores
           </template>
         </PlNumberField>
         <PlNumberField
@@ -74,18 +75,6 @@ const tableSettings = usePlDataTableSettingsV2({
           </template>
         </PlNumberField>
         <PlNumberField
-          v-model="app.model.args.haddockParams.haddockTopClusters"
-          label="Haddock top clusters"
-          :minValue="1"
-          :step="1"
-          :maxValue="99999"
-          placeholder="10"
-        >
-          <template #tooltip>
-            Number of clusters to consider (ranked by score) for HADDOCK3 top model selection.
-          </template>
-        </PlNumberField>
-        <PlNumberField
           v-model="app.model.args.haddockParams.haddockFinalTop"
           label="Haddock final top"
           :minValue="1"
@@ -95,6 +84,17 @@ const tableSettings = usePlDataTableSettingsV2({
         >
           <template #tooltip>
             Number of best-ranked models to select per cluster to be used in affinity step.
+          </template>
+        </PlNumberField>
+        <PlNumberField
+          v-model="app.model.args.cpu"
+          label="CPU (cores)"
+          :minValue="1"
+          :step="1"
+          :maxValue="128"
+        >
+          <template #tooltip>
+            Sets the number of CPU cores to use per each antibody-antigen combination docking.
           </template>
         </PlNumberField>
       </PlAccordionSection>
@@ -108,17 +108,6 @@ const tableSettings = usePlDataTableSettingsV2({
           Enter the antigen sequence for affinity prediction against selected clonotypes' antigens
         </template>
       </PlTextArea>
-      <PlNumberField
-        v-model="app.model.args.cpu"
-        label="CPU (cores)"
-        :minValue="1"
-        :step="1"
-        :maxValue="128"
-      >
-        <template #tooltip>
-          Sets the number of CPU cores to use for the clustering.
-        </template>
-      </PlNumberField>
     </PlSlideModal>
   </PlBlockPage>
 </template>

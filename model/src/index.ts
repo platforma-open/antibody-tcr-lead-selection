@@ -34,7 +34,6 @@ export type BlockArgs = {
     haddockSampling: number;
     haddockSeleTop: number;
     haddockFinalTop: number;
-    haddockTopClusters: number;
   };
 };
 
@@ -55,10 +54,9 @@ export const model = BlockModel.create()
     rankingOrder: [],
     filters: [],
     haddockParams: {
-      haddockSampling: 1000,
+      haddockSampling: 800,
       haddockSeleTop: 200,
       haddockFinalTop: 10,
-      haddockTopClusters: 10,
     },
   })
 

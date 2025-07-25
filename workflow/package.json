@@ -14,6 +14,8 @@
     "@platforma-open/milaboratories.top-antibodies.umap": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.abodybuilder-2": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.esmfold-v1": "workspace:*",
+    "@platforma-open/milaboratories.top-antibodies.haddock-3": "workspace:*",
+    "@platforma-open/milaboratories.top-antibodies.prodigy": "workspace:*",
     "@platforma-sdk/workflow-tengo": "catalog:"
   },
   "devDependencies": {

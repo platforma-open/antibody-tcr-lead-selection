@@ -146,6 +146,24 @@ importers:
         specifier: 'catalog:'
         version: 2.16.2
 
+  software/haddock-3:
+    devDependencies:
+      '@platforma-open/milaboratories.runenv-python-3':
+        specifier: 'catalog:'
+        version: 1.1.16
+      '@platforma-sdk/package-builder':
+        specifier: 'catalog:'
+        version: 2.16.2
+
+  software/prodigy:
+    devDependencies:
+      '@platforma-open/milaboratories.runenv-python-3':
+        specifier: 'catalog:'
+        version: 1.1.16
+      '@platforma-sdk/package-builder':
+        specifier: 'catalog:'
+        version: 2.16.2
+
   software/sample-clonotypes:
     devDependencies:
       '@platforma-open/milaboratories.runenv-python-3':
@@ -243,6 +261,12 @@ importers:
       '@platforma-open/milaboratories.top-antibodies.esmfold-v1':
         specifier: workspace:*
         version: link:../software/esmfold-v1
+      '@platforma-open/milaboratories.top-antibodies.haddock-3':
+        specifier: workspace:*
+        version: link:../software/haddock-3
+      '@platforma-open/milaboratories.top-antibodies.prodigy':
+        specifier: workspace:*
+        version: link:../software/prodigy
       '@platforma-open/milaboratories.top-antibodies.sample-clonotypes':
         specifier: workspace:*
         version: link:../software/sample-clonotypes

@@ -1,0 +1,74 @@
+self := import("@platforma-sdk/workflow-tengo:tpl")
+exec := import("@platforma-sdk/workflow-tengo:exec")
+assets := import("@platforma-sdk/workflow-tengo:assets")
+pframes := import("@platforma-sdk/workflow-tengo:pframes")
+xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
+json := import("json")
+
+self.defineOutputs("dockedPdbRefs", "dockedPdbNames")
+
+self.body(func(inputs) {
+	cleanAntigenPdb := inputs.cleanAntigenPdb
+    antibodyPdb := inputs.antibodyPdb
+    seqAnnotationsA := inputs.seqAnnotationsA
+    seqAnnotationsB := inputs.seqAnnotationsB
+    offset := inputs.offset
+    haddockParams := inputs.haddockParams
+    
+    cpu := 8
+    mem := "10GiB"
+    if !is_undefined(inputs.mem) {
+        mem = string(inputs.mem) + "GiB"
+    }
+    if !is_undefined(inputs.cpu) {
+        cpu = cpu
+    }
+
+    // Defined saved files (output top pdb files for affinity calculation
+    dockedOut := "dockedModels"
+    dockedPdbNames := []
+    dockedPdbs := []
+    for i in range(haddockParams.haddockTopClusters) {
+        dockedPdbNames.append("cluster_" + string(i) + "_model_1.pdb")
+        dockedPdbs.append(dockedOut + "/" + dockedPdbNames[i])
+    }   
+
+    // Run Haddock docking
+    haddockCmd := exec.builder().
+		software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.haddock-3:main")).
+		mem(mem).
+		cpu(cpu).
+        addFile(antibodyPdb, "abodyBuilder.pdb").
+        addFile(cleanAntigenPdb, "esmfold_antigen_clean.pdb").
+		arg("--input-pdb-file").arg("abodyBuilder.pdb").
+		arg("--input-antigen-pdb-file").arg("esmfold_antigen_clean.pdb").
+        arg("--annotation-heavy").arg(seqAnnotationsA).
+        arg("--annotation-light").arg(seqAnnotationsB).
+        arg("--offset").arg(offset).
+        arg("--sampling").arg(haddockParams.haddockSampling).
+        arg("--haddock-sele-top").arg(haddockParams.haddockSeleTop).
+        arg("--haddock-top-clusters").arg(haddockParams.haddockFinalTop).
+		arg("--output-dir").arg(dockedOut).
+        arg("--n-cpu").argWithVar("{system.cpu}")
+
+    for pdb in dockedPdbs {
+        haddockCmd.saveFile(pdb)
+    }
+
+    haddockCmd = haddockCmd.
+		printErrStreamToStdout().
+		saveStdoutContent().
+		cache(24 * 60 * 60 * 1000).
+		run()
+
+    // Get the output files
+    dockedPdbRefs := []
+    for pdb in dockedPdbs {
+        dockedPdbRefs.append(haddockCmd.getFile(pdb))
+    }
+
+    return {
+        dockedPdbRefs: dockedPdbRefs,
+        dockedPdbNames: dockedPdbNames
+    }
+})

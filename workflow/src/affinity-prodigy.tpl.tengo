@@ -1,0 +1,43 @@
+self := import("@platforma-sdk/workflow-tengo:tpl")
+exec := import("@platforma-sdk/workflow-tengo:exec")
+assets := import("@platforma-sdk/workflow-tengo:assets")
+pframes := import("@platforma-sdk/workflow-tengo:pframes")
+xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
+json := import("json")
+
+self.defineOutputs("prodigyFullOutput", "prodigyBestAffinity", "highestAffinityPdb")
+
+self.body(func(inputs) {
+    dockedPdbRefs := inputs.dockedPdbRefs
+    dockedPdbNames := inputs.dockedPdbNames
+
+    // Run PRODIGY
+    prodigyCmd := exec.builder().
+		software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.prodigy:main")).
+		arg("--input_directory").arg("./docking_results").
+		arg("--chains").arg("A B").
+		arg("--output_file").arg("prodigy_affinity.csv").
+		arg("--best_affinity_file").arg("best_affinity_result.csv").
+		arg("--output_pdb_name").arg("highest_affinity.pdb")
+
+     // Copy the docked PDB files to the current directory
+    for ni, pdb in dockedPdbRefs {
+       prodigyCmd.addFile("./docking_results/" + dockedPdbNames[ni], pdb)
+    }
+
+
+    prodigyCmd = prodigyCmd.
+        saveFile("highest_affinity.pdb").
+        saveFile("best_affinity_result.csv").
+		printErrStreamToStdout().
+		saveStdoutContent().
+		cache(24 * 60 * 60 * 1000).
+		run()
+
+    return {
+        prodigyFullOutput: prodigyCmd.getFile("prodigy_affinity.csv"),
+        prodigyBestAffinity: prodigyCmd.getFileContent("best_affinity_result.csv"),
+        highestAffinityPdb: prodigyCmd.getFile("highest_affinity.pdb")
+    }
+})
+

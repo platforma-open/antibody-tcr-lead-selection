@@ -5,14 +5,25 @@ assets := import("@platforma-sdk/workflow-tengo:assets")
 pframes := import("@platforma-sdk/workflow-tengo:pframes")
 xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
 json := import("json")
+ll := import("@platforma-sdk/workflow-tengo:ll")
+render := import("@platforma-sdk/workflow-tengo:render")
 
-self.defineOutputs("antibodyPdb")
+antibodyModellingTpl := assets.importTemplate(":antibody-modelling-abodybuilder")
+haddockTpl := assets.importTemplate(":docking-haddock")
+affinityProdigyTpl := assets.importTemplate(":affinity-prodigy")
+
+self.defineOutputs("antibodyPdb", "dockedPdbRefs", "affinityOutputFull", "affinityOutputBest", "affinityOutputPdb")
 
 
 self.body(func(inputs) {
 	// The input 'selSeqContent' contains a string with an escaped JSON object.
 	// e.g., "{\"VDJRegionInFrame.A\":\"...\",\"seqAnnotations.A\":\"...\"}"
 	selSeqContent := inputs.__value__
+	cleanAntigenPdb := inputs.cleanAntigenPdb
+	haddockParams := inputs.haddockParams
+	cpu := inputs.cpu
+
+	outputs := {}
 
 	// Parse this string into a usable Tengo map.
 	dataMap := json.decode(selSeqContent)
@@ -23,35 +34,56 @@ self.body(func(inputs) {
 	vdjRegionB := dataMap["VDJRegionInFrame.B"]
 	seqAnnotationsB := dataMap["seqAnnotations.B"]
 
-	// Now we will execute each step in a subtemplate
+	// For now we only support single-chain antibodies
+	if vdjRegionB == undefined {
+		ll.panic("Single-chain antibodies are not supported yet")
+	} else {
 
-	
+		// Now we will execute each step in a subtemplate //
 
-	haddockParams := inputs.haddockParams
+		// 1 -- antibody modelling
+		antibodyModellingResult := render.create(antibodyModellingTpl, {
+			vdjRegionA: vdjRegionA,
+			vdjRegionB: vdjRegionB
+		})
+		antibodyPdb := antibodyModellingResult.output("antibodyPdb")
+		outputs["antibodyPdb"] = antibodyPdb
 
-	
-    abodyBuilderCmd := exec.builder().
-		software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.abodybuilder-2:main")).
-		mem("8GiB").
-		cpu(1).
-		arg("--h-sequence").arg(vdjRegionA)
+		// 2 -- Haddock docking
+		// @TODO: The residue indices of the antibody CDR loops: can be predicted using bioinformatics tools for paratope prediction such as proABC2
+		// @TODO: The surface residue indices of the antigen: can be predicted computed using haddock3-restraints calc_accessibility antigen.pdb.
+		// @TODO: make sure annotations are index 1-based, and make sure hadock coordinates for CDR3 are index 1-based
+		haddockResult := render.create(haddockTpl, {
+			antibodyPdb: antibodyPdb,
+			cleanAntigenPdb: cleanAntigenPdb,
+			seqAnnotationsA: seqAnnotationsA,
+			seqAnnotationsB: seqAnnotationsB,
+			offset: len(vdjRegionA) + 1, // +1 because I think the annotations are 1-based and haddock uses 1-based indices
+			haddockParams: haddockParams,
+			cpu: cpu
+		}, {
+			metaInputs: {
+				cpu: cpu
+			}
+		})
+		dockedPdbRefs := haddockResult.output("dockedPdbRefs")
+		dockedPdbNames := haddockResult.output("dockedPdbNames")
+		// @TODO: check if this is correct
+		outputs["dockedPdbRefs"] = dockedPdbRefs
 
-	// Bulk mode or special cases of single-cell where B chain is missing
-	if vdjRegionB != undefined {
-		abodyBuilderCmd.arg("--l-sequence").arg(vdjRegionB)
+		// 3 -- Affinity calculation
+		affinityResult := render.create(affinityProdigyTpl, {
+			dockedPdbRefs: dockedPdbRefs,
+			dockedPdbNames: dockedPdbNames
+		})
+		affinityOutputFull := affinityResult.output("prodigyFullOutput")
+		affinityOutputBest := string(affinityResult.output("prodigyBestAffinity").getData())
+		affinityOutputPdb := affinityResult.output("highestAffinityPdb")
+		outputs["affinityOutputFull"] = affinityOutputFull
+		outputs["affinityOutputBest"] = affinityOutputBest
+		outputs["affinityOutputPdb"] = affinityOutputPdb
+
 	}
 
-	abodyBuilderCmd = abodyBuilderCmd.
-		arg("--output-path").arg(".").
-		arg("--output-file").arg("abodyBuilder.pdb").
-        saveFile("abodyBuilder.pdb").
-		printErrStreamToStdout().
-		saveStdoutContent().
-		cache(24 * 60 * 60 * 1000).
-		run()
-
-    antibodyPdb := abodyBuilderCmd.getFile("abodyBuilder.pdb")
-
-    return {
-        antibodyPdb: antibodyPdb    }
+    return outputs
 })
