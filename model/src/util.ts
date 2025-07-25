@@ -144,9 +144,11 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefi
 
   // calculate default filters
   const scores = [...cloneScores, ...linkScores];
+  // Remove duplicated scores coming from two blocks with exact same parameters
+  const uniqueScores = Array.from(new Map(scores.map((s) => [s.column.id, s])).values());
   const defaultFilters: PlTableFiltersDefault[] = [];
 
-  for (const score of scores) {
+  for (const score of uniqueScores) {
     const valueString = score.column.spec.annotations?.['pl7.app/score/defaultCutoff'];
     if (valueString === undefined) continue;
 
@@ -201,9 +203,9 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefi
 
   return {
     props: [...links, ...cloneProps, ...linkProps],
-    scores: scores,
+    scores: uniqueScores,
     defaultFilters: defaultFilters,
-    defaultRankingOrder: scores
+    defaultRankingOrder: uniqueScores
       .filter((s) => s.column.spec.valueType !== 'String')
       .map((s) => ({
         id: `default-rank-${s.column.id}`,
