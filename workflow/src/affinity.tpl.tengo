@@ -52,13 +52,12 @@ self.body(func(inputs) {
 		// 2 -- Haddock docking
 		// @TODO: The residue indices of the antibody CDR loops: can be predicted using bioinformatics tools for paratope prediction such as proABC2
 		// @TODO: The surface residue indices of the antigen: can be predicted computed using haddock3-restraints calc_accessibility antigen.pdb.
-		// @TODO: make sure annotations are index 1-based, and make sure hadock coordinates for CDR3 are index 1-based
 		haddockResult := render.create(haddockTpl, {
 			antibodyPdb: antibodyPdb,
 			cleanAntigenPdb: cleanAntigenPdb,
 			seqAnnotationsA: seqAnnotationsA,
 			seqAnnotationsB: seqAnnotationsB,
-			offset: len(vdjRegionA) + 1, // +1 because I think the annotations are 1-based and haddock uses 1-based indices
+			offset: len(vdjRegionA), // Annotations are 0-based. Script work with it and returns 1-based indices for haddock
 			haddockParams: haddockParams,
 			cpu: cpu
 		}, {

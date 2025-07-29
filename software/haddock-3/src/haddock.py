@@ -179,10 +179,11 @@ def generate_toml_file(config_file: str, finalAntibodyPDB: str,
                        lightCdrs: list[tuple[int, int]]):
 
 
-    heavyCdrString = "".join([f"rair_sta_1_{i} = {cdr[0]}\nrair_end_1_{i} = {cdr[1]}\n" 
+    # PDB file coordinates are 1-based, so we have to convert the 0-based coordinates to 1-based
+    heavyCdrString = "".join([f"rair_sta_1_{i} = {cdr[0] + 1}\nrair_end_1_{i} = {cdr[1] + 1}\n" 
                               for i, cdr in enumerate(heavyCdrs, start=1)])
     startPos = len(heavyCdrs) + 1
-    lightCdrString = "".join([f"rair_sta_1_{i} = {cdr[0]}\nrair_end_1_{i} = {cdr[1]}\n" 
+    lightCdrString = "".join([f"rair_sta_1_{i} = {cdr[0] + 1}\nrair_end_1_{i} = {cdr[1] + 1}\n" 
                               for i, cdr in enumerate(lightCdrs, start=startPos)])
 
     toml_ref = f"""
