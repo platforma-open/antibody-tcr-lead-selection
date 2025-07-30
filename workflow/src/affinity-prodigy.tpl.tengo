@@ -21,6 +21,7 @@ self.body(func(inputs) {
 		arg("--output_pdb_name").arg("highest_affinity.pdb")
 
      // Copy the docked PDB files to the current directory
+     // @TODO: Fix this for windows case
     for ni, pdb in dockedPdbRefs {
        prodigyCmd.addFile("./docking_results/" + dockedPdbNames[ni], pdb)
     }
@@ -28,6 +29,7 @@ self.body(func(inputs) {
 
     prodigyCmd = prodigyCmd.
         saveFile("highest_affinity.pdb").
+        saveFile("prodigy_affinity.csv").
         saveFile("best_affinity_result.csv").
 		printErrStreamToStdout().
 		saveStdoutContent().

@@ -372,15 +372,6 @@ wf.body(func(args) {
 		wholeSeqTable.cpu(1)
 		wholeSeqTable = wholeSeqTable.build()
 
-		// Run antigen modelling
-		antigenModellingResult := render.create(antigenModellingTpl, {
-			antigenSequence: args.antigenSequence
-		})
-		antigenPdb := antigenModellingResult.output("antigenPdb")
-		cleanAntigenPdb := antigenModellingResult.output("cleanAntigenPdb")
-		outputs["antigenPdb"] = antigenPdb
-		outputs["cleanAntigenPdb"] = cleanAntigenPdb
-
 		//////////// get selected clonotype's information
 		ptw := pt.workflow()
 		// Load sequences file
@@ -393,6 +384,15 @@ wf.body(func(args) {
 		// Save file content
 		filteredDf.saveContent("selectedSequences.tsv")
 		ptablerResult := ptw.run()
+
+		//////////// Run antigen modelling
+		antigenModellingResult := render.create(antigenModellingTpl, {
+			antigenSequence: args.antigenSequence
+		})
+		antigenPdb := antigenModellingResult.output("antigenPdb")
+		cleanAntigenPdb := antigenModellingResult.output("cleanAntigenPdb")
+		outputs["antigenPdb"] = antigenPdb
+		outputs["cleanAntigenPdb"] = cleanAntigenPdb
 
 		//////////// parse to json and run processes im parallel
 		// 1. Dynamically build the list of columns that will be encoded into each JSON object.
@@ -475,7 +475,11 @@ wf.body(func(args) {
 		)
 
 		antibodyPdb := result.output("antibodyPdb")
+		affinityOutputBest := result.output("affinityOutputBest")
+		affinityOutputPdb := result.output("affinityOutputPdb")
 		outputs["antibodyPdb"] = antibodyPdb
+		outputs["affinityOutputBest"] = affinityOutputBest
+		outputs["affinityOutputPdb"] = affinityOutputPdb
 	}
 
 	return {
