@@ -1,5 +1,15 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.10.2
+
+### Patch Changes
+
+- 22b01ef: Updated SDK to support polars.
+- Updated dependencies [22b01ef]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.4.1
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.4.1
+  - @platforma-open/milaboratories.top-antibodies.umap@1.1.1
+
 ## 1.10.1
 
 ### Patch Changes

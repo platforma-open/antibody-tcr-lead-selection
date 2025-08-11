@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.spectratype
 
+## 1.4.1
+
+### Patch Changes
+
+- 22b01ef: Updated SDK to support polars.
+
 ## 1.4.0
 
 ### Minor Changes

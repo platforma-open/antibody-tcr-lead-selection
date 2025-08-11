@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.9.2
+
+### Patch Changes
+
+- 22b01ef: Updated SDK to support polars.
+
 ## 1.9.1
 
 ### Patch Changes

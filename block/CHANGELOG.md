@@ -1,5 +1,15 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 1.1.34
+
+### Patch Changes
+
+- 22b01ef: Updated SDK to support polars.
+- Updated dependencies [22b01ef]
+  - @platforma-open/milaboratories.top-antibodies.model@1.9.2
+  - @platforma-open/milaboratories.top-antibodies.ui@1.8.3
+  - @platforma-open/milaboratories.top-antibodies.workflow@1.10.2
+
 ## 1.1.33
 
 ### Patch Changes
