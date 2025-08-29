@@ -14,15 +14,18 @@ wf.prepare(func(args){
     bundleBuilder.ignoreMissingDomains() // to make query work for both bulk and single cell data
     bundleBuilder.addAnchor("main", args.inputAnchor) 
     
+    validRanks := false
     if len(args.rankingOrder) > 0 {
         for col in args.rankingOrder {
             // For cases where the user is selecting the table to filter
             if col.value != undefined {
                 bundleBuilder.addAnchor(col.value.anchorName, col.value.anchorRef)
                 bundleBuilder.addSingle(col.value.column)
+                validRanks = true
             }
         }
-    } else {
+    } 
+    if !validRanks {
         // @TODO: this is a temporal patch for issue where rankingOrderDefault 
         // are not defined by the time prerun works
         // prerun sometimes runs before this variable is ready
@@ -132,9 +135,11 @@ wf.body(func(args) {
         }
 
         // Add ranking columns to table
+        validRanks := false
         if len(args.rankingOrder) > 0 {
             for i, col in args.rankingOrder {
                 if col.value != undefined {
+                    validRanks = true
                     cloneTable.add(columns.getColumn(col.value.column), {header: "Col" + string(i)})
                     // Store ranking order for this column
                     rankingMap["Col" + string(i)] = col.rankingOrder
@@ -151,7 +156,9 @@ wf.body(func(args) {
                     }	
                 }
             }
-        } else {
+        }
+        // If we didn't have any ranking column or all where not valid
+        if !validRanks {
             // @TODO: this is a temporal patch for issue where rankingOrderDefault 
             // are not defined by the time prerun works
             if args.rankingOrderDefault.value != undefined {
