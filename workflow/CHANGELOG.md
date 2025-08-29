@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.10.3
+
+### Patch Changes
+
+- 2e6e7c9: Label update and minor fix
+
 ## 1.10.2
 
 ### Patch Changes

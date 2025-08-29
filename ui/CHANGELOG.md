@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.8.4
+
+### Patch Changes
+
+- 2e6e7c9: Label update and minor fix
+
 ## 1.8.3
 
 ### Patch Changes
