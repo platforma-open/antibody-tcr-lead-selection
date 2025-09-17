@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.9.3
+
+### Patch Changes
+
+- 020a5b4: Update SDK and python
+
 ## 1.9.2
 
 ### Patch Changes

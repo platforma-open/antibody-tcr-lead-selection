@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 1.4.2
+
+### Patch Changes
+
+- 020a5b4: Update SDK and python
+
 ## 1.4.1
 
 ### Patch Changes
