@@ -323,7 +323,7 @@ export const model = BlockModel.create()
     ];
   })
 
-  .done();
+  .done(2);
 
 export type BlockOutputs = InferOutputsType<typeof model>;
 
