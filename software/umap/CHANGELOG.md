@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.umap
 
+## 1.1.2
+
+### Patch Changes
+
+- 020a5b4: Update SDK and python
+
 ## 1.1.1
 
 ### Patch Changes
