@@ -28,8 +28,8 @@ catalogs:
       specifier: ^1.43.2
       version: 1.43.2
     '@platforma-sdk/package-builder':
-      specifier: ^3.3.0
-      version: 3.3.0
+      specifier: ^3.5.0
+      version: 3.5.4
     '@platforma-sdk/tengo-builder':
       specifier: ^2.1.19
       version: 2.1.19
@@ -135,7 +135,7 @@ importers:
         version: 1.1.16
       '@platforma-sdk/package-builder':
         specifier: 'catalog:'
-        version: 3.3.0
+        version: 3.5.4
 
   software/spectratype:
     devDependencies:
@@ -144,7 +144,7 @@ importers:
         version: 1.1.16
       '@platforma-sdk/package-builder':
         specifier: 'catalog:'
-        version: 3.3.0
+        version: 3.5.4
 
   software/umap:
     devDependencies:
@@ -153,7 +153,7 @@ importers:
         version: 1.1.16
       '@platforma-sdk/package-builder':
         specifier: 'catalog:'
-        version: 3.3.0
+        version: 3.5.4
 
   test:
     dependencies:
@@ -1297,8 +1297,8 @@ packages:
   '@platforma-sdk/model@1.43.2':
     resolution: {integrity: sha512-qI9zlRRKF8tx6jQUsfHDKNQ/aBcOz05ERtBDFgStH8Sn3ehZZcXRRmWsX0QRDTifdhSiMklioalmT/2mx8SDOA==}
 
-  '@platforma-sdk/package-builder@3.3.0':
-    resolution: {integrity: sha512-vH6SPqMpaBKIipHA9nqH357TYiin8Z/+WwyiQaUIJ9h36qCAQnPBLt3KBXwisFX/0GcBdRIobYyqZ/iYUJA76Q==}
+  '@platforma-sdk/package-builder@3.5.4':
+    resolution: {integrity: sha512-7BsxfR/uEq+Dh95uhojceNuATbZ1bJB6logGqai92/tlzKkUUyJME2Vx3w8mytHraaF0kbkKKYobmvzXtBMmXA==}
     hasBin: true
 
   '@platforma-sdk/tengo-builder@2.1.19':
@@ -7271,7 +7271,7 @@ snapshots:
       utility-types: 3.11.0
       zod: 3.23.8
 
-  '@platforma-sdk/package-builder@3.3.0':
+  '@platforma-sdk/package-builder@3.5.4':
     dependencies:
       '@aws-sdk/client-s3': 3.859.0
       '@aws-sdk/lib-storage': 3.859.0(@aws-sdk/client-s3@3.859.0)
