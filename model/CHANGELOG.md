@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.9.4
+
+### Patch Changes
+
+- technical release
+
 ## 1.9.3
 
 ### Patch Changes

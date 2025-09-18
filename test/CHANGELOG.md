@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.test
 
+## 1.1.2
+
+### Patch Changes
+
+- technical release
+
 ## 1.1.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 1.4.3
+
+### Patch Changes
+
+- technical release
+
 ## 1.4.2
 
 ### Patch Changes

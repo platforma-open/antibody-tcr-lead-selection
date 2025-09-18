@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.umap
 
+## 1.1.3
+
+### Patch Changes
+
+- technical release
+
 ## 1.1.2
 
 ### Patch Changes
