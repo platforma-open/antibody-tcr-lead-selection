@@ -12,12 +12,13 @@ catalog:
   '@platforma-sdk/model': ^1.43.2
   '@platforma-sdk/ui-vue': ^1.43.2
   '@platforma-sdk/workflow-tengo': ^5.2.2
-  '@platforma-sdk/block-tools': ^2.6.6
-  '@platforma-sdk/test': ^1.43.10
+  '@platforma-sdk/block-tools': ^2.6.4
+
+  '@platforma-sdk/test': ^1.43.13
   '@platforma-sdk/tengo-builder': ^2.1.21
   '@platforma-sdk/package-builder': ^3.5.4
   '@platforma-sdk/eslint-config': ^1.1.0
-  '@milaboratories/graph-maker': ^1.1.158
+  '@milaboratories/graph-maker': ^1.1.159
   '@platforma-sdk/blocks-deps-updater': ^2.0.0
 
   '@milaboratories/software-pframes-conv': ^2.2.7
