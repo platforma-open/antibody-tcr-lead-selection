@@ -4,8 +4,8 @@ import type { ListOption } from '@platforma-sdk/ui-vue';
 import { PlDropdown } from '@platforma-sdk/ui-vue';
 
 const rankingOrderOptions = [
-  { value: 'increasing', label: 'Increasing' },
-  { value: 'decreasing', label: 'Decreasing' },
+  { value: 'increasing', label: 'Lowest' },
+  { value: 'decreasing', label: 'Highest' },
 ];
 
 const model = defineModel<RankingOrder>(
@@ -29,11 +29,11 @@ const props = defineProps<{
 
   <PlDropdown
     v-model="model.rankingOrder" :options="rankingOrderOptions"
-    label="Ranking order"
+    label="Take from"
     required
   >
     <template #tooltip>
-      Decreasing to pick candidates with higher column values, increasing to pick candidates with lower values.
+      Rank rows by a specific column value and decide whether to keep the Lowest or Highest.
     </template>
   </PlDropdown>
 </template>

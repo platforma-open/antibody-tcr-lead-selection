@@ -6,11 +6,12 @@
       "inputs": ["$TURBO_DEFAULT$"],
       "env": ["PL_PKG_DEV"],
       "outputs": ["./dist/**", "./block-pack/**", "./pkg-*.tgz"],
-      "dependsOn": ["^build"]
+      "dependsOn": ["^build"],
+      "passThroughEnv": ["PL_DOCKER_REGISTRY_PUSH_TO"]
     },
     "test": {
       "dependsOn": ["^build:dev", "build"],
-      "passThroughEnv": ["PL_ADDRESS", "PL_TEST_PASSWORD", "PL_TEST_USER", "PL_TEST_PROXY", "DEBUG"]
+      "passThroughEnv": ["PL_ADDRESS", "PL_TEST_PASSWORD", "PL_TEST_USER", "PL_TEST_PROXY", "DEBUG", "PL_DOCKER_REGISTRY_PUSH_TO"]
     },
     "mark-stable": {
       "passThroughEnv": ["PL_REGISTRY", "AWS_*"],

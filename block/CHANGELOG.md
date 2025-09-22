@@ -1,5 +1,64 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 1.1.37
+
+### Patch Changes
+
+- technical release
+- Updated dependencies
+  - @platforma-open/milaboratories.top-antibodies.model@1.9.4
+  - @platforma-open/milaboratories.top-antibodies.ui@1.8.6
+  - @platforma-open/milaboratories.top-antibodies.workflow@1.10.5
+
+## 1.1.36
+
+### Patch Changes
+
+- aba57f2: update dependencies
+- Updated dependencies [020a5b4]
+  - @platforma-open/milaboratories.top-antibodies.model@1.9.3
+  - @platforma-open/milaboratories.top-antibodies.workflow@1.10.4
+  - @platforma-open/milaboratories.top-antibodies.ui@1.8.5
+
+## 1.1.35
+
+### Patch Changes
+
+- Updated dependencies [2e6e7c9]
+  - @platforma-open/milaboratories.top-antibodies.workflow@1.10.3
+  - @platforma-open/milaboratories.top-antibodies.ui@1.8.4
+
+## 1.1.34
+
+### Patch Changes
+
+- 22b01ef: Updated SDK to support polars.
+- Updated dependencies [22b01ef]
+  - @platforma-open/milaboratories.top-antibodies.model@1.9.2
+  - @platforma-open/milaboratories.top-antibodies.ui@1.8.3
+  - @platforma-open/milaboratories.top-antibodies.workflow@1.10.2
+
+## 1.1.33
+
+### Patch Changes
+
+- Updated dependencies [878a86a]
+  - @platforma-open/milaboratories.top-antibodies.model@1.9.1
+  - @platforma-open/milaboratories.top-antibodies.ui@1.8.2
+
+## 1.1.32
+
+### Patch Changes
+
+- @platforma-open/milaboratories.top-antibodies.workflow@1.10.1
+
+## 1.1.31
+
+### Patch Changes
+
+- Updated dependencies [10e479d]
+  - @platforma-open/milaboratories.top-antibodies.ui@1.8.1
+
 ## 1.1.30
 
 ### Patch Changes

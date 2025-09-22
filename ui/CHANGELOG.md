@@ -1,5 +1,48 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.8.6
+
+### Patch Changes
+
+- technical release
+- Updated dependencies
+  - @platforma-open/milaboratories.top-antibodies.model@1.9.4
+
+## 1.8.5
+
+### Patch Changes
+
+- Updated dependencies [020a5b4]
+  - @platforma-open/milaboratories.top-antibodies.model@1.9.3
+
+## 1.8.4
+
+### Patch Changes
+
+- 2e6e7c9: Label update and minor fix
+
+## 1.8.3
+
+### Patch Changes
+
+- 22b01ef: Updated SDK to support polars.
+- Updated dependencies [22b01ef]
+  - @platforma-open/milaboratories.top-antibodies.model@1.9.2
+
+## 1.8.2
+
+### Patch Changes
+
+- 878a86a: Update packages versions
+- Updated dependencies [878a86a]
+  - @platforma-open/milaboratories.top-antibodies.model@1.9.1
+
+## 1.8.1
+
+### Patch Changes
+
+- 10e479d: update graph-maker verison
+
 ## 1.8.0
 
 ### Minor Changes

@@ -1,5 +1,48 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.10.5
+
+### Patch Changes
+
+- technical release
+- Updated dependencies
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.4.3
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.4.3
+  - @platforma-open/milaboratories.top-antibodies.umap@1.1.3
+
+## 1.10.4
+
+### Patch Changes
+
+- Updated dependencies [020a5b4]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.4.2
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.4.2
+  - @platforma-open/milaboratories.top-antibodies.umap@1.1.2
+
+## 1.10.3
+
+### Patch Changes
+
+- 2e6e7c9: Label update and minor fix
+
+## 1.10.2
+
+### Patch Changes
+
+- 22b01ef: Updated SDK to support polars.
+- Updated dependencies [22b01ef]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.4.1
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.4.1
+  - @platforma-open/milaboratories.top-antibodies.umap@1.1.1
+
+## 1.10.1
+
+### Patch Changes
+
+- Updated dependencies [c4927c6]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.4.0
+  - @platforma-open/milaboratories.top-antibodies.umap@1.1.0
+
 ## 1.10.0
 
 ### Minor Changes
