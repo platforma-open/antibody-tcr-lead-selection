@@ -2,6 +2,7 @@ import { convertFilterUI, convertRankingOrderUI, model } from '@platforma-open/m
 import { defineApp } from '@platforma-sdk/ui-vue';
 import debounce from 'lodash.debounce';
 import { toRaw, watch } from 'vue';
+import AffinityPage from './pages/AffinityPage.vue';
 import MainPage from './pages/MainPage.vue';
 import SpectratypePage from './pages/SpectratypePage.vue';
 import UmapPage from './pages/UmapPage.vue';
@@ -35,6 +36,7 @@ export const sdkPlugin = defineApp(model, (app) => {
       '/umap': () => UmapPage,
       '/spectratype': () => SpectratypePage,
       '/usage': () => UsagePage,
+      '/affinity': () => AffinityPage,
     },
   };
 });

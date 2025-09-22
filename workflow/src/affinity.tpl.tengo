@@ -1,0 +1,88 @@
+// Template for abodybuilder 2
+self := import("@platforma-sdk/workflow-tengo:tpl")
+exec := import("@platforma-sdk/workflow-tengo:exec")
+assets := import("@platforma-sdk/workflow-tengo:assets")
+pframes := import("@platforma-sdk/workflow-tengo:pframes")
+xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
+json := import("json")
+ll := import("@platforma-sdk/workflow-tengo:ll")
+render := import("@platforma-sdk/workflow-tengo:render")
+
+antibodyModellingTpl := assets.importTemplate(":antibody-modelling-abodybuilder")
+haddockTpl := assets.importTemplate(":docking-haddock")
+affinityProdigyTpl := assets.importTemplate(":affinity-prodigy")
+
+self.defineOutputs("antibodyPdb", "dockedPdbRefs", "affinityOutputFull", "affinityOutputBest", "affinityOutputPdb")
+
+
+self.body(func(inputs) {
+	// The input 'selSeqContent' contains a string with an escaped JSON object.
+	// e.g., "{\"VDJRegionInFrame.A\":\"...\",\"seqAnnotations.A\":\"...\"}"
+	selSeqContent := inputs.__value__
+	cleanAntigenPdb := inputs.cleanAntigenPdb
+	haddockParams := inputs.haddockParams
+	cpu := inputs.cpu
+
+	outputs := {}
+
+	// Parse this string into a usable Tengo map.
+	dataMap := json.decode(selSeqContent)
+
+	// Access the data from the map using keys.
+	vdjRegionA := dataMap["VDJRegionInFrame.A"]
+	seqAnnotationsA := dataMap["seqAnnotations.A"]
+	vdjRegionB := dataMap["VDJRegionInFrame.B"]
+	seqAnnotationsB := dataMap["seqAnnotations.B"]
+
+	// For now we only support single-chain antibodies
+	if vdjRegionB == undefined {
+		ll.panic("Single-chain antibodies are not supported yet")
+	} else {
+
+		// Now we will execute each step in a subtemplate //
+
+		// 1 -- antibody modelling
+		antibodyModellingResult := render.create(antibodyModellingTpl, {
+			vdjRegionA: vdjRegionA,
+			vdjRegionB: vdjRegionB
+		})
+		antibodyPdb := antibodyModellingResult.output("antibodyPdb")
+		outputs["antibodyPdb"] = antibodyPdb
+
+		// 2 -- Haddock docking
+		// @TODO: The residue indices of the antibody CDR loops: can be predicted using bioinformatics tools for paratope prediction such as proABC2
+		// @TODO: The surface residue indices of the antigen: can be predicted computed using haddock3-restraints calc_accessibility antigen.pdb.
+		haddockResult := render.create(haddockTpl, {
+			antibodyPdb: antibodyPdb,
+			cleanAntigenPdb: cleanAntigenPdb,
+			seqAnnotationsA: seqAnnotationsA,
+			seqAnnotationsB: seqAnnotationsB,
+			offset: len(vdjRegionA), // Annotations are 0-based. Script work with it and returns 1-based indices for haddock
+			haddockParams: haddockParams,
+			cpu: cpu
+		}, {
+			metaInputs: {
+				cpu: cpu
+			}
+		})
+		dockedPdbRefs := haddockResult.output("dockedPdbRefs")
+		dockedPdbNames := haddockResult.output("dockedPdbNames")
+		// @TODO: check if this is correct
+		outputs["dockedPdbRefs"] = dockedPdbRefs
+
+		// 3 -- Affinity calculation
+		affinityResult := render.create(affinityProdigyTpl, {
+			dockedPdbRefs: dockedPdbRefs,
+			dockedPdbNames: dockedPdbNames
+		})
+		affinityOutputFull := affinityResult.output("prodigyFullOutput")
+		affinityOutputBest := string(affinityResult.output("prodigyBestAffinity").getData())
+		affinityOutputPdb := affinityResult.output("highestAffinityPdb")
+		outputs["affinityOutputFull"] = affinityOutputFull
+		outputs["affinityOutputBest"] = affinityOutputBest
+		outputs["affinityOutputPdb"] = affinityOutputPdb
+
+	}
+
+    return outputs
+})

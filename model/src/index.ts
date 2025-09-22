@@ -25,6 +25,16 @@ export type BlockArgs = {
   rankingOrder: RankingOrder[];
   rankingOrderDefault?: RankingOrder;
   filters: Filter[];
+  // Affinity prediction
+  affinitySelected?: string[];
+  antigenSequence?: string;
+  mem?: number;
+  cpu?: number;
+  haddockParams: {
+    haddockSampling: number;
+    haddockSeleTop: number;
+    haddockFinalTop: number;
+  };
 };
 
 export type UiState = {
@@ -43,6 +53,11 @@ export const model = BlockModel.create()
   .withArgs<BlockArgs>({
     rankingOrder: [],
     filters: [],
+    haddockParams: {
+      haddockSampling: 800,
+      haddockSeleTop: 200,
+      haddockFinalTop: 10,
+    },
   })
 
   .withUiState<UiState>({
@@ -320,6 +335,7 @@ export const model = BlockModel.create()
       { type: 'link', href: '/umap', label: 'Clonotype Space' },
       { type: 'link', href: '/spectratype', label: 'CDR3 V Spectratype' },
       { type: 'link', href: '/usage', label: 'V/J gene usage' },
+      { type: 'link', href: '/affinity', label: 'Affinity Prediction' },
     ];
   })
 

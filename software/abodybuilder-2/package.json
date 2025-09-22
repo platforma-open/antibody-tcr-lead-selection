@@ -1,0 +1,39 @@
+{
+  "name": "@platforma-open/milaboratories.top-antibodies.abodybuilder-2",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Block Software",
+  "scripts": {
+    "do-pack": "rm -f *.tgz && pl-pkg build && pnpm pack && mv platforma-open*.tgz package.tgz",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "build": "pl-pkg build",
+    "prepublishOnly": "pl-pkg publish packages"
+  },
+  "block-software": {
+    "artifacts": {
+      "main": {
+        "type": "python",
+        "registry": "platforma-open",
+        "environment": "@platforma-open/milaboratories.runenv-python-3:3.12.6",
+        "dependencies": {
+          "toolset": "pip",
+          "requirements": "requirements.txt"
+        },
+        "root": "./src"
+      }
+    },
+    "entrypoints": {
+      "main": {
+        "binary": {
+          "artifact": "main",
+          "cmd": [ "python", "{pkg}/main.py" ]
+        }
+      }
+    }
+  },
+  "devDependencies": {
+    "@platforma-open/milaboratories.runenv-python-3": "catalog:",
+    "@platforma-sdk/package-builder": "catalog:"
+  }
+}

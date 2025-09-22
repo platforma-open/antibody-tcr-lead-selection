@@ -1,0 +1,41 @@
+self := import("@platforma-sdk/workflow-tengo:tpl")
+exec := import("@platforma-sdk/workflow-tengo:exec")
+assets := import("@platforma-sdk/workflow-tengo:assets")
+file := import("@platforma-sdk/workflow-tengo:file")
+
+self.defineOutputs("antibodyPdb")
+
+self.body(func(inputs) {
+    vdjRegionA := inputs.vdjRegionA
+    vdjRegionB := inputs.vdjRegionB
+	
+	outputFile := "abodyBuilder.pdb"
+
+    // Run abodybuilder to generate the antibody PDB file
+    abodyBuilderCmd := exec.builder().
+		software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.abodybuilder-2:main")).
+		mem("8GiB").
+		cpu(1).
+		arg("--h-sequence").arg(vdjRegionA)
+
+	// Bulk mode or special cases of single-cell where B chain is missing
+	if vdjRegionB != undefined {
+		abodyBuilderCmd.arg("--l-sequence").arg(vdjRegionB)
+	}
+
+	abodyBuilderCmd = abodyBuilderCmd.
+		arg("--output-path").arg(".").
+		arg("--output-file").arg(outputFile).
+        saveFile(outputFile).
+		printErrStreamToStdout().
+		saveStdoutContent().
+		cache(24 * 60 * 60 * 1000).
+		run()
+
+    antibodyPdb := abodyBuilderCmd.getFile(outputFile)
+
+
+
+    return {
+        antibodyPdb: file.exportFile(antibodyPdb)    }
+})
