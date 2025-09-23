@@ -15,7 +15,7 @@
       "main": {
         "type": "python",
         "registry": "platforma-open",
-        "environment": "@platforma-open/milaboratories.runenv-python-3:3.12.6",
+        "environment": "@platforma-open/milaboratories.runenv-python-3:3.12.10-atls",
         "dependencies": {
           "toolset": "pip",
           "requirements": "requirements.txt"

@@ -1,2 +1,0 @@
-conda install -c bioconda "biobb_haddock>=5.1.0"
-conda install -c bioconda "biobb_pdb_tools>=5.1.0"

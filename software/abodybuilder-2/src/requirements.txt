@@ -1,6 +1,5 @@
-OpenMM==8.3.0
-conda install -c conda-forge pdbfixer
-conda install -c bioconda hmmer=3.3.2 -y
-conda install -c bioconda anarci
-torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+openmm==8.3.1
+torch==2.7.0
+torchvision==0.22.0
+torchaudio==2.7.0
 ImmuneBuilder==1.2
