@@ -358,22 +358,21 @@ def main(args):
     output_dir = args.output_dir
 
     # Output file names #
-    finalAntibodyPDB = 'HL_clean.pdb'
-    cleanAntigenPDB = 'B_clean.pdb'
+    finalAntibodyPDB = f"{output_dir}/HL_clean.pdb"
     # file with distance restraints to keep the two antibody chains together during 
     # the high temperature flexible refinement stage
-    unambigAntibody = 'antibody-unambig.tbl'
-    config_file = "./run.toml"
+    unambigAntibody = f"{output_dir}/antibody-unambig.tbl"
+    config_file = f"{output_dir}/run.toml"
 
     # Docking preparation #
     print("--- Preparing structures for docking ---")
     # Process the Heavy chain ('H')
-    process_pdb_chain_biobb(input_pdb_file, 'H.pdb', 'H')
+    process_pdb_chain_biobb(input_pdb_file, f"{output_dir}/H.pdb", 'H')
     # Process the Light chain ('L')
-    process_pdb_chain_biobb(input_pdb_file, 'L.pdb', 'L')
+    process_pdb_chain_biobb(input_pdb_file, f"{output_dir}/L.pdb", 'L')
 
     # Merge and clean the chains
-    merge_and_clean_chains_biobb('H.pdb', 'L.pdb', finalAntibodyPDB)
+    merge_and_clean_chains_biobb(f"{output_dir}/H.pdb", f"{output_dir}/L.pdb", finalAntibodyPDB)
 
     # Generate distance restraints to keep bodies together
     haddock3_restrain_bodies(input_structure_path=finalAntibodyPDB,
@@ -391,7 +390,7 @@ def main(args):
     # Docking #
     print("\n--- Starting Haddock docking run ---")
     # Call the haddock3_run function directly
-    haddock_output_zip_path = os.path.join('./', 'haddock_output.zip')
+    haddock_output_zip_path = os.path.join(output_dir, 'haddock_output.zip')
     haddock3_run(
         mol1_input_pdb_path=finalAntibodyPDB,
         mol2_input_pdb_path=cleanAntigenPDB,

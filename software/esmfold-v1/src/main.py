@@ -120,28 +120,29 @@ def predict_protein_structure(sequence, output_path=".", output_file="esmfold_st
     
     return output_file_path
 
-def process_antigen_biobb(input_file: str, output_file: str):
+def process_antigen_biobb(output_path: str, input_file: str, output_file: str):
     """
     Processes a PDB file using a biobb_pdb_tools pipeline.
 
     Args:
+        output_path: The path to the output directory.
         input_file: The path to the source PDB file.
         output_file: The path to write the final PDB output.
     """
-    print(f"Processing {input_file} using BioBBs...")
+    print(f"Processing {f"{output_path}/{input_file}"} using BioBBs...")
 
     # Define paths for the intermediate files for each step
-    temp_path_1 = "tmp_1_tidy_initial.pdb"
-    temp_path_2 = "tmp_2_keepcoord.pdb"
-    temp_path_3 = "tmp_3_chain.pdb"
-    temp_path_4 = "tmp_4_chainxseg.pdb"
+    temp_path_1 = f"{output_path}/tmp_1_tidy_initial.pdb"
+    temp_path_2 = f"{output_path}/tmp_2_keepcoord.pdb"
+    temp_path_3 = f"{output_path}/tmp_3_chain.pdb"
+    temp_path_4 = f"{output_path}/tmp_4_chainxseg.pdb"
     
     intermediate_files = [temp_path_1, temp_path_2, temp_path_3, temp_path_4]
 
     try:
         # Step 1: pdb_tidy -strict (Initial tidy)
         prop_tidy_strict = {'strict': True}
-        biobb_pdb_tidy(input_file_path=input_file,
+        biobb_pdb_tidy(input_file_path=f"{output_path}/{input_file}",
                        output_file_path=temp_path_1,
                        properties=prop_tidy_strict)
 
@@ -161,10 +162,10 @@ def process_antigen_biobb(input_file: str, output_file: str):
 
         # Step 5: pdb_tidy -strict (Final tidy)
         biobb_pdb_tidy(input_file_path=temp_path_4,
-                       output_file_path=output_file,
+                       output_file_path=f"{output_path}/{output_file}",
                        properties=prop_tidy_strict)
 
-        print(f"Successfully created {output_file}")
+        print(f"Successfully created {f"{output_path}/{output_file}"}")
 
     except Exception as e:
         print(f"An error occurred: {e}")
@@ -201,7 +202,7 @@ def main():
         print(f"Output file: {output_file_path}")
 
         # Prepare antigen structure for docking
-        process_antigen_biobb(args.output_file_clean, args.output_file)
+        process_antigen_biobb(args.output_path, args.output_file, args.output_file_clean)
 
         return 0
         
