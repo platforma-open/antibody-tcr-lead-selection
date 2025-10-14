@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.11.0
+
+### Minor Changes
+
+- 67443d9: Move all calculations to prerun
+
 ## 1.10.5
 
 ### Patch Changes

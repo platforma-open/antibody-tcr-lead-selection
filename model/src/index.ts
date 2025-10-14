@@ -225,16 +225,26 @@ export const model = BlockModel.create()
 
   // Use the cdr3LengthsCalculated cols
   .output('spectratypePf', (ctx) => {
-    const pCols = ctx.outputs?.resolve('cdr3VspectratypePf')?.getPColumns();
-    if (!pCols) return undefined;
+    // const pCols = ctx.outputs?.resolve('cdr3VspectratypePf')?.getPColumns();
+    const pCols = ctx.prerun?.resolve({
+      field: 'cdr3VspectratypePf',
+      assertFieldType: 'Input',
+      allowPermanentAbsence: true,
+    })?.getPColumns();
+    if (pCols === undefined) return undefined;
 
     return createPFrameForGraphs(ctx, pCols);
   })
 
   // Use the cdr3LengthsCalculated cols
   .output('vjUsagePf', (ctx) => {
-    const pCols = ctx.outputs?.resolve('vjUsagePf')?.getPColumns();
-    if (!pCols) return undefined;
+    // const pCols = ctx.outputs?.resolve('vjUsagePf')?.getPColumns();
+    const pCols = ctx.prerun?.resolve({
+      field: 'vjUsagePf',
+      assertFieldType: 'Input',
+      allowPermanentAbsence: true,
+    })?.getPColumns();
+    if (pCols === undefined) return undefined;
 
     return createPFrameForGraphs(ctx, pCols);
   })
