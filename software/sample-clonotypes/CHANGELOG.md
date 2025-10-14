@@ -1,5 +1,14 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 1.4.4
+
+### Patch Changes
+
+- edbd894: technical release
+- 6dc2d2b: technical release
+- e581493: technical release
+- 1c26f0d: technical release
+
 ## 1.4.3
 
 ### Patch Changes

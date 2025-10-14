@@ -1,5 +1,21 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.11.1
+
+### Patch Changes
+
+- edbd894: technical release
+- 6dc2d2b: technical release
+- e581493: technical release
+- 1c26f0d: technical release
+- Updated dependencies [edbd894]
+- Updated dependencies [6dc2d2b]
+- Updated dependencies [e581493]
+- Updated dependencies [1c26f0d]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.4.4
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.4.4
+  - @platforma-open/milaboratories.top-antibodies.umap@1.1.4
+
 ## 1.11.0
 
 ### Minor Changes

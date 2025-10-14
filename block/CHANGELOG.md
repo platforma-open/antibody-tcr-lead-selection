@@ -1,5 +1,21 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 1.1.40
+
+### Patch Changes
+
+- edbd894: technical release
+- 6dc2d2b: technical release
+- e581493: technical release
+- 1c26f0d: technical release
+- Updated dependencies [edbd894]
+- Updated dependencies [6dc2d2b]
+- Updated dependencies [e581493]
+- Updated dependencies [1c26f0d]
+  - @platforma-open/milaboratories.top-antibodies.model@1.10.1
+  - @platforma-open/milaboratories.top-antibodies.ui@1.8.9
+  - @platforma-open/milaboratories.top-antibodies.workflow@1.11.1
+
 ## 1.1.39
 
 ### Patch Changes
