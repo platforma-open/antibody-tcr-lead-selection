@@ -273,7 +273,7 @@ export const model = BlockModel.create()
       // Use sampled rows if available (ranking applied), otherwise use filtered clonotypes
       cols.push(...props, ...sampledRows);
       ops = {
-        coreColumnPredicate: (spec) => spec.name === 'pl7.app/vdj/sampling-column',
+        coreColumnPredicate: (spec) => spec.spec.name === 'pl7.app/vdj/sampling-column',
         coreJoinType: 'inner',
       };
     }

@@ -44,7 +44,7 @@ getColumns := func() {
                 }
             }
         ],
-        storageFormat: "Binary",
+        storageFormat: "Parquet",
         partitionKeyLength: 0
     }
 }
