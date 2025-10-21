@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.11.2
+
+### Patch Changes
+
+- 65e8749: Minor bugs correction and SDK update
+
 ## 1.11.1
 
 ### Patch Changes

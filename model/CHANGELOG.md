@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.10.2
+
+### Patch Changes
+
+- 65e8749: Minor bugs correction and SDK update
+
 ## 1.10.1
 
 ### Patch Changes
