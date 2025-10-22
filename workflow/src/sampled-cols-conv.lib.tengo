@@ -40,7 +40,7 @@ getColumns := func(datasetSpec, addRanking) {
         spec: datasetSpec.axesSpec[1]
       }],
     columns: columns,
-    storageFormat: "Binary",
+    storageFormat: "Parquet",
     partitionKeyLength: 0
   }
 }
