@@ -1,0 +1,131 @@
+ll := import("@platforma-sdk/workflow-tengo:ll")
+
+getColumns := func(datasetSpec, featureName, bulkChain) {
+  isSingleCell := datasetSpec.axesSpec[1].name == "pl7.app/vdj/scClonotypeKey"
+
+  // Compose feature suffix for spec names
+  featSuf := ""
+  if !is_undefined(featureName) && featureName != "" { featSuf = "." + string(featureName) }
+
+  cols := [
+    {
+      column: "kabatSequence_H",
+      spec: {
+        name: "pl7.app/vdj/kabatSequence" + featSuf,
+        valueType: "String",
+        domain: {
+          "pl7.app/vdj/chain": "IGHeavy"
+        },
+        annotations: {
+          "pl7.app/label": "KABAT sequence " + featureName + " Heavy",
+          "pl7.app/table/orderPriority": "10",
+		  "pl7.app/table/visibility": "optional"
+        }
+      }
+    },
+    {
+      column: "kabatPositions_H",
+      spec: {
+        name: "pl7.app/vdj/kabatPositions" + featSuf,
+        valueType: "String",
+        domain: {
+          "pl7.app/vdj/chain": "IGHeavy"
+        },
+        annotations: {
+          "pl7.app/label": "KABAT positions " + featureName + " Heavy",
+          "pl7.app/table/orderPriority": "9",
+		  "pl7.app/table/visibility": "optional"
+        }
+      }
+    }
+  ]
+
+  if isSingleCell {
+    cols = cols + [
+      {
+        column: "kabatSequence_KL",
+        spec: {
+          name: "pl7.app/vdj/kabatSequence" + featSuf,
+          valueType: "String",
+          domain: {
+            "pl7.app/vdj/chain": "IGLight"
+          },
+          annotations: {
+            "pl7.app/label": "KABAT sequence " + featureName + " Light",
+            "pl7.app/table/orderPriority": "8",
+		    "pl7.app/table/visibility": "optional"
+          }
+        }
+      },
+      {
+        column: "kabatPositions_KL",
+        spec: {
+          name: "pl7.app/vdj/kabatPositions" + featSuf,
+          valueType: "String",
+          domain: {
+            "pl7.app/vdj/chain": "IGLight"
+          },
+          annotations: {
+            "pl7.app/label": "KABAT positions " + featureName + " Light",
+            "pl7.app/table/orderPriority": "7",
+		    "pl7.app/table/visibility": "optional"
+          }
+        }
+      }
+    ]
+  } else {
+    // bulk: include only heavy or only light according to bulkChain
+    if bulkChain == "KL" {
+      cols = [
+        {
+          column: "kabatSequence_KL",
+          spec: {
+            name: "pl7.app/vdj/kabatSequence" + featSuf,
+            valueType: "String",
+            domain: {
+              "pl7.app/vdj/chain": "IGLight"
+            },
+            annotations: {
+              "pl7.app/label": "KABAT sequence " + featureName + " Light",
+              "pl7.app/table/orderPriority": "8",
+ 		      "pl7.app/table/visibility": "optional"
+            }
+          }
+        },
+        {
+          column: "kabatPositions_KL",
+          spec: {
+            name: "pl7.app/vdj/kabatPositions" + featSuf,
+            valueType: "String",
+            domain: {
+              "pl7.app/vdj/chain": "IGLight"
+            },
+            annotations: {
+              "pl7.app/label": "KABAT positions " + featureName + " Light",
+              "pl7.app/table/orderPriority": "7",
+ 		      "pl7.app/table/visibility": "optional"
+            }
+          }
+        }
+      ]
+    }
+  }
+
+  return {
+    axes: [
+      {
+        column: "clonotypeKey",
+        spec: datasetSpec.axesSpec[1]
+      }
+    ],
+    columns: cols,
+    storageFormat: "Binary",
+    partitionKeyLength: 0
+  }
+}
+
+export ll.toStrict({
+  getColumns: getColumns
+})
+
+

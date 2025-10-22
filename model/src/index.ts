@@ -25,6 +25,7 @@ export type BlockArgs = {
   rankingOrder: RankingOrder[];
   rankingOrderDefault?: RankingOrder;
   filters: Filter[];
+  kabatNumbering?: boolean;
 };
 
 export type UiState = {
@@ -263,6 +264,12 @@ export const model = BlockModel.create()
       allowPermanentAbsence: true,
     })?.getPColumns();
 
+    const assemblingKabatPf = ctx.prerun?.resolve({
+      field: 'assemblingKabatPf',
+      assertFieldType: 'Input',
+      allowPermanentAbsence: true,
+    })?.getPColumns();
+
     let ops: CreatePlDataTableOps = {};
     const cols: Column[] = [];
 
@@ -272,8 +279,11 @@ export const model = BlockModel.create()
     } else {
       // Use sampled rows if available (ranking applied), otherwise use filtered clonotypes
       cols.push(...props, ...sampledRows);
+      if (assemblingKabatPf !== undefined) {
+        cols.push(...assemblingKabatPf);
+      }
       ops = {
-        coreColumnPredicate: (spec) => spec.name === 'pl7.app/vdj/sampling-column',
+        coreColumnPredicate: (c) => c.spec.name === 'pl7.app/vdj/sampling-column',
         coreJoinType: 'inner',
       };
     }

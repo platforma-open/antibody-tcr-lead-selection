@@ -7,6 +7,7 @@ pframes := import("@platforma-sdk/workflow-tengo:pframes")
 slices := import("@platforma-sdk/workflow-tengo:slices")
 render := import("@platforma-sdk/workflow-tengo:render")
 ll := import("@platforma-sdk/workflow-tengo:ll")
+kabatConv := import(":pf-kabat-conv")
 
 spectratypeConv := import(":pf-spectratype-conv")
 vjUsageConv := import(":pf-vj-usage-conv")
@@ -76,6 +77,7 @@ wf.prepare(func(args){
 		name: "pl7.app/vdj/sequence",
 		domain: {
 			"pl7.app/alphabet": "aminoacid",
+            "pl7.app/vdj/scClonotypeChain/index": "primary",
 			"pl7.app/vdj/feature": "CDR3"    // Specify CDR3 feature
 		}
 	}, "cdr3Sequences") // New collection name for CDR3 sequences
@@ -97,6 +99,13 @@ wf.prepare(func(args){
 			"pl7.app/vdj/reference": "JGene"
 		}
 	}, "JGenes")
+
+	// Add assembling feature aminoacid sequences (bulk, sc, scFv)
+	bundleBuilder.addMulti({
+		axes: [{ anchor: "main", idx: 1 }], // Clonotype axis
+		annotations: { "pl7.app/vdj/isAssemblingFeature": "true" },
+		domain: { "pl7.app/alphabet": "aminoacid" }
+	}, "assemblingAaSeqs")
     
     return {
         columns: bundleBuilder.build()
@@ -285,7 +294,13 @@ wf.body(func(args) {
 
         for col in cdr3Sequences {
             headerName := makeHeaderName(col, "cdr3Sequence", isSingleCell)
-            cdr3SeqTable.add(col, {header: headerName})
+            if isSingleCell {
+                if col.spec.domain["pl7.app/vdj/scClonotypeChain/index"] == "primary" {
+                    cdr3SeqTable.add(col, {header: headerName})
+                }
+            } else {
+                cdr3SeqTable.add(col, {header: headerName})
+            }
         }
 
         // Process V genes
@@ -345,6 +360,55 @@ wf.body(func(args) {
                                     "tsv", vjUsageConv.getColumns(), 
                                     {cpu: 1, mem: "16GiB"})
         outputs["vjUsagePf"] = pframes.exportFrame(vjUsagePf)
+
+		if args.kabatNumbering == true {
+		////////// Assembling AA sequences //////////
+            assemSeqTable := pframes.tsvFileBuilder()
+            keyHeader := "clonotypeKey"
+            assemSeqTable.setAxisHeader(datasetSpec.axesSpec[1].name, keyHeader)
+
+            seqCols := columns.getColumns("assemblingAaSeqs")
+            for col in seqCols {
+                headerName := makeHeaderName(col, "assemblingFeature", isSingleCell)
+                assemSeqTable.add(col, {header: headerName})
+            }
+
+            assemSeqTable.mem("16GiB")
+            assemSeqTable.cpu(1)
+            assemSeqTableBuilt := assemSeqTable.build()
+
+            // Convert assembling feature sequences to FASTA via sub-template
+            assemFastaTpl := assets.importTemplate(":assembling-fasta")
+            bulkChain := undefined
+            if !isSingleCell {
+                // infer bulk chain by header names of incoming seq columns (domain uses IGHeavy / IGLight)
+                chainDetected := "KL"
+                for col in seqCols {
+                    ch := col.spec.axesSpec[0].domain["pl7.app/vdj/chain"] // e.g., IGHeavy, IGLight
+                    if ch == "IGHeavy" { chainDetected = "H"; break }
+                    if ch == "IGLight" { chainDetected = "KL" }
+                }
+                bulkChain = chainDetected
+            }
+            assem := render.create(assemFastaTpl, {
+                inputTsv: assemSeqTableBuilt,
+                keyColumn: "clonotypeKey",
+                finalClonotypesCsv: finalClonotypesCsv,
+                isSingleCell: isSingleCell,
+                bulkChain: bulkChain
+            })
+            //outputs["assemblingAnarci"] = assem.output("anarci", 24 * 60 * 60 * 1000)
+            kabatFile := assem.output("kabat", 24 * 60 * 60 * 1000)
+            // Derive feature name from assembling feature columns (prefer first column's feature)
+            featName := ""
+            if len(seqCols) > 0 {
+                f := seqCols[0].spec.domain["pl7.app/vdj/feature"]
+                if f != undefined { featName = f }
+            }
+            // Convert kabat.tsv to PFrame with proper specs (bulk: select heavy/light)
+            kabatPf := xsv.importFile(kabatFile, "tsv", kabatConv.getColumns(datasetSpec, featName, bulkChain), {cpu: 1, mem: "8GiB"})
+            outputs["assemblingKabatPf"] = pframes.exportFrame(kabatPf)
+		}
     }
 
 	return {
