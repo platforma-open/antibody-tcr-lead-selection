@@ -42,7 +42,7 @@ const resetToDefaults = () => {
   app.model.ui.filters = app.model.outputs.defaultFilters?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter }) => ({
     id: generateUniqueId(),
     value: defaultFilter.column,
-    filter: defaultFilter.default,
+    filter: { ...defaultFilter.default }, // Create a deep copy to avoid reference rewriting issues
     isExpanded: false,
   })) ?? [];
 };
