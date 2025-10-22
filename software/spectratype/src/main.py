@@ -12,12 +12,12 @@ def main():
     parser = argparse.ArgumentParser(description="Calculate CDR3 lengths and output in long format.")
     parser.add_argument("--input_tsv", required=True, 
                        help="Input TSV file with clonotypeKey, cdr3Sequence[.chain], and vGene[.chain] columns.")
+    parser.add_argument("--final_clonotypes_csv", required=False,
+                        help="Input CSV file with top/filtered clonotypes to calculate spectratype and V/J gene usage only on them.")
     parser.add_argument("--spectratype_tsv", required=True, 
                        help="Output TSV file with chain, cdr3Length, vGene, and count columns.")
     parser.add_argument("--vj_usage_tsv", required=True,
                         help="Output TSV file with vGene, jGene, and count columns for V/J gene usage.")
-    parser.add_argument("--final_clonotypes_csv", required=False,
-                        help="Input CSV file with top/filtered clonotypes to calculate spectratype and V/J gene usage only on them.")
     args = parser.parse_args()
 
     # Read input data
