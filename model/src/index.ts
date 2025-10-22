@@ -283,7 +283,7 @@ export const model = BlockModel.create()
         cols.push(...assemblingKabatPf);
       }
       ops = {
-        coreColumnPredicate: (c) => c.spec.name === 'pl7.app/vdj/sampling-column',
+        coreColumnPredicate: (col) => col.spec.name === 'pl7.app/vdj/sampling-column',
         coreJoinType: 'inner',
       };
     }

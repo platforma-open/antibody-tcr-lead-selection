@@ -1,5 +1,21 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.8.11
+
+### Patch Changes
+
+- Updated dependencies [44895be]
+  - @platforma-open/milaboratories.top-antibodies.model@1.10.3
+
+## 1.8.10
+
+### Patch Changes
+
+- d8318f4: Recover original filter value after resetting filters
+- 65e8749: Minor bugs correction and SDK update
+- Updated dependencies [65e8749]
+  - @platforma-open/milaboratories.top-antibodies.model@1.10.2
+
 ## 1.8.9
 
 ### Patch Changes

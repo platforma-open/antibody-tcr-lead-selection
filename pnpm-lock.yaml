@@ -10,7 +10,7 @@ catalogs:
       specifier: ^2.28.1
       version: 2.29.7
     '@milaboratories/graph-maker':
-      specifier: ^1.1.166
+      specifier: ^1.1.173
       version: 1.1.173
     '@platforma-open/milaboratories.runenv-python-3':
       specifier: ^1.4.9
@@ -19,7 +19,7 @@ catalogs:
       specifier: ^0.0.3
       version: 0.0.3
     '@platforma-sdk/block-tools':
-      specifier: ^2.6.4
+      specifier: ^2.6.15
       version: 2.6.15
     '@platforma-sdk/blocks-deps-updater':
       specifier: ^2.0.0
@@ -28,22 +28,22 @@ catalogs:
       specifier: ^1.1.0
       version: 1.1.0
     '@platforma-sdk/model':
-      specifier: ^1.43.2
+      specifier: ^1.44.14
       version: 1.44.14
     '@platforma-sdk/package-builder':
-      specifier: ^3.8.1
+      specifier: ^3.10.5
       version: 3.10.5
     '@platforma-sdk/tengo-builder':
-      specifier: ^2.3.0
+      specifier: ^2.3.2
       version: 2.3.2
     '@platforma-sdk/test':
-      specifier: ^1.44.7
+      specifier: ^1.44.19
       version: 1.44.19
     '@platforma-sdk/ui-vue':
-      specifier: ^1.43.2
+      specifier: ^1.44.15
       version: 1.44.15
     '@platforma-sdk/workflow-tengo':
-      specifier: ^5.4.0
+      specifier: ^5.4.2
       version: 5.4.2
     '@vitejs/plugin-vue':
       specifier: ^5.2.1
@@ -184,7 +184,7 @@ importers:
     devDependencies:
       '@platforma-sdk/test':
         specifier: 'catalog:'
-        version: 1.44.19(@types/node@24.9.1)(sass-embedded@1.93.2)(sass@1.93.2)
+        version: 1.44.19(@types/node@24.5.2)(sass-embedded@1.89.0)
       typescript:
         specifier: 'catalog:'
         version: 5.6.3
@@ -267,7 +267,7 @@ importers:
         version: 2.3.2
       '@platforma-sdk/test':
         specifier: 'catalog:'
-        version: 1.44.19(@types/node@24.9.1)(sass-embedded@1.93.2)(sass@1.93.2)
+        version: 1.44.19(@types/node@24.5.2)(sass-embedded@1.89.0)
       vitest:
         specifier: 'catalog:'
         version: 2.1.9(@types/node@24.9.1)(sass-embedded@1.93.2)(sass@1.93.2)
@@ -1153,6 +1153,9 @@ packages:
     resolution: {integrity: sha512-Eg3AQMJbVClYhdvhogdlW3Ys9EdLLl8ZTqG675iLwoO64ZJcQOAnIPjXwl4zJ/bZWx4nEhRF9AvwxRdc08fikQ==}
     engines: {node: '>=22'}
 
+  '@milaboratories/miplots4@1.0.154':
+    resolution: {integrity: sha512-QrHMh96EnOESF1E51vYHUXwae8gHbBaDKOXmuD1PtKHD0AYH7kWhSwV3p4vTOh09Nfhnh7X3SebOMxUIOAO5ww==}
+
   '@milaboratories/miplots4@1.0.155':
     resolution: {integrity: sha512-DapqlH2rdKGryhwF47fFwxv03dOROpVjRhpi3EmI/vHoDqEAeRmBNRalhkh8NOLaP5y9Rt7WqLh+ZW6oz8KxMQ==}
 
@@ -1347,12 +1350,6 @@ packages:
 
   '@platforma-open/milaboratories.runenv-python-3.12.10@1.2.19':
     resolution: {integrity: sha512-rgeODG9cgB5Y6cRqbpSuyDuk3xL6eZwJHBHdN5OT3KOfH75FNgWtd2+yuS57haPeOqwQAxDwcbvQ5r7Eo3jvAw==}
-
-  '@platforma-open/milaboratories.runenv-python-3@1.5.8':
-    resolution: {integrity: sha512-GJh4FMXvXCBZutsAJeyw4vxOSsoSIKEYOaYaBmsY4HO/qmWpYlj5l7w5YBK0xBog+q6w0JntWpX3X5yXo8OWyA==}
-
-  '@platforma-open/milaboratories.software-anarci@0.0.3':
-    resolution: {integrity: sha512-BtzWsu32K/V7Sw3uCS/lzkILoI+JVHYl7mE3PNf0UEj1ZImjlRFuMFbo/t8LpywYTAGdUIwR9cu2i6ayq/hDGQ==}
 
   '@platforma-open/milaboratories.software-ptabler@1.12.10':
     resolution: {integrity: sha512-sYRbmb1Yhy60YfudrPx+9/BLqhKgsfwyoctoyvdq8UBbaYpQqZotwJ8ByciDP3utVta3KeLERLhjcRmBEOEVCA==}
@@ -5592,9 +5589,6 @@ packages:
   undici-types@7.12.0:
     resolution: {integrity: sha512-goOacqME2GYyOZZfb5Lgtu+1IDmAlAEu5xnD3+xTzS10hT0vzpf0SPjkXwAw9Jm+4n/mQGDP3LO8CPbYROeBfQ==}
 
-  undici-types@7.16.0:
-    resolution: {integrity: sha512-Zz+aZWSj8LE6zoxD+xrjh4VfkIG8Ya6LvYkZqtUQGJPZjYl53ypCaUwWqo7eI0x66KBGeRo+mlBEkMSeSZ38Nw==}
-
   undici@7.16.0:
     resolution: {integrity: sha512-QEg3HPMll0o3t2ourKwOeUAZ159Kn9mx5pnzHRQO8+Wixmh88YdZRiIwat0iNzNNXn0yoEtXJqFpyW7eM8BV7g==}
     engines: {node: '>=20.18.1'}
@@ -6961,7 +6955,7 @@ snapshots:
 
   '@milaboratories/graph-maker@1.1.173(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(sortablejs@1.15.6)(typescript@5.6.3)':
     dependencies:
-      '@ag-grid-community/core': 32.3.9
+      '@ag-grid-community/core': 32.3.5
       '@milaboratories/helpers': 1.12.0
       '@milaboratories/miplots4': 1.0.155(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)
       '@milaboratories/pf-plots': 1.1.41
@@ -6996,7 +6990,7 @@ snapshots:
 
   '@milaboratories/helpers@1.12.0': {}
 
-  '@milaboratories/miplots4@1.0.155(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)':
+  '@milaboratories/miplots4@1.0.154(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)':
     dependencies:
       '@d3fc/d3fc-chart': 5.1.9(d3-array@3.2.4)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(d3-scale@4.0.2)(d3-selection@3.0.0)(d3-shape@3.2.0)
       '@d3fc/d3fc-pointer': 3.0.3(d3-dispatch@3.0.1)(d3-selection@3.0.0)
@@ -7025,6 +7019,60 @@ snapshots:
       '@types/rbush': 4.0.0
       '@types/react': 18.3.26
       '@types/react-dom': 18.3.7(@types/react@18.3.26)
+      d3-array: 3.2.4
+      d3-axis: 3.0.0
+      d3-color: 3.1.0
+      d3-drag: 3.0.0
+      d3-format: 3.1.0
+      d3-hierarchy: 3.1.2
+      d3-polygon: 3.0.1
+      d3-quadtree: 3.0.1
+      d3-random: 3.0.1
+      d3-scale: 4.0.2
+      d3-selection: 3.0.0
+      d3-shape: 3.2.0
+      d3-zoom: 3.0.0
+      kdbush: 4.0.2
+      lodash: 4.17.21
+      rbush: 4.0.1
+      react: 18.3.1
+      react-dom: 18.3.1(react@18.3.1)
+      zod: 3.23.8
+    transitivePeerDependencies:
+      - d3-dispatch
+      - d3-path
+      - d3-scale-chromatic
+      - supports-color
+
+  '@milaboratories/miplots4@1.0.155(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)':
+    dependencies:
+      '@d3fc/d3fc-chart': 5.1.9(d3-array@3.2.4)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(d3-scale@4.0.2)(d3-selection@3.0.0)(d3-shape@3.2.0)
+      '@d3fc/d3fc-pointer': 3.0.3(d3-dispatch@3.0.1)(d3-selection@3.0.0)
+      '@d3fc/d3fc-webgl': 3.2.1(d3-scale@4.0.2)(d3-shape@3.2.0)
+      '@stdlib/stats-anova1': 0.2.2
+      '@stdlib/stats-kruskal-test': 0.2.2
+      '@stdlib/stats-ttest': 0.2.2
+      '@stdlib/stats-ttest2': 0.2.2
+      '@stdlib/stats-wilcoxon': 0.2.2
+      '@types/d3-array': 3.2.1
+      '@types/d3-axis': 3.0.6
+      '@types/d3-color': 3.1.3
+      '@types/d3-drag': 3.0.7
+      '@types/d3-format': 3.0.4
+      '@types/d3-hierarchy': 3.1.7
+      '@types/d3-polygon': 3.0.2
+      '@types/d3-quadtree': 3.0.6
+      '@types/d3-random': 3.0.3
+      '@types/d3-scale': 4.0.9
+      '@types/d3-selection': 3.0.11
+      '@types/d3-shape': 3.1.7
+      '@types/d3-zoom': 3.0.8
+      '@types/kdbush': 3.0.5
+      '@types/lodash': 4.17.19
+      '@types/node': 18.15.3
+      '@types/rbush': 4.0.0
+      '@types/react': 18.3.23
+      '@types/react-dom': 18.3.7(@types/react@18.3.23)
       d3-array: 3.2.4
       d3-axis: 3.0.0
       d3-color: 3.1.0
@@ -7220,7 +7268,7 @@ snapshots:
   '@milaboratories/pl-model-middle-layer@1.8.34':
     dependencies:
       '@milaboratories/pl-model-common': 1.21.3
-      remeda: 2.32.0
+      remeda: 2.30.0
       utility-types: 3.11.0
       zod: 3.23.8
 
@@ -7246,7 +7294,7 @@ snapshots:
   '@milaboratories/ts-helpers-oclif@1.1.30':
     dependencies:
       '@milaboratories/ts-helpers': 1.5.1
-      '@oclif/core': 4.7.0
+      '@oclif/core': 4.2.6
 
   '@milaboratories/ts-helpers@1.5.1':
     dependencies:
@@ -7257,7 +7305,7 @@ snapshots:
     dependencies:
       '@milaboratories/helpers': 1.12.0
       '@platforma-sdk/model': 1.44.14
-      '@types/d3-array': 3.2.2
+      '@types/d3-array': 3.2.1
       '@types/d3-axis': 3.0.6
       '@types/d3-scale': 4.0.9
       '@types/d3-selection': 3.0.11
@@ -7484,7 +7532,7 @@ snapshots:
       eslint-plugin-vue: 9.33.0(eslint@9.38.0)
       globals: 15.15.0
       typescript: 5.6.3
-      typescript-eslint: 8.46.2(eslint@9.38.0)(typescript@5.6.3)
+      typescript-eslint: 8.24.0(eslint@9.23.0)(typescript@5.6.3)
 
   '@platforma-sdk/model@1.44.14':
     dependencies:
@@ -7504,9 +7552,9 @@ snapshots:
       '@types/node': 24.5.2
       archiver: 7.0.1
       canonicalize: 2.1.0
-      tar: 7.5.1
+      tar: 7.4.3
       undici: 7.16.0
-      winston: 3.18.3
+      winston: 3.17.0
       yaml: 2.8.1
       zod: 4.1.12
     transitivePeerDependencies:
@@ -7526,7 +7574,7 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@platforma-sdk/test@1.44.19(@types/node@24.9.1)(sass-embedded@1.93.2)(sass@1.93.2)':
+  '@platforma-sdk/test@1.44.19(@types/node@24.5.2)(sass-embedded@1.89.0)':
     dependencies:
       '@milaboratories/computable': 2.7.1
       '@milaboratories/pl-client': 2.16.0
@@ -7534,7 +7582,7 @@ snapshots:
       '@milaboratories/pl-tree': 1.8.7
       '@milaboratories/ts-helpers': 1.5.1
       '@platforma-sdk/model': 1.44.14
-      vitest: 2.1.9(@types/node@24.9.1)(sass-embedded@1.93.2)(sass@1.93.2)
+      vitest: 2.1.9(@types/node@24.5.2)(sass-embedded@1.89.0)
     transitivePeerDependencies:
       - '@edge-runtime/vm'
       - '@types/node'
@@ -7560,20 +7608,20 @@ snapshots:
   '@platforma-sdk/ui-vue@1.44.15(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)(sortablejs@1.15.6)(typescript@5.6.3)':
     dependencies:
       '@milaboratories/biowasm-tools': 2.0.0
-      '@milaboratories/miplots4': 1.0.155(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)
+      '@milaboratories/miplots4': 1.0.154(d3-dispatch@3.0.1)(d3-path@3.1.0)(d3-scale-chromatic@3.1.0)
       '@milaboratories/uikit': 2.4.30(typescript@5.6.3)
       '@platforma-sdk/model': 1.44.14
       '@types/d3-format': 3.0.4
       '@types/node': 24.5.2
-      '@types/semver': 7.7.1
-      '@vueuse/core': 13.9.0(vue@3.5.22(typescript@5.6.3))
-      '@vueuse/integrations': 13.9.0(sortablejs@1.15.6)(vue@3.5.22(typescript@5.6.3))
-      ag-grid-enterprise: 34.3.0
-      ag-grid-vue3: 34.3.0(vue@3.5.22(typescript@5.6.3))
+      '@types/semver': 7.7.0
+      '@vueuse/core': 13.4.0(vue@3.5.13(typescript@5.6.3))
+      '@vueuse/integrations': 13.4.0(sortablejs@1.15.6)(vue@3.5.13(typescript@5.6.3))
+      ag-grid-enterprise: 34.2.0
+      ag-grid-vue3: 34.2.0(vue@3.5.13(typescript@5.6.3))
       canonicalize: 2.1.0
       d3-format: 3.1.0
       lru-cache: 11.2.2
-      vue: 3.5.22(typescript@5.6.3)
+      vue: 3.5.13(typescript@5.6.3)
       zod: 3.23.8
     transitivePeerDependencies:
       - async-validator
@@ -12516,8 +12564,6 @@ snapshots:
       through: 2.3.8
 
   undici-types@7.12.0: {}
-
-  undici-types@7.16.0: {}
 
   undici@7.16.0: {}
 
