@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.11.3
+
+### Patch Changes
+
+- 44895be: Support parquet format
+
 ## 1.11.2
 
 ### Patch Changes
