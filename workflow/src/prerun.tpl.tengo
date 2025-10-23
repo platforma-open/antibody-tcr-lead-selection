@@ -77,7 +77,6 @@ wf.prepare(func(args){
 		name: "pl7.app/vdj/sequence",
 		domain: {
 			"pl7.app/alphabet": "aminoacid",
-            "pl7.app/vdj/scClonotypeChain/index": "primary",
 			"pl7.app/vdj/feature": "CDR3"    // Specify CDR3 feature
 		}
 	}, "cdr3Sequences") // New collection name for CDR3 sequences

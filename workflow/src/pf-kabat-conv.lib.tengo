@@ -119,7 +119,7 @@ getColumns := func(datasetSpec, featureName, bulkChain) {
       }
     ],
     columns: cols,
-    storageFormat: "Binary",
+    storageFormat: "Parquet",
     partitionKeyLength: 0
   }
 }

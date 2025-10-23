@@ -42,6 +42,7 @@ self.body(func(inputs) {
         software(anarciSw).
         arg("-i").arg("assembling.fasta").
         arg("--scheme").arg("kabat").
+        arg("--ncpu").argWithVar("{system.cpu}").
         arg("-o").arg("anarci.csv").arg("--csv").
         addFile("assembling.fasta", cmd.getFile("assembling.fasta"))
     if isSingleCell {
@@ -81,54 +82,6 @@ self.body(func(inputs) {
         run()
     
     kabat := kabatExec.getFile("kabat.tsv")
-
-    //kabatDf := wf.frame(kabatExec.getFile("kabat.tsv"), { xsvType: "tsv", inferSchema: false })
-
-    // savedH := false
-    // savedKL := false
-    // if isSingleCell {
-    //     anarciBuilder = anarciBuilder.saveFile("anarci.csv_H.csv")
-    //     anarciBuilder = anarciBuilder.saveFile("anarci.csv_KL.csv")
-    //     savedH = true
-    //     savedKL = true
-    // } else {
-    //     if bulkChain == "H" {
-    //         anarciBuilder = anarciBuilder.saveFile("anarci.csv_H.csv")
-    //         savedH = true
-    //     } else {
-    //         anarciBuilder = anarciBuilder.saveFile("anarci.csv_KL.csv")
-    //         savedKL = true
-    //     }
-    // }
-
-    // anarciCmd := anarciBuilder.
-    //     printErrStreamToStdout().
-    //     saveStdoutContent().
-    //     cache(24 * 60 * 60 * 1000).
-    //     run()
-
-    // // Build KABAT table via software package
-    // kabatSw := assets.importSoftware("@platforma-open/milaboratories.top-antibodies.anarci-kabat:main")
-    // kabatExec := exec.builder().
-    //     software(kabatSw)
-    // if savedH {
-    //     kabatExec = kabatExec.addFile("anarci.csv_H.csv", anarciCmd.getFile("anarci.csv_H.csv")).
-    //         arg("--h_csv").arg("anarci.csv_H.csv")
-    // }
-    // if savedKL {
-    //     kabatExec = kabatExec.addFile("anarci.csv_KL.csv", anarciCmd.getFile("anarci.csv_KL.csv")).
-    //         arg("--kl_csv").arg("anarci.csv_KL.csv")
-    // }
-    // kabatExec = kabatExec.
-    //     arg("--out_tsv").arg("kabat.tsv").
-    //     saveFile("kabat.tsv").
-    //     printErrStreamToStdout().
-    //     saveStdoutContent().
-    //     cache(24 * 60 * 60 * 1000).
-    //     run()
-
-    // Read kabat.tsv into a PFrame (columns may vary between bulk and single-cell)
-   // kabatDf := wf.frame(kabatExec.getFile("kabat.tsv"), { xsvType: "tsv", inferSchema: false })
 
     return {
         kabat: kabat
