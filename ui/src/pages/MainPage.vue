@@ -11,9 +11,10 @@ import {
   PlNumberField,
   PlSectionSeparator,
   PlSlideModal,
+  PlCheckbox,
   usePlDataTableSettingsV2,
 } from '@platforma-sdk/ui-vue';
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { useApp } from '../app';
 import {
   isSequenceColumn,
@@ -74,6 +75,18 @@ watch(() => [app.model.outputs.rankingOptions], (_) => {
 const selection = ref<PlSelectionModel>({
   axesSpec: [],
   selectedKeys: [],
+});
+
+// Temporary typed bridge until model types are regenerated
+const kabatNumbering = computed<boolean>({
+  get: () => (app.model.args.kabatNumbering ?? false),
+  set: (v: boolean) => (app.model.args.kabatNumbering = v),
+});
+
+// Disable and reset Kabat until sampling number is set
+const isSamplingConfigured = computed<boolean>(() => app.model.args.topClonotypes !== undefined);
+watch(() => app.model.args.topClonotypes, (newVal) => {
+  if (newVal === undefined) kabatNumbering.value = false;
 });
 </script>
 
@@ -137,6 +150,10 @@ const selection = ref<PlSelectionModel>({
       </PlNumberField>
 
       <RankList />
+
+      <PlCheckbox v-if="isSamplingConfigured" v-model="kabatNumbering">
+        Kabat numbering
+      </PlCheckbox>
 
       <PlAlert v-if="app.model.ui.rankingOrder.length === 0 && app.model.args.topClonotypes !== undefined" type="warn">
         {{ "Warning: If you don't select any Clonotype Ranking columns to pick the top candidates, '" + defaultRankingLabel + "' will be used by default in decreasing order" }}

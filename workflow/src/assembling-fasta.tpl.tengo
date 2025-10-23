@@ -1,0 +1,92 @@
+self := import("@platforma-sdk/workflow-tengo:tpl")
+exec := import("@platforma-sdk/workflow-tengo:exec")
+assets := import("@platforma-sdk/workflow-tengo:assets")
+wf := import("@platforma-sdk/workflow-tengo:workflow")
+pt := import("@platforma-sdk/workflow-tengo:pt")
+pframes := import("@platforma-sdk/workflow-tengo:pframes")
+anarciSw := assets.importSoftware("@platforma-open/milaboratories.software-anarci:main")
+
+self.defineOutputs("kabat")
+
+self.body(func(inputs) {
+
+    inputTsv := inputs.inputTsv
+    keyColumn := inputs.keyColumn // "clonotypeKey" or "scClonotypeKey"
+    finalClonotypesCsv := inputs.finalClonotypesCsv // optional
+    isSingleCell := inputs.isSingleCell // boolean
+    bulkChain := inputs.bulkChain // "H" or "KL" when !isSingleCell
+
+    cmd := exec.builder().
+        software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.assembling-fasta:main")).
+        cpu(1).
+        mem("4GiB").
+        addFile("assembling.tsv", inputTsv).
+        arg("--input_tsv").arg("assembling.tsv").
+        arg("--key_column").arg(keyColumn).
+        arg("--output_fasta").arg("assembling.fasta")
+
+    if finalClonotypesCsv != undefined {
+        cmd = cmd.addFile("finalClonotypes.csv", finalClonotypesCsv).
+            arg("--final_clonotypes_csv").arg("finalClonotypes.csv")
+    }
+
+    cmd = cmd.saveFile("assembling.fasta").
+        printErrStreamToStdout().
+        saveStdoutContent().
+        cache(24 * 60 * 60 * 1000).
+        run()
+    
+    anarciFileNameBulk := "anarci.csv_" + bulkChain + ".csv"
+    
+     anarciBuilder := exec.builder().
+        software(anarciSw).
+        arg("-i").arg("assembling.fasta").
+        arg("--scheme").arg("kabat").
+        arg("--ncpu").argWithVar("{system.cpu}").
+        arg("-o").arg("anarci.csv").arg("--csv").
+        addFile("assembling.fasta", cmd.getFile("assembling.fasta"))
+    if isSingleCell {
+        anarciBuilder = anarciBuilder.saveFile("anarci.csv_H.csv").saveFile("anarci.csv_KL.csv")
+    } else {
+        anarciBuilder = anarciBuilder.saveFile(anarciFileNameBulk)
+    }
+    anarciBuilder = anarciBuilder.
+        printErrStreamToStdout().
+        saveStdoutContent().
+        cache(24 * 60 * 60 * 1000).
+        run()
+
+    kabatSw := assets.importSoftware("@platforma-open/milaboratories.top-antibodies.anarci-kabat:main")
+    kabatExec := exec.builder().
+        software(kabatSw)
+    if isSingleCell {
+        kabatExec = kabatExec.addFile("anarci.csv_KL.csv", anarciBuilder.getFile("anarci.csv_KL.csv")).
+            arg("--kl_csv").arg("anarci.csv_KL.csv").
+        addFile("anarci.csv_H.csv", anarciBuilder.getFile("anarci.csv_H.csv")).
+            arg("--h_csv").arg("anarci.csv_H.csv")
+    } else {
+        if bulkChain == "H" {
+            kabatExec = kabatExec.addFile("anarci.csv_H.csv", anarciBuilder.getFile("anarci.csv_H.csv")).
+                arg("--h_csv").arg("anarci.csv_H.csv")
+        } else {
+            kabatExec = kabatExec.addFile("anarci.csv_KL.csv", anarciBuilder.getFile("anarci.csv_KL.csv")).
+                arg("--kl_csv").arg("anarci.csv_KL.csv")
+        }
+    }
+    kabatExec = kabatExec.
+        arg("--out_tsv").arg("kabat.tsv").
+        saveFile("kabat.tsv").
+        printErrStreamToStdout().
+        saveStdoutContent().
+        cache(24 * 60 * 60 * 1000).
+        run()
+    
+    kabat := kabatExec.getFile("kabat.tsv")
+
+    return {
+        kabat: kabat
+      //  kabatPf: pframes.exportFrame(kabatDf)
+    }
+})
+
+
