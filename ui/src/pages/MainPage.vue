@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PlRef, PlSelectionModel } from '@platforma-sdk/model';
+import { createPlDataTableStateV2 } from '@platforma-sdk/model';
 import { plRefsEqual } from '@platforma-sdk/model';
 import {
   PlAgDataTableV2,
@@ -11,9 +12,12 @@ import {
   PlNumberField,
   PlSectionSeparator,
   PlSlideModal,
+  PlCheckbox,
+  PlTooltip,
+  PlIcon16,
   usePlDataTableSettingsV2,
 } from '@platforma-sdk/ui-vue';
-import { ref, watch } from 'vue';
+import { ref, watch, computed } from 'vue';
 import { useApp } from '../app';
 import {
   isSequenceColumn,
@@ -74,6 +78,40 @@ watch(() => [app.model.outputs.rankingOptions], (_) => {
 const selection = ref<PlSelectionModel>({
   axesSpec: [],
   selectedKeys: [],
+});
+
+// Temporary typed bridge until model types are regenerated
+const kabatNumbering = computed<boolean>({
+  get: () => (app.model.args.kabatNumbering ?? false),
+  set: (v: boolean) => (app.model.args.kabatNumbering = v),
+});
+
+// Detect if selected dataset is Immunoglobulins (IG) vs TCR
+const isIGDataset = computed<boolean | undefined>(() => {
+  const spec = app.model.outputs.inputAnchorSpec;
+  if (!spec?.axesSpec || spec.axesSpec.length < 2) return undefined;
+
+  // Single cell: second axis has receptor domain
+  const isSingleCell = spec.axesSpec?.[1]?.name === 'pl7.app/vdj/scClonotypeKey';
+  if (isSingleCell) {
+    const receptor = spec.axesSpec?.[1]?.domain?.['pl7.app/vdj/receptor'];
+    return receptor === 'IG';
+  }
+
+  // Bulk: first second axis has chain domain
+  const chain = spec.axesSpec?.[1]?.domain?.['pl7.app/vdj/chain'];
+  return chain === 'IGHeavy' || chain === 'IGLight';
+});
+
+// Disable and reset Kabat until sampling number is set
+const isSamplingConfigured = computed<boolean>(() => app.model.args.topClonotypes !== undefined);
+watch(() => app.model.args.topClonotypes, (newVal) => {
+  if (newVal === undefined) kabatNumbering.value = false;
+});
+
+// Reset table state when dataset or Kabat toggle changes to re-apply defaults (like optional visibility)
+watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
+  app.model.ui.tableState = createPlDataTableStateV2();
 });
 </script>
 
@@ -137,6 +175,20 @@ const selection = ref<PlSelectionModel>({
       </PlNumberField>
 
       <RankList />
+      <template v-if="isSamplingConfigured && isIGDataset">
+        <PlSectionSeparator>
+          Antibody numbering
+        </PlSectionSeparator>
+        <PlCheckbox v-model="kabatNumbering">
+          Kabat numbering
+          <PlTooltip class="info" position="top">
+            <PlIcon16 name="info"/>
+            <template #tooltip>
+              Applies Kabat numbering to the whole VDJ region amino acid sequences. Produces two columns: Kabat sequence and Kabat positions (per chain where applicable).
+            </template>
+          </PlTooltip>
+        </PlCheckbox>
+      </template>
 
       <PlAlert v-if="app.model.ui.rankingOrder.length === 0 && app.model.args.topClonotypes !== undefined" type="warn">
         {{ "Warning: If you don't select any Clonotype Ranking columns to pick the top candidates, '" + defaultRankingLabel + "' will be used by default in decreasing order" }}

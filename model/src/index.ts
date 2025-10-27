@@ -25,6 +25,7 @@ export type BlockArgs = {
   rankingOrder: RankingOrder[];
   rankingOrderDefault?: RankingOrder;
   filters: Filter[];
+  kabatNumbering?: boolean;
 };
 
 export type UiState = {
@@ -98,6 +99,12 @@ export const model = BlockModel.create()
       annotations: { 'pl7.app/isAnchor': 'true' },
     }], { refsWithEnrichments: true }),
   )
+
+  .output('inputAnchorSpec', (ctx) => {
+    const ref = ctx.args.inputAnchor;
+    if (ref === undefined) return undefined;
+    return ctx.resultPool.getPColumnSpecByRef(ref);
+  }, { retentive: true })
 
   .output('defaultRankingOrder', (ctx) => {
     const anchor = ctx.args.inputAnchor;
@@ -263,6 +270,12 @@ export const model = BlockModel.create()
       allowPermanentAbsence: true,
     })?.getPColumns();
 
+    const assemblingKabatPf = ctx.prerun?.resolve({
+      field: 'assemblingKabatPf',
+      assertFieldType: 'Input',
+      allowPermanentAbsence: true,
+    })?.getPColumns();
+
     let ops: CreatePlDataTableOps = {};
     const cols: Column[] = [];
 
@@ -272,6 +285,9 @@ export const model = BlockModel.create()
     } else {
       // Use sampled rows if available (ranking applied), otherwise use filtered clonotypes
       cols.push(...props, ...sampledRows);
+      if (assemblingKabatPf !== undefined) {
+        cols.push(...assemblingKabatPf);
+      }
       ops = {
         coreColumnPredicate: (col) => col.spec.name === 'pl7.app/vdj/sampling-column',
         coreJoinType: 'inner',
@@ -286,12 +302,27 @@ export const model = BlockModel.create()
     );
   }, { retentive: true })
 
-  .output('calculating', (ctx) => ctx.args.inputAnchor !== undefined
-    && ctx.prerun?.resolve({
+  .output('calculating', (ctx) => {
+    if (ctx.args.inputAnchor === undefined)
+      return false;
+
+    const sampledReady = ctx.prerun?.resolve({
       field: 'sampledRows',
       assertFieldType: 'Input',
       allowPermanentAbsence: true,
-    }) === undefined)
+    }) !== undefined;
+
+    let kabatReady = true;
+    if (ctx.args.kabatNumbering === true) {
+      kabatReady = ctx.prerun?.resolve({
+        field: 'assemblingKabatPf',
+        assertFieldType: 'Input',
+        allowPermanentAbsence: true,
+      }) !== undefined;
+    }
+
+    return !(sampledReady && kabatReady);
+  })
 
   // Use UMAP output from ctx from clonotype-space block
   .output('umapPf', (ctx): PFrameHandle | undefined => {
