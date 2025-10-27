@@ -100,6 +100,12 @@ export const model = BlockModel.create()
     }], { refsWithEnrichments: true }),
   )
 
+  .output('inputAnchorSpec', (ctx) => {
+    const ref = ctx.args.inputAnchor;
+    if (ref === undefined) return undefined;
+    return ctx.resultPool.getPColumnSpecByRef(ref);
+  }, { retentive: true })
+
   .output('defaultRankingOrder', (ctx) => {
     const anchor = ctx.args.inputAnchor;
     if (anchor === undefined)

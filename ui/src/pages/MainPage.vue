@@ -86,6 +86,23 @@ const kabatNumbering = computed<boolean>({
   set: (v: boolean) => (app.model.args.kabatNumbering = v),
 });
 
+// Detect if selected dataset is Immunoglobulins (IG) vs TCR
+const isIGDataset = computed<boolean | undefined>(() => {
+  const spec = app.model.outputs.inputAnchorSpec;
+  if (!spec?.axesSpec || spec.axesSpec.length < 2) return undefined;
+
+  // Single cell: second axis has receptor domain
+  const isSingleCell = spec.axesSpec?.[1]?.name === 'pl7.app/vdj/scClonotypeKey';
+  if (isSingleCell) {
+    const receptor = spec.axesSpec?.[1]?.domain?.['pl7.app/vdj/receptor'];
+    return receptor === 'IG';
+  }
+
+  // Bulk: first second axis has chain domain
+  const chain = spec.axesSpec?.[1]?.domain?.['pl7.app/vdj/chain'];
+  return chain === 'IGHeavy' || chain === 'IGLight';
+});
+
 // Disable and reset Kabat until sampling number is set
 const isSamplingConfigured = computed<boolean>(() => app.model.args.topClonotypes !== undefined);
 watch(() => app.model.args.topClonotypes, (newVal) => {
@@ -158,7 +175,7 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
       </PlNumberField>
 
       <RankList />
-      <template v-if="isSamplingConfigured">
+      <template v-if="isSamplingConfigured && isIGDataset">
         <PlSectionSeparator>
           Antibody numbering
         </PlSectionSeparator>
