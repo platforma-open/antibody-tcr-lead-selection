@@ -1,5 +1,19 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.12.0
+
+### Minor Changes
+
+- ccc8076: kabat numbering added
+
+### Patch Changes
+
+- Updated dependencies [ccc8076]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.5.0
+  - @platforma-open/milaboratories.top-antibodies.assembling-fasta@1.1.0
+  - @platforma-open/milaboratories.top-antibodies.anarci-kabat@1.1.0
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.5.0
+
 ## 1.11.3
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.9.0
+
+### Minor Changes
+
+- ccc8076: kabat numbering added
+
+### Patch Changes
+
+- Updated dependencies [ccc8076]
+  - @platforma-open/milaboratories.top-antibodies.model@1.11.0
+
 ## 1.8.11
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 1.5.0
+
+### Minor Changes
+
+- ccc8076: kabat numbering added
+
 ## 1.4.4
 
 ### Patch Changes
