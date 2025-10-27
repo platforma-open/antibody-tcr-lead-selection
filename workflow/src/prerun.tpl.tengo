@@ -232,7 +232,7 @@ wf.body(func(args) {
                 // Add the cluster axis header
                 for axisIdx, axis in col.spec.axesSpec {
                     if axis.name != datasetSpec.axesSpec[1].name {
-                        cloneTable.setAxisHeader(axis.name, "clusterAxis_" + string(i) + "_" + string(axisIdx))
+                        cloneTable.setAxisHeader(axis, "clusterAxis_" + string(i) + "_" + string(axisIdx))
                     }
                 }
             }
