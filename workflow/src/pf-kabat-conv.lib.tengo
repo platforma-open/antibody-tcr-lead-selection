@@ -19,7 +19,7 @@ getColumns := func(datasetSpec, featureName, bulkChain) {
         annotations: {
           "pl7.app/label": "KABAT sequence " + featureName + " Heavy",
           "pl7.app/table/orderPriority": "10",
-		  "pl7.app/table/visibility": "optional"
+		      "pl7.app/table/visibility": "default"
         }
       }
     },
@@ -34,7 +34,7 @@ getColumns := func(datasetSpec, featureName, bulkChain) {
         annotations: {
           "pl7.app/label": "KABAT positions " + featureName + " Heavy",
           "pl7.app/table/orderPriority": "9",
-		  "pl7.app/table/visibility": "optional"
+		      "pl7.app/table/visibility": "optional"
         }
       }
     }
@@ -53,7 +53,7 @@ getColumns := func(datasetSpec, featureName, bulkChain) {
           annotations: {
             "pl7.app/label": "KABAT sequence " + featureName + " Light",
             "pl7.app/table/orderPriority": "8",
-		    "pl7.app/table/visibility": "optional"
+		        "pl7.app/table/visibility": "default"
           }
         }
       },
@@ -68,7 +68,7 @@ getColumns := func(datasetSpec, featureName, bulkChain) {
           annotations: {
             "pl7.app/label": "KABAT positions " + featureName + " Light",
             "pl7.app/table/orderPriority": "7",
-		    "pl7.app/table/visibility": "optional"
+		        "pl7.app/table/visibility": "optional"
           }
         }
       }
@@ -88,7 +88,7 @@ getColumns := func(datasetSpec, featureName, bulkChain) {
             annotations: {
               "pl7.app/label": "KABAT sequence " + featureName + " Light",
               "pl7.app/table/orderPriority": "8",
- 		      "pl7.app/table/visibility": "optional"
+ 		          "pl7.app/table/visibility": "default"
             }
           }
         },
@@ -103,7 +103,7 @@ getColumns := func(datasetSpec, featureName, bulkChain) {
             annotations: {
               "pl7.app/label": "KABAT positions " + featureName + " Light",
               "pl7.app/table/orderPriority": "7",
- 		      "pl7.app/table/visibility": "optional"
+ 		          "pl7.app/table/visibility": "optional"
             }
           }
         }

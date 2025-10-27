@@ -296,12 +296,27 @@ export const model = BlockModel.create()
     );
   }, { retentive: true })
 
-  .output('calculating', (ctx) => ctx.args.inputAnchor !== undefined
-    && ctx.prerun?.resolve({
+  .output('calculating', (ctx) => {
+    if (ctx.args.inputAnchor === undefined)
+      return false;
+
+    const sampledReady = ctx.prerun?.resolve({
       field: 'sampledRows',
       assertFieldType: 'Input',
       allowPermanentAbsence: true,
-    }) === undefined)
+    }) !== undefined;
+
+    let kabatReady = true;
+    if (ctx.args.kabatNumbering === true) {
+      kabatReady = ctx.prerun?.resolve({
+        field: 'assemblingKabatPf',
+        assertFieldType: 'Input',
+        allowPermanentAbsence: true,
+      }) !== undefined;
+    }
+
+    return !(sampledReady && kabatReady);
+  })
 
   // Use UMAP output from ctx from clonotype-space block
   .output('umapPf', (ctx): PFrameHandle | undefined => {

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { PlRef, PlSelectionModel } from '@platforma-sdk/model';
+import { createPlDataTableStateV2 } from '@platforma-sdk/model';
 import { plRefsEqual } from '@platforma-sdk/model';
 import {
   PlAgDataTableV2,
@@ -12,6 +13,8 @@ import {
   PlSectionSeparator,
   PlSlideModal,
   PlCheckbox,
+  PlTooltip,
+  PlIcon16,
   usePlDataTableSettingsV2,
 } from '@platforma-sdk/ui-vue';
 import { ref, watch, computed } from 'vue';
@@ -88,6 +91,11 @@ const isSamplingConfigured = computed<boolean>(() => app.model.args.topClonotype
 watch(() => app.model.args.topClonotypes, (newVal) => {
   if (newVal === undefined) kabatNumbering.value = false;
 });
+
+// Reset table state when dataset or Kabat toggle changes to re-apply defaults (like optional visibility)
+watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
+  app.model.ui.tableState = createPlDataTableStateV2();
+});
 </script>
 
 <template>
@@ -150,10 +158,20 @@ watch(() => app.model.args.topClonotypes, (newVal) => {
       </PlNumberField>
 
       <RankList />
-
-      <PlCheckbox v-if="isSamplingConfigured" v-model="kabatNumbering">
-        Kabat numbering
-      </PlCheckbox>
+      <template v-if="isSamplingConfigured">
+        <PlSectionSeparator>
+          Antibody numbering
+        </PlSectionSeparator>
+        <PlCheckbox v-model="kabatNumbering">
+          Kabat numbering
+          <PlTooltip class="info" position="top">
+            <PlIcon16 name="info"/>
+            <template #tooltip>
+              Applies Kabat numbering to the whole VDJ region amino acid sequences. Produces two columns: Kabat sequence and Kabat positions (per chain where applicable).
+            </template>
+          </PlTooltip>
+        </PlCheckbox>
+      </template>
 
       <PlAlert v-if="app.model.ui.rankingOrder.length === 0 && app.model.args.topClonotypes !== undefined" type="warn">
         {{ "Warning: If you don't select any Clonotype Ranking columns to pick the top candidates, '" + defaultRankingLabel + "' will be used by default in decreasing order" }}
