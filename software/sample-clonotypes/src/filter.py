@@ -32,17 +32,17 @@ def apply_filter(df, column_name, filter_type, reference_value):
     print(f"Applying filter: {column_name} {filter_type} {reference_value}")
     
     if filter_type == "number_greaterThan":
-        return df.filter(pl.col(column_name) > reference_value)
+        return df.filter((pl.col(column_name) > reference_value) & (pl.col(column_name).is_not_nan()))
     elif filter_type == "number_greaterThanOrEqualTo":
-        return df.filter(pl.col(column_name) >= reference_value)
+        return df.filter((pl.col(column_name) >= reference_value) & (pl.col(column_name).is_not_nan()))
     elif filter_type == "number_lessThan":
-        return df.filter(pl.col(column_name) < reference_value)
+        return df.filter((pl.col(column_name) < reference_value) & (pl.col(column_name).is_not_nan()))
     elif filter_type == "number_lessThanOrEqualTo":
-        return df.filter(pl.col(column_name) <= reference_value)
+        return df.filter((pl.col(column_name) <= reference_value) & (pl.col(column_name).is_not_nan()))
     elif filter_type == "number_equals":
-        return df.filter(pl.col(column_name) == reference_value)
+        return df.filter((pl.col(column_name) == reference_value) & (pl.col(column_name).is_not_nan()))
     elif filter_type == "number_notEquals":
-        return df.filter(pl.col(column_name) != reference_value)
+        return df.filter((pl.col(column_name) != reference_value) & (pl.col(column_name).is_not_nan()))
     elif filter_type == "string_equals":
         return df.filter(pl.col(column_name) == str(reference_value))
     elif filter_type == "string_notEquals":
@@ -132,6 +132,13 @@ def main():
     except json.JSONDecodeError as e:
         print(f"Error parsing filter map JSON: {e}")
         return
+
+    # Make sure numeric columns where loaded as such
+    for column in filter_map.keys():
+        if filter_map[column]["type"].startswith("number_") and df.schema[column] == pl.String:
+            print("Data type inconsistency in column {column}. Trying to cast to Float64.")
+            # Most tommon case is that zero values are represented as ""
+            df = df.with_columns(pl.col(column).replace("", float("NaN")).cast(pl.Float64))
 
     # Apply filters
     print(f"Initial rows: {df.height}")
