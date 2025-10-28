@@ -324,6 +324,15 @@ export const model = BlockModel.create()
     return !(sampledReady && kabatReady);
   })
 
+  .output('cloneTableFile', (ctx) => {
+    // Added to resolve CID conflicts
+    return ctx.prerun?.resolve({
+      field: 'cloneTableFile',
+      assertFieldType: 'Input',
+      allowPermanentAbsence: true,
+    });
+  })
+
   // Use UMAP output from ctx from clonotype-space block
   .output('umapPf', (ctx): PFrameHandle | undefined => {
     const anchor = ctx.args.inputAnchor;
