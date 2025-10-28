@@ -7,6 +7,7 @@ pframes := import("@platforma-sdk/workflow-tengo:pframes")
 slices := import("@platforma-sdk/workflow-tengo:slices")
 render := import("@platforma-sdk/workflow-tengo:render")
 ll := import("@platforma-sdk/workflow-tengo:ll")
+file := import("@platforma-sdk/workflow-tengo:file")
 kabatConv := import(":pf-kabat-conv")
 
 spectratypeConv := import(":pf-spectratype-conv")
@@ -245,6 +246,9 @@ wf.body(func(args) {
             cloneTable.mem("16GiB")
             cloneTable.cpu(1)
             cloneTable = cloneTable.build()
+
+            // Preserve to eliminate CID conflicts
+            outputs["cloneTableFile"] = file.exportFile(cloneTable)
 
             // Use ender.create to call the filter-clonotypes template
             filterSampleResult := render.create(filterAndSampleTpl, {
