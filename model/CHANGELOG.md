@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.12.0
+
+### Minor Changes
+
+- 3825a42: Fix errors related to numeric properties that apply only to a subset of clonotypes and to multiple clustering blocks upstream
+
 ## 1.11.0
 
 ### Minor Changes

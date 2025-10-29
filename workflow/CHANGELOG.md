@@ -1,5 +1,17 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.13.0
+
+### Minor Changes
+
+- 3825a42: Fix errors related to numeric properties that apply only to a subset of clonotypes and to multiple clustering blocks upstream
+
+### Patch Changes
+
+- Updated dependencies [3825a42]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.6.0
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.6.0
+
 ## 1.12.0
 
 ### Minor Changes
