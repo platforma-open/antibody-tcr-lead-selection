@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies.workflow",
-  "version": "1.11.2",
+  "version": "1.12.0",
   "type": "module",
   "description": "Block Workflow",
   "scripts": {
@@ -12,7 +12,10 @@
     "@platforma-open/milaboratories.top-antibodies.sample-clonotypes": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.spectratype": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.umap": "workspace:*",
-    "@platforma-sdk/workflow-tengo": "catalog:"
+    "@platforma-open/milaboratories.top-antibodies.assembling-fasta": "workspace:*",
+    "@platforma-open/milaboratories.top-antibodies.anarci-kabat": "workspace:*",
+    "@platforma-sdk/workflow-tengo": "catalog:",
+    "@platforma-open/milaboratories.software-anarci": "catalog:"
   },
   "devDependencies": {
     "@platforma-sdk/tengo-builder": "catalog:",

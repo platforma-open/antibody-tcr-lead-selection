@@ -1,5 +1,17 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.11.0
+
+### Minor Changes
+
+- ccc8076: kabat numbering added
+
+## 1.10.3
+
+### Patch Changes
+
+- 44895be: Support parquet format
+
 ## 1.10.2
 
 ### Patch Changes

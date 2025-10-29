@@ -44,7 +44,8 @@ def main():
     ).reset_index()
 
     # Calculate lengths for valid sequences and filter out empty ones
-    df_long['cdr3Length'] = df_long['cdr3Sequence'].str.strip().str.len()
+    # Ensure string dtype to avoid .str accessor errors and use .str.len()
+    df_long['cdr3Length'] = df_long['cdr3Sequence'].fillna('').str.strip().str.len()
     df_long = df_long[df_long['cdr3Length'] > 0].copy()
 
     if df_long.empty:
