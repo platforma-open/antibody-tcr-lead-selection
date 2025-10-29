@@ -127,7 +127,7 @@ wf.body(func(args) {
         ////////// Clonotype Filtering //////////
         // Build clonotype table
         cloneTable := pframes.csvFileBuilder() 
-        cloneTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
+        cloneTable.setAxisHeader(datasetSpec.axesSpec[1], "clonotypeKey")
 
         // Add Filters to table
         addedAxes := []
@@ -150,7 +150,7 @@ wf.body(func(args) {
                     if !slices.hasElement(axesNames, datasetSpec.axesSpec[1].name) {
                         for na, ax in colsSpec.axesSpec {
                             if ax.name != datasetSpec.axesSpec[1].name {
-                                cloneTable.setAxisHeader(ax.name, "cluster_" + string(i) + string(na))
+                                cloneTable.setAxisHeader(ax, "cluster_" + string(i) + string(na))
                                 addedAxes = append(addedAxes, ax.name)
                             }
                         }
@@ -176,7 +176,7 @@ wf.body(func(args) {
                     if !slices.hasElement(axesNames, datasetSpec.axesSpec[1].name) {
                         for na, ax in colsSpec.axesSpec {
                             if ax.name != datasetSpec.axesSpec[1].name && !slices.hasElement(addedAxes, ax.name) {
-                                cloneTable.setAxisHeader(ax.name, "cluster_" + string(i) + string(na))
+                                cloneTable.setAxisHeader(ax, "cluster_" + string(i) + string(na))
                             }
                         }
                     }	
@@ -200,7 +200,7 @@ wf.body(func(args) {
                 if !slices.hasElement(axesNames, datasetSpec.axesSpec[1].name) {
                     for na, ax in colsSpec.axesSpec {
                         if ax.name != datasetSpec.axesSpec[1].name {
-                            cloneTable.setAxisHeader(ax.name, "cluster_" + string(i) + string(na))
+                            cloneTable.setAxisHeader(ax, "cluster_" + string(i) + string(na))
                         }
                     }
                 }	
@@ -213,11 +213,11 @@ wf.body(func(args) {
             for i, col in columns.getColumns("linkers") {
                 if datasetSpec.axesSpec[1].name == col.spec.axesSpec[1].name {
                     cloneTable.add(col, {header: "linker." + string(i)})
-                    cloneTable.setAxisHeader(col.spec.axesSpec[0].name, "cluster_" + string(i))
+                    cloneTable.setAxisHeader(col.spec.axesSpec[0], "cluster_" + string(i))
                     linkerAxisSpec["cluster_" + string(i)] = col.spec.axesSpec[0]
                 } else if datasetSpec.axesSpec[1].name == col.spec.axesSpec[0].name {
                     cloneTable.add(col, {header: "linker." + string(i)})
-                    cloneTable.setAxisHeader(col.spec.axesSpec[1].name, "cluster_" + string(i))
+                    cloneTable.setAxisHeader(col.spec.axesSpec[1], "cluster_" + string(i))
                     linkerAxisSpec["cluster_" + string(i)] = col.spec.axesSpec[1]
                 }
                 addedCols = true
@@ -232,7 +232,7 @@ wf.body(func(args) {
                 // Add the cluster axis header
                 for axisIdx, axis in col.spec.axesSpec {
                     if axis.name != datasetSpec.axesSpec[1].name {
-                        cloneTable.setAxisHeader(axis.name, "clusterAxis_" + string(i) + "_" + string(axisIdx))
+                        cloneTable.setAxisHeader(axis, "clusterAxis_" + string(i) + "_" + string(axisIdx))
                     }
                 }
             }

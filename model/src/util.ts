@@ -1,12 +1,13 @@
-import type {
-  DataInfo,
-  PColumn,
-  PColumnValues,
-  PlRef,
-  PlTableFilter,
-  RenderCtx,
-  SUniversalPColumnId,
-  TreeNodeAccessor,
+import {
+  isLabelColumn,
+  type DataInfo,
+  type PColumn,
+  type PColumnValues,
+  type PlRef,
+  type PlTableFilter,
+  type RenderCtx,
+  type SUniversalPColumnId,
+  type TreeNodeAccessor,
 } from '@platforma-sdk/model';
 import type { BlockArgs, UiState } from '.';
 
@@ -131,7 +132,9 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefi
           },
         ],
       ) ?? [];
-      linkProps.push(...props.map((p) => ({ anchorRef: link.ref, anchorName, column: p })));
+      linkProps.push(...props
+        .filter((p) => !isLabelColumn(p.spec))
+        .map((p) => ({ anchorRef: link.ref, anchorName, column: p })));
       i++;
     }
   }
