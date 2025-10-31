@@ -93,13 +93,16 @@ def apply_filters(df, filter_map):
         
         filter_type = filter_spec["type"]
         reference_value = filter_spec["reference"]
+        data_type = filter_spec["valueType"]
         
-        # Apply the filter
-        filtered_df = apply_filter(filtered_df, column_name, filter_type, reference_value)
+        # Apply the filter if is correct for the given data type
+        if (((data_type == "String") and (filter_type.startswith("string_"))) or
+            ((data_type != "String") and (filter_type.startswith("number_")))):
+            filtered_df = apply_filter(filtered_df, column_name, filter_type, reference_value)
         
-        rows_after_filter = filtered_df.height
-        print(f"Filter '{column_name}' {filter_type} {reference_value}: {initial_rows} -> {rows_after_filter} rows")
-        initial_rows = rows_after_filter
+            rows_after_filter = filtered_df.height
+            print(f"Filter '{column_name}' {filter_type} {reference_value}: {initial_rows} -> {rows_after_filter} rows")
+            initial_rows = rows_after_filter
     
     return filtered_df
 
@@ -135,27 +138,34 @@ def main():
 
     # Make sure numeric columns where loaded as such
     for column in filter_map.keys():
-        if filter_map[column]["type"].startswith("number_") and df.schema[column] == pl.String:
-            print("Data type inconsistency in column {column}. Trying to find out if it's an integer or a float...")
-            # Check if non-empty values ("") might be integers or floats
-            non_empty_values = df.filter(pl.col(column) != "").select(pl.col(column)).to_series().to_list()
-            consensus_type = {"interger": 0, "float": 0}
-            for value in non_empty_values[:100]:
-                if isinstance(value, int):
-                    consensus_type["interger"] += 1
-                elif isinstance(value, float):
-                    consensus_type["float"] += 1
+        filter_spec = filter_map[column]
+        
+        filter_type = filter_spec["type"]
+        data_type = filter_spec["valueType"]
+        # Check data type if filters are non-string and correct for the given data type 
+        if ((data_type != "String") and (filter_type.startswith("number_"))):
+            
+            if filter_map[column]["type"].startswith("number_") and df.schema[column] == pl.String:
+                print("Data type inconsistency in column {column}. Trying to find out if it's an integer or a float...")
+                # Check if non-empty values ("") might be integers or floats
+                non_empty_values = df.filter(pl.col(column) != "").select(pl.col(column)).to_series().to_list()
+                consensus_type = {"interger": 0, "float": 0}
+                for value in non_empty_values[:50]:
+                    if isinstance(value, int):
+                        consensus_type["interger"] += 1
+                    elif isinstance(value, float):
+                        consensus_type["float"] += 1
+                    else:
+                        print(f"Value {value} is not an integer or float. Skipping cast.")
+                # decide data type based on consensus
+                if consensus_type["interger"] > consensus_type["float"]:
+                    dtype = pl.Int32
+                    print(f"Casting column {column} to Int64 based on consensus.")
                 else:
-                    print(f"Value {value} is not an integer or float. Skipping cast.")
-            # decide data type based on consensus
-            if consensus_type["interger"] > consensus_type["float"]:
-                dtype = pl.Int32
-                print(f"Casting column {column} to Int64 based on consensus.")
-            else:
-                dtype = pl.Float64
-                print(f"Casting column {column} to Float64 based on consensus.")
-            # Most tommon case is that zero values are represented as ""
-            df = df.with_columns(pl.col(column).replace("", float("NaN")).cast(dtype))
+                    dtype = pl.Float64
+                    print(f"Casting column {column} to Float64 based on consensus.")
+                # Most tommon case is that zero values are represented as ""
+                df = df.with_columns(pl.col(column).replace("", float("NaN")).cast(dtype))
 
     # Apply filters
     print(f"Initial rows: {df.height}")

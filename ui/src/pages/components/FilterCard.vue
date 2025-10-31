@@ -26,7 +26,7 @@ const model = defineModel<FilterUI>({
 });
 
 const props = defineProps<{
-  options?: { label: string; value: AnchoredColumnId; column?: { spec: { annotations?: Record<string, string> } } }[];
+  options?: { label: string; value: AnchoredColumnId; column?: { spec: { valueType?: string; annotations?: Record<string, string> } } }[];
 }>();
 
 const filterTypeOptions = [
@@ -45,9 +45,25 @@ const filterTypeOptions = [
 const getFilterTypeOptions = (columnId?: AnchoredColumnId) => {
   if (!columnId) return filterTypeOptions;
 
-  // This would need to be enhanced to get the actual column spec
-  // For now, return all options
-  return filterTypeOptions;
+  // Find the selected option to access column spec
+  const selectedOption = props.options?.find((opt) =>
+    opt.value.column === columnId.column,
+  );
+
+  if (!selectedOption?.column?.spec?.valueType) {
+    // If we can't determine the type, return all options
+    return filterTypeOptions;
+  }
+
+  const valueType = selectedOption.column.spec.valueType;
+
+  // If String, return only string filters; otherwise return only number filters
+  if (valueType === 'String') {
+    return filterTypeOptions.filter((opt) => opt.value.startsWith('string_'));
+  } else {
+    // Double, Int, Long, etc. - return only number filters
+    return filterTypeOptions.filter((opt) => opt.value.startsWith('number_'));
+  }
 };
 
 const isNumberFilter = (type?: string): type is NumberFilterType => {

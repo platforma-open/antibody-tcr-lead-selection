@@ -143,6 +143,7 @@ wf.body(func(args) {
                     addedCols = true
                     // Store reference value and filter type associated to this column
                     filterMap["Filter_" + string(i)] = filter.filter
+                    filterMap["Filter_" + string(i)]["valueType"] = columns.getSpec(filter.value.column).valueType
                 
                     // If column does not have main anchor axis we have to include theirs
                     colsSpec := columns.getSpec(filter.value.column)
