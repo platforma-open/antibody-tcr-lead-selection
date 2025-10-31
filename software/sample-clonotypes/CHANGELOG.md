@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 1.6.1
+
+### Patch Changes
+
+- 9245274: Fix filter issues related to data types
+
 ## 1.6.0
 
 ### Minor Changes

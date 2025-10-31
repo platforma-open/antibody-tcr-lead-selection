@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.13.1
+
+### Patch Changes
+
+- 9245274: Fix filter issues related to data types
+- Updated dependencies [9245274]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.6.1
+
 ## 1.13.0
 
 ### Minor Changes

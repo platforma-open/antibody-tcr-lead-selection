@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.9.2
+
+### Patch Changes
+
+- 9245274: Fix filter issues related to data types
+
 ## 1.9.1
 
 ### Patch Changes
