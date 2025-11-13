@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.9.3
+
+### Patch Changes
+
+- 89154a2: use moved pl-multi-sequence-alignment
+
 ## 1.9.2
 
 ### Patch Changes
