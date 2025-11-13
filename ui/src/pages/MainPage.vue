@@ -8,7 +8,6 @@ import {
   PlBlockPage,
   PlBtnGhost,
   PlDropdownRef,
-  PlMultiSequenceAlignment,
   PlNumberField,
   PlSectionSeparator,
   PlSlideModal,
@@ -17,6 +16,7 @@ import {
   PlIcon16,
   usePlDataTableSettingsV2,
 } from '@platforma-sdk/ui-vue';
+import { PlMultiSequenceAlignment } from '@milaboratories/multi-sequence-alignment';
 import { ref, watch, computed } from 'vue';
 import { useApp } from '../app';
 import {
