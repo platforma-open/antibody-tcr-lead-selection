@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 1.1.49
+
+### Patch Changes
+
+- 736ecfe: Block metadata updated
+
 ## 1.1.48
 
 ### Patch Changes
