@@ -2,7 +2,6 @@
 import '@milaboratories/graph-maker/styles';
 import { PlBlockPage, PlBtnGhost, PlSlideModal } from '@platforma-sdk/ui-vue';
 import { PlMultiSequenceAlignment } from '@milaboratories/multi-sequence-alignment';
-
 import { useApp } from '../app';
 
 import type { PredefinedGraphOption } from '@milaboratories/graph-maker';
