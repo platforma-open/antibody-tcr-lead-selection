@@ -38,15 +38,6 @@ self.body(func(inputs) {
     // Save filtered CSV file
     filteredClonotypesCsv := filterResult.getFile("filteredClonotypes.csv")
 
-    // Store outputs 
-    sampledColsParams := sampledColsConv.getColumns(datasetSpec, false) // No ranking column
-    filteredClonotypesPf := xsv.importFile(filteredClonotypesCsv, "csv", sampledColsParams,
-                                        {cpu: 1, mem: "16GiB"})
-
-    // Prepare outputs in case there is no top ranking
-    outputs["sampledRows"] = pframes.exportFrame(filteredClonotypesPf)
-    finalClonotypesCsv = filteredClonotypesCsv
-
 	if topClonotypes != undefined {
 
 		////////// Top Clonotypes Sampling //////////
@@ -73,8 +64,15 @@ self.body(func(inputs) {
 		sampledColumnsPf := xsv.importFile(finalClonotypesCsv, "csv", sampledColsParams,
 											{cpu: 1, mem: "16GiB"})
 		outputs["sampledRows"] = pframes.exportFrame(sampledColumnsPf)
-	} 
-
+	} else {
+            // Store outputs 
+        sampledColsParams := sampledColsConv.getColumns(datasetSpec, false) // No ranking column
+        filteredClonotypesPf := xsv.importFile(filteredClonotypesCsv, "csv", sampledColsParams,
+                                            {cpu: 1, mem: "16GiB"})
+        // Prepare outputs in case there is no top ranking
+        outputs["sampledRows"] = pframes.exportFrame(filteredClonotypesPf)
+        finalClonotypesCsv = filteredClonotypesCsv
+    }
     outputs["finalClonotypesCsv"] = finalClonotypesCsv
 
     return outputs
