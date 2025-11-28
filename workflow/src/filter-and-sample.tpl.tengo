@@ -32,7 +32,6 @@ self.body(func(inputs) {
         arg("--filter-map").arg(string(json.encode(filterMap))).
         saveFile("filteredClonotypes.csv").
         printErrStreamToStdout().
-        saveStdoutContent().
         cache(24 * 60 * 60 * 1000).
         run()
 
@@ -63,7 +62,6 @@ self.body(func(inputs) {
 			arg("--out").arg("sampledClonotypes_top.csv").
 			saveFile("sampledClonotypes_top.csv").
 			printErrStreamToStdout().
-			saveStdoutContent().
 			cache(24 * 60 * 60 * 1000).
 			run()
 

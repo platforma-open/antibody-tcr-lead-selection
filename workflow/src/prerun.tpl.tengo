@@ -353,7 +353,6 @@ wf.body(func(args) {
                 saveFile("spectratype.tsv").
                 saveFile("vj_usage.tsv").
                 printErrStreamToStdout().
-                saveStdoutContent().
                 cache(24 * 60 * 60 * 1000).
                 run()
 
