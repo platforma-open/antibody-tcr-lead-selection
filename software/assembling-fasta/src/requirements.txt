@@ -1,2 +1,3 @@
-# No external deps needed, use stdlib CSV
+pandas==2.2.3
+pyarrow==21.0.0
 

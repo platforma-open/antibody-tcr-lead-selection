@@ -1,5 +1,6 @@
 import argparse
 import os
+from datetime import datetime
 from typing import Dict, List, Tuple, Optional
 
 import polars as pl
@@ -94,6 +95,18 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    script_name = os.path.splitext(os.path.basename(__file__))[0]
+    log_file = f"{script_name}.time.log"
+    start_time = datetime.now()
+    
+    try:
+        main()
+    finally:
+        end_time = datetime.now()
+        duration = end_time - start_time
+        with open(log_file, 'w') as f:
+            f.write(f"Start time: {start_time.isoformat()}\n")
+            f.write(f"End time: {end_time.isoformat()}\n")
+            f.write(f"Duration: {duration.total_seconds():.6f} seconds\n")
 
 
