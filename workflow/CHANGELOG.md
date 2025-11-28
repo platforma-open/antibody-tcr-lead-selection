@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.13.2
+
+### Patch Changes
+
+- e17b19a: Remove unused `saveStdoutContent` calls, update sdk
+
 ## 1.13.1
 
 ### Patch Changes
