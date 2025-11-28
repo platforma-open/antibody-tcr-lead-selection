@@ -3,12 +3,24 @@ ll := import("@platforma-sdk/workflow-tengo:ll")
 getColumns := func() {
     return {
         axes: [
-                {
+            {
                 column: "chain",
                 spec: {
                     name: "pl7.app/vdj/chain",
                     type: "String",
                     annotations: { "pl7.app/label": "CDR3 chain" }
+                }
+            },
+            {
+                column: "cdr3Length",
+                spec: {
+                    name: "pl7.app/vdj/sequenceLength",
+                    type: "Int",
+                    domain: {
+                        "pl7.app/vdj/feature": "CDR3",
+                        "pl7.app/alphabet": "aminoacid"
+                    },
+                    annotations: { "pl7.app/label": "CDR3 aa Length" }
                 }
             },
             {
@@ -21,26 +33,19 @@ getColumns := func() {
                         "pl7.app/label": "Best V gene"
                     }
                 }
-            },
-            {
-                column: "jGene",
-                spec: {
-                    name: "pl7.app/vdj/geneHit",
-                    type: "String",
-                    domain: { "pl7.app/vdj/reference": "JGene" },
-                    annotations: {
-                        "pl7.app/label": "Best J gene"
-                    }
-                }
             }
         ],
         columns: [
             {
                 column: "count",
                 spec: {
-                    name: "pl7.app/vdj/vjGeneUsage",
+                    name: "pl7.app/vdj/vSpectratype",
                     valueType: "Int",
-                    annotations: { "pl7.app/label": "V/J usage" }
+                    domain: {
+                        "pl7.app/vdj/feature": "CDR3",
+                        "pl7.app/alphabet": "aminoacid"
+                    },
+                    annotations: { "pl7.app/label": "CDR3 V Spectratype" }
                 }
             }
         ],
@@ -52,3 +57,4 @@ getColumns := func() {
 export ll.toStrict({
     getColumns: getColumns
 })
+
