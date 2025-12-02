@@ -48,4 +48,3 @@ getColumns := func(datasetSpec, addRanking) {
 export ll.toStrict({
 	getColumns: getColumns
 })
-

@@ -1,28 +1,12 @@
 import argparse
 import csv
 import sys
-import os
-from datetime import datetime
 from typing import List
 
 
-def to_fasta(input_tsv: str, key_column: str, output_fasta: str, final_csv: str | None = None, final_parquet: str | None = None) -> None:
+def to_fasta(input_tsv: str, key_column: str, output_fasta: str, final_csv: str | None = None) -> None:
     keys: set[str] | None = None
-    if final_parquet:
-        import pandas as pd
-        keys = set()
-        df = pd.read_parquet(final_parquet)
-        # Prefer explicit key columns if present
-        key_field = (
-            "clonotypeKey"
-            if "clonotypeKey" in df.columns
-            else ("scClonotypeKey" if "scClonotypeKey" in df.columns else None)
-        )
-        if key_field is None and len(df.columns) > 0:
-            key_field = df.columns[0]
-        if key_field:
-            keys = set(df[key_field].astype(str).tolist())
-    elif final_csv:
+    if final_csv:
         keys = set()
         with open(final_csv, newline="") as f:
             r = csv.DictReader(f)
@@ -64,8 +48,7 @@ def main() -> None:
     parser.add_argument("--input_tsv", required=True, help="Input TSV: key + one or more sequence columns")
     parser.add_argument("--key_column", required=True, help="Name of the key column (clonotypeKey or scClonotypeKey)")
     parser.add_argument("--output_fasta", required=True, help="Output FASTA file path")
-    parser.add_argument("--final_clonotypes_csv", required=False, help="Optional CSV with allowed keys (deprecated, use --final_clonotypes_parquet instead)")
-    parser.add_argument("--final_clonotypes_parquet", required=False, help="Optional Parquet file with allowed keys")
+    parser.add_argument("--final_clonotypes_csv", required=False, help="Optional CSV with allowed keys")
 
     args = parser.parse_args()
     to_fasta(
@@ -73,23 +56,10 @@ def main() -> None:
         key_column=args.key_column,
         output_fasta=args.output_fasta,
         final_csv=args.final_clonotypes_csv,
-        final_parquet=args.final_clonotypes_parquet,
     )
 
 
 if __name__ == "__main__":
-    script_name = os.path.splitext(os.path.basename(__file__))[0]
-    log_file = f"{script_name}.time.log"
-    start_time = datetime.now()
-    
-    try:
-        main()
-    finally:
-        end_time = datetime.now()
-        duration = end_time - start_time
-        with open(log_file, 'w') as f:
-            f.write(f"Start time: {start_time.isoformat()}\n")
-            f.write(f"End time: {end_time.isoformat()}\n")
-            f.write(f"Duration: {duration.total_seconds():.6f} seconds\n")
+    main()
 
 
