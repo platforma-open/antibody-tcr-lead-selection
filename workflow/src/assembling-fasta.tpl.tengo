@@ -12,7 +12,7 @@ self.body(func(inputs) {
 
     inputTsv := inputs.inputTsv
     keyColumn := inputs.keyColumn // "clonotypeKey" or "scClonotypeKey"
-    finalClonotypesParquet := inputs.finalClonotypesParquet // optional
+    finalClonotypesCsv := inputs.finalClonotypesCsv // optional
     isSingleCell := inputs.isSingleCell // boolean
     bulkChain := inputs.bulkChain // "H" or "KL" when !isSingleCell
 
@@ -25,9 +25,9 @@ self.body(func(inputs) {
         arg("--key_column").arg(keyColumn).
         arg("--output_fasta").arg("assembling.fasta")
 
-    if finalClonotypesParquet != undefined {
-        cmd = cmd.addFile("finalClonotypes.parquet", finalClonotypesParquet).
-            arg("--final_clonotypes_parquet").arg("finalClonotypes.parquet")
+    if finalClonotypesCsv != undefined {
+        cmd = cmd.addFile("finalClonotypes.csv", finalClonotypesCsv).
+            arg("--final_clonotypes_csv").arg("finalClonotypes.csv")
     }
 
     cmd = cmd.saveFile("assembling.fasta").
