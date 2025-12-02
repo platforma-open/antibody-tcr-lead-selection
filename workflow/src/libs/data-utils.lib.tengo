@@ -3,6 +3,7 @@ slices := import("@platforma-sdk/workflow-tengo:slices")
 pt := import("@platforma-sdk/workflow-tengo:pt")
 ll := import("@platforma-sdk/workflow-tengo:ll")
 times := import("times")
+text := import("text")
 
 // Helper function to add chain information to the headers dynamically
 makeHeaderName := func(col, baseHeaderName, isSingleCell) {
@@ -47,6 +48,7 @@ prepareClonotypeData := func(filters, rankingOrder, rankingOrderDefault, columns
                 addedCols = true
                 // Store reference value and filter type associated to this column
                 filterMap["Filter_" + string(i)] = filter.filter
+                filterMap["Filter_" + string(i)]["valueType"] = columns.getSpec(filter.value.column).valueType
                 
                 // If column does not have main anchor axis we have to include theirs
                 colsSpec := columns.getSpec(filter.value.column)
@@ -255,10 +257,24 @@ filterClonotypes := func(structuredMap, axisRenames, filterMap, datasetSpec) {
     dfPt := wfPt.frame(pt.p.full(structuredMap)).select(projection...)
 
     // Step 1: Apply filters from filterMap (matches filter.py lines 123-164)
+    // Only apply filters if the data type matches the filter type
     filterPredicates := []
     for filterColName, filterSpec in filterMap {
-        predicate := buildFilterPredicate(filterColName, filterSpec)
-        filterPredicates = append(filterPredicates, predicate)
+        filterType := filterSpec["type"]
+        valueType := filterSpec["valueType"]
+        
+        // Validate filter type matches data type (same logic as filter.py)
+        isValidFilter := false
+        if valueType == "String" && text.has_prefix(filterType, "string_") {
+            isValidFilter = true
+        } else if valueType != "String" && text.has_prefix(filterType, "number_") {
+            isValidFilter = true
+        }
+        
+        if isValidFilter {
+            predicate := buildFilterPredicate(filterColName, filterSpec)
+            filterPredicates = append(filterPredicates, predicate)
+        }
     }
     
     if len(filterPredicates) > 0 {
