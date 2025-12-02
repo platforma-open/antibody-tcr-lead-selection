@@ -12,7 +12,6 @@
   },
   "dependencies": {
     "@milaboratories/graph-maker": "catalog:",
-    "@milaboratories/multi-sequence-alignment": "catalog:",
     "@platforma-open/milaboratories.top-antibodies.model": "workspace:*",
     "@platforma-sdk/model": "catalog:",
     "@platforma-sdk/ui-vue": "catalog:",
