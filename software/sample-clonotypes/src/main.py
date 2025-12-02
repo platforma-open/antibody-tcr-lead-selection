@@ -6,13 +6,16 @@ import re
 import os
 import time
 import json
+from datetime import datetime
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Rank rows based on Col* columns and output top N rows.")
-    parser.add_argument("--csv", required=True, help="Path to input CSV file")
+    parser.add_argument("--csv", help="Path to input CSV file (deprecated, use --input instead)")
+    parser.add_argument("--input", help="Path to input file (CSV or Parquet)")
     parser.add_argument("--n", type=int, required=True, help="Number of top rows to output")
     parser.add_argument("--out", required=True, help="Path to output CSV file")
+    parser.add_argument("--out-parquet", help="Path to output Parquet file (optional, defaults to --out with .parquet extension)")
     parser.add_argument("--ranking-map", type=str, help='JSON string specifying ranking direction for each column, e.g., {"Col0":"decreasing","Col1":"increasing"}')
     return parser.parse_args()
 
@@ -156,16 +159,36 @@ def main():
     
     args = parse_arguments()
 
-    # Load CSV - try both comma and tab separated
+    # Determine input file path (support both --csv and --input for backward compatibility)
+    input_file = args.input if args.input else args.csv
+    if not input_file:
+        print("Error: Either --input or --csv must be provided")
+        return
+
+    # Load file - detect format from extension or try both CSV and Parquet
     load_start = time.time()
     try:
-        df = pl.read_csv(args.csv, separator=',')
-    except:
-        try:
-            df = pl.read_csv(args.csv, separator='\t')
-        except Exception as e:
-            print(f"Error reading file: {e}")
-            return
+        if input_file.endswith('.parquet'):
+            df = pl.read_parquet(input_file)
+        elif input_file.endswith('.csv'):
+            # Try comma-separated first
+            try:
+                df = pl.read_csv(input_file, separator=',')
+            except:
+                # Try tab-separated
+                df = pl.read_csv(input_file, separator='\t')
+        else:
+            # Auto-detect: try parquet first, then CSV
+            try:
+                df = pl.read_parquet(input_file)
+            except:
+                try:
+                    df = pl.read_csv(input_file, separator=',')
+                except:
+                    df = pl.read_csv(input_file, separator='\t')
+    except Exception as e:
+        print(f"Error reading file: {e}")
+        return
     
     load_time = time.time() - load_start
     print(f"✓ Data loading: {load_time:.3f}s ({df.height:,} rows, {len(df.columns)} columns)")
@@ -232,14 +255,37 @@ def main():
             'ranked_order': top_n['ranked_order']
         })
     
-    # Output simplified version to main output file
+    # Determine parquet output path
+    if args.out_parquet:
+        parquet_out = args.out_parquet
+    else:
+        # Derive parquet path from CSV path
+        if args.out.endswith('.csv'):
+            parquet_out = args.out[:-4] + '.parquet'
+        else:
+            parquet_out = args.out + '.parquet'
+    
+    # Output simplified version to both CSV and Parquet
     simplified_df.write_csv(args.out)
+    simplified_df.write_parquet(parquet_out)
     output_time = time.time() - output_start
-    print(f"✓ Output: {output_time:.3f}s (wrote to {args.out})")
+    print(f"✓ Output: {output_time:.3f}s (wrote CSV to {args.out}, Parquet to {parquet_out})")
     
     total_time = time.time() - start_time
     print(f"🎯 Total time: {total_time:.3f}s")
 
 
 if __name__ == "__main__":
-    main()
+    script_name = os.path.splitext(os.path.basename(__file__))[0]
+    log_file = "ranking.time.log"
+    start_time = datetime.now()
+    
+    try:
+        main()
+    finally:
+        end_time = datetime.now()
+        duration = end_time - start_time
+        with open(log_file, 'w') as f:
+            f.write(f"Start time: {start_time.isoformat()}\n")
+            f.write(f"End time: {end_time.isoformat()}\n")
+            f.write(f"Duration: {duration.total_seconds():.6f} seconds\n")
