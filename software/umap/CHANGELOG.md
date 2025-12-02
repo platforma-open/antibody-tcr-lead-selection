@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.umap
 
+## 1.2.1
+
+### Patch Changes
+
+- b99b7ba: Revert optimization changes
+
 ## 1.2.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.10.1
+
+### Patch Changes
+
+- b99b7ba: Revert optimization changes
+
 ## 1.10.0
 
 ### Minor Changes

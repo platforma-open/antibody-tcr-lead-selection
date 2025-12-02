@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.spectratype
 
+## 1.7.1
+
+### Patch Changes
+
+- b99b7ba: Revert optimization changes
+
 ## 1.7.0
 
 ### Minor Changes

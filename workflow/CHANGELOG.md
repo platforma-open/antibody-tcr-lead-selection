@@ -1,5 +1,17 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.14.1
+
+### Patch Changes
+
+- b99b7ba: Revert optimization changes
+- Updated dependencies [b99b7ba]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.7.1
+  - @platforma-open/milaboratories.top-antibodies.assembling-fasta@1.2.1
+  - @platforma-open/milaboratories.top-antibodies.anarci-kabat@1.2.1
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.7.1
+  - @platforma-open/milaboratories.top-antibodies.umap@1.2.1
+
 ## 1.14.0
 
 ### Minor Changes
