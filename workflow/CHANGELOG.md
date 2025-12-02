@@ -1,5 +1,20 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.14.0
+
+### Minor Changes
+
+- 532b9ed: Block performance optimization
+
+### Patch Changes
+
+- Updated dependencies [532b9ed]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.7.0
+  - @platforma-open/milaboratories.top-antibodies.assembling-fasta@1.2.0
+  - @platforma-open/milaboratories.top-antibodies.anarci-kabat@1.2.0
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.7.0
+  - @platforma-open/milaboratories.top-antibodies.umap@1.2.0
+
 ## 1.13.2
 
 ### Patch Changes

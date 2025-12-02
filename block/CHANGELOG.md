@@ -1,5 +1,17 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 1.2.0
+
+### Minor Changes
+
+- 532b9ed: Block performance optimization
+
+### Patch Changes
+
+- Updated dependencies [532b9ed]
+  - @platforma-open/milaboratories.top-antibodies.workflow@1.14.0
+  - @platforma-open/milaboratories.top-antibodies.ui@1.10.0
+
 ## 1.1.50
 
 ### Patch Changes

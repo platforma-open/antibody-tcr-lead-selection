@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.spectratype
 
+## 1.7.0
+
+### Minor Changes
+
+- 532b9ed: Block performance optimization
+
 ## 1.6.0
 
 ### Minor Changes

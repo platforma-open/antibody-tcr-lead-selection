@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 1.7.0
+
+### Minor Changes
+
+- 532b9ed: Block performance optimization
+
 ## 1.6.1
 
 ### Patch Changes

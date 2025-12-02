@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.umap
 
+## 1.2.0
+
+### Minor Changes
+
+- 532b9ed: Block performance optimization
+
 ## 1.1.4
 
 ### Patch Changes
