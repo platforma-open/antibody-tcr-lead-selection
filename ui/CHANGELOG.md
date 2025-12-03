@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.10.2
+
+### Patch Changes
+
+- 10883fc: Fix “UpdateSerializer.run error, retrying... Error: An object could not be cloned” when changing filters
+
 ## 1.10.1
 
 ### Patch Changes
