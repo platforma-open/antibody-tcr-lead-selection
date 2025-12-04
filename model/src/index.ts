@@ -51,25 +51,25 @@ function updateClusterColumnLabels(columns: PColumn<PColumnDataUniversal>[]): PC
   // 1. Columns with clustering prefix (e.g., pl7.app/vdj/clustering/clusterSize)
   // 2. Sequence columns with clusterId axis (centroid sequences from clustering)
   // 3. Abundance columns with clusterId axis (abundance per cluster)
+  // 4. distanceToCentroid columns (even without clusterId axis, as they come from cluster blocks)
   const clusterColumns = columns.filter((col) => {
-    // Check for clustering prefix columns
     if (col.spec.name.startsWith('pl7.app/vdj/clustering/')) {
       return true;
     }
-    // Check if column has clusterId axis (indicates it's from clustering)
+
     const hasClusterIdAxis = col.spec.axesSpec.some((axis) => axis.name === 'pl7.app/vdj/clusterId');
     if (!hasClusterIdAxis) {
       return false;
     }
-    // Check for centroid sequence columns (sequence columns with clusterId axis)
-    if (col.spec.name === 'pl7.app/vdj/sequence') {
-      return true;
-    }
-    // Check for abundance per cluster columns (abundance columns with clusterId axis)
-    if (col.spec.name === 'pl7.app/vdj/uniqueMoleculeCount' || col.spec.name === 'pl7.app/vdj/readCount') {
-      return true;
-    }
-    return false;
+
+    const relevantNames = [
+      'pl7.app/vdj/sequence',
+      'pl7.app/vdj/uniqueMoleculeCount',
+      'pl7.app/vdj/uniqueMoleculeFraction',
+      'pl7.app/vdj/readCount',
+      'pl7.app/vdj/readFraction',
+    ];
+    return relevantNames.includes(col.spec.name);
   });
 
   if (clusterColumns.length === 0) {
