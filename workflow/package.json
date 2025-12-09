@@ -11,7 +11,6 @@
   "dependencies": {
     "@platforma-open/milaboratories.top-antibodies.sample-clonotypes": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.spectratype": "workspace:*",
-    "@platforma-open/milaboratories.top-antibodies.umap": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.assembling-fasta": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.anarci-kabat": "workspace:*",
     "@platforma-sdk/workflow-tengo": "catalog:",
