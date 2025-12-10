@@ -136,7 +136,8 @@ wf.body(func(args) {
         addedCols := false
         if len(args.filters) > 0 {
             for i, filter in args.filters {
-                if filter.value != undefined {
+                // we check for value presence and for actual pcolumn (cases where upstream block is deleted)
+                if filter.value != undefined && columns.getColumn(filter.value.column).spec != undefined {
                     // Columns added here might also be in ranking list, so we add default IDs
                     cloneTable.add(columns.getColumn(filter.value.column), 
                                     {header: "Filter_" + string(i), id: "filter_" + string(i)})
@@ -164,7 +165,8 @@ wf.body(func(args) {
         validRanks := false
         if len(args.rankingOrder) > 0 {
             for i, col in args.rankingOrder {
-                if col.value != undefined {
+                // we check for value presence and for actual pcolumn (cases where upstream block is deleted)
+                if col.value != undefined && columns.getColumn(col.value.column).spec != undefined {
                     validRanks = true
                     cloneTable.add(columns.getColumn(col.value.column), {header: "Col" + string(i)})
                     addedCols = true
