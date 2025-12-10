@@ -16,6 +16,96 @@ import {
 } from '@platforma-sdk/model';
 import type { AnchoredColumnId, Column, Filter, FilterUI, RankingOrder, RankingOrderUI } from './util';
 import { anchoredColumnId, getColumns } from './util';
+import type { PColumn, PColumnDataUniversal } from '@platforma-sdk/model';
+
+/**
+ * Checks if there are multiple upstream clustering blocks by examining clusterId axes.
+ * Returns true if there are 2 or more unique clustering blockIds.
+ */
+function hasMultipleClusteringBlocks(columns: PColumn<PColumnDataUniversal>[]): boolean {
+  const blockIds = new Set<string>();
+
+  for (const col of columns) {
+    // Look for clusterId axes
+    for (const axis of col.spec.axesSpec) {
+      if (axis.name === 'pl7.app/vdj/clusterId' && axis.domain) {
+        const blockId = axis.domain['pl7.app/vdj/clustering/blockId'];
+        if (blockId && typeof blockId === 'string') {
+          blockIds.add(blockId);
+        }
+      }
+    }
+  }
+
+  return blockIds.size > 1;
+}
+
+/**
+ * Updates cluster-related columns to use labels derived from trace information.
+ * This ensures that columns like "Cluster Size", centroid sequences, and abundance per cluster
+ * show distinguishing labels when multiple clustering blocks are present
+ * (e.g., "Cluster Size / Clustering (sim:..., ident:..., cov:...)").
+ */
+function updateClusterColumnLabels(columns: PColumn<PColumnDataUniversal>[]): PColumn<PColumnDataUniversal>[] {
+  // Identify cluster-related columns:
+  // 1. Columns with clustering prefix (e.g., pl7.app/vdj/clustering/clusterSize)
+  // 2. Sequence columns with clusterId axis (centroid sequences from clustering)
+  // 3. Abundance columns with clusterId axis (abundance per cluster)
+  // 4. distanceToCentroid columns (even without clusterId axis, as they come from cluster blocks)
+  const clusterColumns = columns.filter((col) => {
+    if (col.spec.name.startsWith('pl7.app/vdj/clustering/')) {
+      return true;
+    }
+
+    const hasClusterIdAxis = col.spec.axesSpec.some((axis) => axis.name === 'pl7.app/vdj/clusterId');
+    if (!hasClusterIdAxis) {
+      return false;
+    }
+
+    const relevantNames = [
+      'pl7.app/vdj/sequence',
+      'pl7.app/vdj/uniqueMoleculeCount',
+      'pl7.app/vdj/uniqueMoleculeFraction',
+      'pl7.app/vdj/readCount',
+      'pl7.app/vdj/readFraction',
+    ];
+    return relevantNames.includes(col.spec.name);
+  });
+
+  if (clusterColumns.length === 0) {
+    return columns; // No cluster columns, return as-is
+  }
+
+  // Derive labels using trace information
+  const derivedLabels = deriveLabels(
+    clusterColumns,
+    (col) => col.spec,
+    { includeNativeLabel: true },
+  );
+
+  // Create a map of column id to derived label
+  const labelMap = new Map(
+    derivedLabels.map(({ value, label }) => [value.id, label]),
+  );
+
+  // Update columns with derived labels
+  return columns.map((col) => {
+    const derivedLabel = labelMap.get(col.id);
+    if (derivedLabel !== undefined) {
+      return {
+        ...col,
+        spec: {
+          ...col.spec,
+          annotations: {
+            ...col.spec.annotations,
+            'pl7.app/label': derivedLabel,
+          },
+        },
+      };
+    }
+    return col;
+  });
+}
 
 export * from './converters';
 
@@ -281,13 +371,21 @@ export const model = BlockModel.create()
 
     // Case where we just opened the block (no filters, no ranking)
     if (sampledRows === undefined) { // case where we have changed parameters but not hit run
-      cols.push(...props);
+      // Only update cluster column labels if we have multiple clustering blocks
+      cols.push(...(hasMultipleClusteringBlocks(props)
+        ? updateClusterColumnLabels(props)
+        : props));
     } else {
       // Use sampled rows if available (ranking applied), otherwise use filtered clonotypes
-      cols.push(...props, ...sampledRows);
-      if (assemblingKabatPf !== undefined) {
-        cols.push(...assemblingKabatPf);
-      }
+      const allColumns = [
+        ...props,
+        ...(sampledRows ?? []),
+        ...(assemblingKabatPf ?? []),
+      ];
+      // Only update cluster column labels if we have multiple clustering blocks
+      cols.push(...(hasMultipleClusteringBlocks(allColumns)
+        ? updateClusterColumnLabels(allColumns)
+        : allColumns));
       ops = {
         coreColumnPredicate: (col) => col.spec.name === 'pl7.app/vdj/sampling-column',
         coreJoinType: 'inner',
