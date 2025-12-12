@@ -120,9 +120,10 @@ def main():
     # Check if file is empty
     if df.height == 0:
         print("Warning: Input CSV file is empty. Creating empty output file with minimal headers.")
-        # Create empty output file with minimal required columns
+        # Create empty output file with minimal required columns (including 'top' column expected by converter)
         empty_df = pl.DataFrame(schema={
             'clonotypeKey': pl.Utf8,
+            'top': pl.Int64,
         })
         empty_df.write_csv(args.out)
         print(f"Empty output file created: {args.out}")
