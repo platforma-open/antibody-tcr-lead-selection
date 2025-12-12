@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.test
 
+## 1.2.0
+
+### Minor Changes
+
+- 00143a9: multiple clustering blocks fix, columns names fix, dependencies updates
+
 ## 1.1.3
 
 ### Patch Changes

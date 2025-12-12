@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.15.0
+
+### Minor Changes
+
+- 00143a9: multiple clustering blocks fix, columns names fix, dependencies updates
+
 ## 1.14.1
 
 ### Patch Changes

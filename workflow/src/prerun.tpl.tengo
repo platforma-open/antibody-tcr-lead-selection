@@ -212,31 +212,96 @@ wf.body(func(args) {
 
         // Get linker columns if needed
         linkerAxisSpec := {}
+        linkerClusterIdAxes := []
         if len(columns.getColumns("linkers")) > 0 {
             for i, col in columns.getColumns("linkers") {
+                clusterIdAxis := undefined
                 if datasetSpec.axesSpec[1].name == col.spec.axesSpec[1].name {
                     cloneTable.add(col, {header: "linker." + string(i)})
                     cloneTable.setAxisHeader(col.spec.axesSpec[0], "cluster_" + string(i))
                     linkerAxisSpec["cluster_" + string(i)] = col.spec.axesSpec[0]
+                    clusterIdAxis = col.spec.axesSpec[0]
                 } else if datasetSpec.axesSpec[1].name == col.spec.axesSpec[0].name {
                     cloneTable.add(col, {header: "linker." + string(i)})
                     cloneTable.setAxisHeader(col.spec.axesSpec[1], "cluster_" + string(i))
                     linkerAxisSpec["cluster_" + string(i)] = col.spec.axesSpec[1]
+                    clusterIdAxis = col.spec.axesSpec[1]
+                }
+                // Collect clusterId axes from linker columns to match cluster size columns
+                if !is_undefined(clusterIdAxis) && clusterIdAxis.name == "pl7.app/vdj/clusterId" {
+                    linkerClusterIdAxes = append(linkerClusterIdAxes, clusterIdAxis)
                 }
                 addedCols = true
             }
         }
 
-        // Add cluster size columns if available
+        // Add cluster size columns if available, but only those matching linker columns' clusterId axes
+        // This ensures we only join columns from the same clustering run
         if len(columns.getColumns("clusterSizes")) > 0 {
-            for i, col in columns.getColumns("clusterSizes") {
-                cloneTable.add(col, {header: "clusterSize." + string(i)})
-                addedCols = true
-                // Add the cluster axis header
-                for axisIdx, axis in col.spec.axesSpec {
-                    if axis.name != datasetSpec.axesSpec[1].name {
-                        cloneTable.setAxisHeader(axis, "clusterAxis_" + string(i) + "_" + string(axisIdx))
+            clusterSizeIdx := 0
+            for col in columns.getColumns("clusterSizes") {
+                // Find the clusterId axis in this cluster size column
+                clusterSizeClusterIdAxis := undefined
+                for axis in col.spec.axesSpec {
+                    if axis.name == "pl7.app/vdj/clusterId" {
+                        clusterSizeClusterIdAxis = axis
+                        break
                     }
+                }
+                
+                // Only add if we have linker columns and this cluster size matches one of them
+                shouldAdd := false
+                if len(linkerClusterIdAxes) > 0 && !is_undefined(clusterSizeClusterIdAxis) {
+                    // Check if this cluster size column matches any linker's clusterId axis
+                    for linkerAxis in linkerClusterIdAxes {
+                        // Compare domains - they must match exactly for same clustering run
+                        if clusterSizeClusterIdAxis.name == linkerAxis.name &&
+                           clusterSizeClusterIdAxis.type == linkerAxis.type {
+                            // Check if domains match
+                            domainsMatch := true
+                            if is_undefined(clusterSizeClusterIdAxis.domain) != is_undefined(linkerAxis.domain) {
+                                domainsMatch = false
+                            } else if !is_undefined(clusterSizeClusterIdAxis.domain) && !is_undefined(linkerAxis.domain) {
+                                // Compare domain keys and values
+                                if len(clusterSizeClusterIdAxis.domain) != len(linkerAxis.domain) {
+                                    domainsMatch = false
+                                } else {
+                                    for k, v in clusterSizeClusterIdAxis.domain {
+                                        if is_undefined(linkerAxis.domain[k]) || linkerAxis.domain[k] != v {
+                                            domainsMatch = false
+                                            break
+                                        }
+                                    }
+                                }
+                            }
+                            if domainsMatch {
+                                shouldAdd = true
+                                break
+                            }
+                        }
+                    }
+                }
+                
+                // Only add cluster size columns that match a linker column's clustering run
+                if shouldAdd {
+                    // Trace elements are already present in col.spec from the clustering block.
+                    // deriveLabels (in label.ts) will use these existing trace elements to construct
+                    // distinguishing labels when multiple clustering blocks are joined, similar to
+                    // how LabelTypeFull ('__LABEL__@1') works. The trace includes:
+                    // - Original dataset trace
+                    // - "milaboratories.clonotype-clustering.sequences" trace element
+                    // - "milaboratories.clonotype-clustering.clustering" trace element
+                    // No modification needed - just preserve the existing trace.
+                    
+                    cloneTable.add(col, {header: "clusterSize." + string(clusterSizeIdx)})
+                    addedCols = true
+                    // Add the cluster axis header
+                    for axisIdx, axis in col.spec.axesSpec {
+                        if axis.name != datasetSpec.axesSpec[1].name {
+                            cloneTable.setAxisHeader(axis, "clusterAxis_" + string(clusterSizeIdx) + "_" + string(axisIdx))
+                        }
+                    }
+                    clusterSizeIdx = clusterSizeIdx + 1
                 }
             }
         }
