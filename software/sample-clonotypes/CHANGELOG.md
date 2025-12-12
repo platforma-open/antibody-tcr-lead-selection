@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 1.7.2
+
+### Patch Changes
+
+- 5619236: Fix missing input related error
+
 ## 1.7.1
 
 ### Patch Changes

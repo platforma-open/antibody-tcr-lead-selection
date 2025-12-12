@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.15.1
+
+### Patch Changes
+
+- 5619236: Fix missing input related error
+- Updated dependencies [5619236]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.7.2
+
 ## 1.15.0
 
 ### Minor Changes
