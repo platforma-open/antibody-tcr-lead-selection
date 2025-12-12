@@ -123,6 +123,7 @@ def main():
         # Create empty output file with minimal required columns
         empty_df = pl.DataFrame(schema={
             'clonotypeKey': pl.Utf8,
+            'top': pl.Int64,
         })
         empty_df.write_csv(args.out)
         print(f"Empty output file created: {args.out}")
