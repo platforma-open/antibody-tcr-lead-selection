@@ -8,6 +8,7 @@ import {
   PlBlockPage,
   PlBtnGhost,
   PlDropdownRef,
+  PlDropdown,
   PlNumberField,
   PlSectionSeparator,
   PlSlideModal,
@@ -84,6 +85,11 @@ const selection = ref<PlSelectionModel>({
 const kabatNumbering = computed<boolean>({
   get: () => (app.model.args.kabatNumbering ?? false),
   set: (v: boolean) => (app.model.args.kabatNumbering = v),
+});
+
+const disableClusterRanking = computed<boolean>({
+  get: () => (app.model.args.disableClusterRanking ?? false),
+  set: (v: boolean) => (app.model.args.disableClusterRanking = v),
 });
 
 // Detect if selected dataset is Immunoglobulins (IG) vs TCR
@@ -175,6 +181,32 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
       </PlNumberField>
 
       <RankList />
+      
+      <PlCheckbox v-if="isSamplingConfigured && app.model.outputs.hasClusterData" v-model="disableClusterRanking">
+        Disable cluster ranking
+        <PlTooltip class="info" position="top">
+          <PlIcon16 name="info"/>
+          <template #tooltip>
+            When enabled, skips automatic cluster size ranking. Use this when you want to rank only by the selected clonotype properties.
+          </template>
+        </PlTooltip>
+      </PlCheckbox>
+      
+      <PlDropdown
+        v-if="isSamplingConfigured && app.model.outputs.clusterColumnOptions && app.model.outputs.clusterColumnOptions.length > 1"
+        v-model="app.model.args.clusterColumn"
+        :options="app.model.outputs.clusterColumnOptions"
+        :style="{ width: '320px' }"
+        :disabled="disableClusterRanking"
+        label="Cluster column for sampling"
+        clearable
+        placeholder="Auto (use first available)"
+      >
+        <template #tooltip>
+          When multiple cluster columns are available, select which one to use for round-robin sampling. If not specified, the first cluster column will be used.
+        </template>
+      </PlDropdown>
+      
       <template v-if="isSamplingConfigured && isIGDataset">
         <PlSectionSeparator>
           Antibody numbering

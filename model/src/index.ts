@@ -19,6 +19,21 @@ import { anchoredColumnId, getColumns } from './util';
 import type { PColumn, PColumnDataUniversal } from '@platforma-sdk/model';
 
 /**
+ * Checks if any cluster data is present by examining clusterId axes.
+ * Returns true if at least one column has a clusterId axis.
+ */
+function hasClusterData(columns: PColumn<PColumnDataUniversal>[]): boolean {
+  for (const col of columns) {
+    for (const axis of col.spec.axesSpec) {
+      if (axis.name === 'pl7.app/vdj/clusterId') {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * Checks if there are multiple upstream clustering blocks by examining clusterId axes.
  * Returns true if there are 2 or more unique clustering blockIds.
  */
@@ -116,6 +131,8 @@ export type BlockArgs = {
   rankingOrderDefault?: RankingOrder;
   filters: Filter[];
   kabatNumbering?: boolean;
+  disableClusterRanking?: boolean;
+  clusterColumn?: string;
 };
 
 export type UiState = {
@@ -134,6 +151,8 @@ export const model = BlockModel.create()
   .withArgs<BlockArgs>({
     rankingOrder: [],
     filters: [],
+    disableClusterRanking: false,
+    clusterColumn: undefined,
   })
 
   .withUiState<UiState>({
@@ -323,7 +342,7 @@ export const model = BlockModel.create()
   // Use the cdr3LengthsCalculated cols
   .output('spectratypePf', (ctx) => {
     // const pCols = ctx.outputs?.resolve('cdr3VspectratypePf')?.getPColumns();
-    const pCols = ctx.prerun?.resolve({
+    const pCols = ctx.outputs?.resolve({
       field: 'cdr3VspectratypePf',
       assertFieldType: 'Input',
       allowPermanentAbsence: true,
@@ -336,7 +355,7 @@ export const model = BlockModel.create()
   // Use the cdr3LengthsCalculated cols
   .output('vjUsagePf', (ctx) => {
     // const pCols = ctx.outputs?.resolve('vjUsagePf')?.getPColumns();
-    const pCols = ctx.prerun?.resolve({
+    const pCols = ctx.outputs?.resolve({
       field: 'vjUsagePf',
       assertFieldType: 'Input',
       allowPermanentAbsence: true,
@@ -354,13 +373,13 @@ export const model = BlockModel.create()
     const props = columns.props.map((c) => c.column);
 
     // Get filtered/sampled rows from prerun
-    const sampledRows = ctx.prerun?.resolve({
+    const sampledRows = ctx.outputs?.resolve({
       field: 'sampledRows',
       assertFieldType: 'Input',
       allowPermanentAbsence: true,
     })?.getPColumns();
 
-    const assemblingKabatPf = ctx.prerun?.resolve({
+    const assemblingKabatPf = ctx.outputs?.resolve({
       field: 'assemblingKabatPf',
       assertFieldType: 'Input',
       allowPermanentAbsence: true,
@@ -404,22 +423,17 @@ export const model = BlockModel.create()
     if (ctx.args.inputAnchor === undefined)
       return false;
 
-    const sampledReady = ctx.prerun?.resolve({
-      field: 'sampledRows',
-      assertFieldType: 'Input',
-      allowPermanentAbsence: true,
-    }) !== undefined;
+    // If outputs object doesn't exist yet, workflow hasn't been run - not calculating
+    if (!ctx.outputs) return false;
 
-    let kabatReady = true;
-    if (ctx.args.kabatNumbering === true) {
-      kabatReady = ctx.prerun?.resolve({
-        field: 'assemblingKabatPf',
-        assertFieldType: 'Input',
-        allowPermanentAbsence: true,
-      }) !== undefined;
-    }
-
-    return !(sampledReady && kabatReady);
+    // Check if outputs are currently being computed
+    const outputsState = ctx.outputs.getIsReadyOrError();
+    
+    // If still computing, return true (actively calculating)
+    if (outputsState === false) return true;
+    
+    // If errored or ready, we're done calculating
+    return false;
   })
 
   // Use UMAP output from ctx from clonotype-space block
@@ -444,9 +458,66 @@ export const model = BlockModel.create()
     // @TODO: if umap size is > 2 !
 
     // Get sampled rows from workflow prerun output (if ranking was applied)
-    const sampledRows = ctx.prerun?.resolve({ field: 'sampledRows', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
+    const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
 
     return createPFrameForGraphs(ctx, [...umap, ...(sampledRows ?? [])]);
+  })
+
+  .output('hasClusterData', (ctx) => {
+    const columns = getColumns(ctx);
+    if (columns === undefined)
+      return false;
+    
+    // Check all available columns (props includes cloneProps, linkProps, and links)
+    return hasClusterData(columns.props.map(p => p.column));
+  })
+
+  .output('clusterColumnOptions', (ctx) => {
+    const anchor = ctx.args.inputAnchor;
+    if (anchor === undefined)
+      return undefined;
+
+    const anchorSpec = ctx.resultPool.getPColumnSpecByRef(anchor);
+    if (anchorSpec === undefined)
+      return undefined;
+
+    const options: Array<{ label: string; value: string }> = [];
+    
+    // Get linker columns (these become cluster columns in the workflow)
+    // For simplicity, always use clusterAxis_N_0 format which handles both cases:
+    // - When cluster sizes exist: matches workflow's clusterAxis naming directly
+    // - When no cluster sizes: Python script handles both formats via regex
+    let i = 0;
+    for (const idx of [0, 1]) {
+      let axesToMatch;
+      if (idx === 0) {
+        // clonotypeKey in second axis
+        axesToMatch = [{}, anchorSpec.axesSpec[1]];
+      } else {
+        // clonotypeKey in first axis
+        axesToMatch = [anchorSpec.axesSpec[1], {}];
+      }
+      
+      // Get linkers as PlRefs (same as in util.ts)
+      const linkers = ctx.resultPool.getOptions([
+        {
+          axes: axesToMatch,
+          annotations: { 'pl7.app/isLinkerColumn': 'true' },
+        },
+      ]);
+
+      for (const link of linkers) {
+        // Always use clusterAxis_N_0 format
+        // Python script will match this to either clusterAxis_N_M or cluster_N in the actual data
+        options.push({
+          label: link.label || `Cluster ${i}`,
+          value: `clusterAxis_${i}_0`,
+        });
+        i++;
+      }
+    }
+    
+    return options.length > 0 ? options : undefined;
   })
 
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)
