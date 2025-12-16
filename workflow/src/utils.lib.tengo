@@ -1,0 +1,139 @@
+// Utility functions for antibody-tcr-lead-selection workflow
+
+slices := import("@platforma-sdk/workflow-tengo:slices")
+
+/**
+ * Checks if two clusterId axes have matching domains.
+ * Used to determine if two columns belong to the same clustering run.
+ * 
+ * @param axis1 - First clusterId axis to compare
+ * @param axis2 - Second clusterId axis to compare
+ * @return true if domains match, false otherwise
+ */
+clusterAxisDomainsMatch := func(axis1, axis2) {
+    // If either axis is undefined, they don't match
+    if is_undefined(axis1) || is_undefined(axis2) {
+        return false
+    }
+    
+    // Check if both have the same domain presence
+    if is_undefined(axis1.domain) != is_undefined(axis2.domain) {
+        return false
+    }
+    
+    // If both have no domain, consider them matching
+    if is_undefined(axis1.domain) && is_undefined(axis2.domain) {
+        return true
+    }
+    
+    // Both have domains - compare them
+    if len(axis1.domain) != len(axis2.domain) {
+        return false
+    }
+    
+    // Check all keys and values match
+    for k, v in axis1.domain {
+        if is_undefined(axis2.domain[k]) || axis2.domain[k] != v {
+            return false
+        }
+    }
+    
+    return true
+}
+
+/**
+ * Finds the linker index that matches a ranking column's clusterId axis.
+ * Returns undefined if no matching linker is found.
+ * 
+ * @param colsSpec - Column specification containing axes
+ * @param linkerColumns - List of linker columns to match against
+ * @return Linker index (number) or undefined if not found
+ */
+findMatchingLinkerIndex := func(colsSpec, linkerColumns) {
+    // Find the clusterId axis in the ranking column
+    rankingClusterIdAxis := undefined
+    for axis in colsSpec.axesSpec {
+        if axis.name == "pl7.app/vdj/clusterId" {
+            rankingClusterIdAxis = axis
+            break
+        }
+    }
+    
+    // Try to match this column to a linker by comparing clusterId axes
+    if is_undefined(rankingClusterIdAxis) {
+        return undefined
+    }
+    
+    for li, linkerCol in linkerColumns {
+        // Get the clusterId axis from the linker column
+        linkerClusterIdAxis := undefined
+        for axis in linkerCol.spec.axesSpec {
+            if axis.name == "pl7.app/vdj/clusterId" {
+                linkerClusterIdAxis = axis
+                break
+            }
+        }
+        
+        // Compare the axes - check if domains match
+        if clusterAxisDomainsMatch(rankingClusterIdAxis, linkerClusterIdAxis) {
+            return li
+        }
+    }
+    
+    return undefined
+}
+
+/**
+ * Processes a ranking column to determine its header name and cluster axis index.
+ * 
+ * @param colsSpec - Column specification
+ * @param datasetMainAxisName - Name of the main dataset axis (e.g., clonotype axis)
+ * @param linkerColumns - List of linker columns to match against
+ * @param clusterPropertyIdx - Current cluster property index counter
+ * @return Map with keys: header, clusterAxisIdx, newClusterPropertyIdx
+ */
+processRankingColumn := func(colsSpec, datasetMainAxisName, linkerColumns, clusterPropertyIdx) {
+    axesNames := slices.map(colsSpec.axesSpec, func (a) { return a.name})
+    isClusterProperty := !slices.hasElement(axesNames, datasetMainAxisName)
+    
+    if !isClusterProperty {
+        // This is a clonotype property
+        return {
+            isClusterProperty: false,
+            header: undefined,
+            clusterAxisIdx: undefined,
+            newClusterPropertyIdx: clusterPropertyIdx
+        }
+    }
+    
+    // This is a cluster property - try to find matching linker
+    linkerIdx := findMatchingLinkerIndex(colsSpec, linkerColumns)
+    
+    header := ""
+    clusterAxisIdx := undefined
+    newClusterPropertyIdx := clusterPropertyIdx
+    
+    if linkerIdx != undefined {
+        // This column belongs to a linker - use the linker index
+        header = "Col_linker." + string(linkerIdx)
+        clusterAxisIdx = linkerIdx
+    } else {
+        // This is a generic cluster property (not associated with any linker)
+        header = "Col_cluster." + string(clusterPropertyIdx)
+        clusterAxisIdx = clusterPropertyIdx
+        newClusterPropertyIdx = clusterPropertyIdx + 1
+    }
+    
+    return {
+        isClusterProperty: true,
+        header: header,
+        clusterAxisIdx: clusterAxisIdx,
+        newClusterPropertyIdx: newClusterPropertyIdx
+    }
+}
+
+export {
+    clusterAxisDomainsMatch: clusterAxisDomainsMatch,
+    findMatchingLinkerIndex: findMatchingLinkerIndex,
+    processRankingColumn: processRankingColumn
+}
