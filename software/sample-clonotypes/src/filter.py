@@ -5,12 +5,13 @@ import polars as pl
 import re
 import os
 import json
+import time
 
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Filter rows based on Filter_* columns using provided filter specifications.")
-    parser.add_argument("--csv", required=True, help="Path to input CSV file")
-    parser.add_argument("--out", required=True, help="Path to output CSV file")
+    parser.add_argument("--parquet", required=True, help="Path to input Parquet file")
+    parser.add_argument("--out", required=True, help="Path to output Parquet file")
     parser.add_argument("--filter-map", required=True, help="JSON string containing filter mapping")
     return parser.parse_args()
 
@@ -108,25 +109,34 @@ def apply_filters(df, filter_map):
 
 
 def main():
+    start_time = time.time()
+    print(f"Starting clonotype filtering at {time.strftime('%H:%M:%S')}")
+    
     args = parse_arguments()
 
-    # Load CSV 
+    # Load Parquet file
+    load_start = time.time()
     try:
-        df = pl.read_csv(args.csv, separator=',')
+        df = pl.read_parquet(args.parquet)
     except Exception as e:
         print(f"Error reading file: {e}")
         return
+    
+    load_time = time.time() - load_start
+    print(f"✓ Data loading: {load_time:.3f}s ({df.height:,} rows, {len(df.columns)} columns)")
 
     # Check if file is empty
     if df.height == 0:
-        print("Warning: Input CSV file is empty. Creating empty output file with minimal headers.")
+        print("Warning: Input Parquet file is empty. Creating empty output file with minimal headers.")
         # Create empty output file with minimal required columns
         empty_df = pl.DataFrame(schema={
             'clonotypeKey': pl.Utf8,
             'top': pl.Int64,
         })
-        empty_df.write_csv(args.out)
+        empty_df.write_parquet(args.out)
+        total_time = time.time() - start_time
         print(f"Empty output file created: {args.out}")
+        print(f"🎯 Total time: {total_time:.3f}s")
         return
 
     # Parse filter map from JSON string
@@ -169,22 +179,27 @@ def main():
                 df = df.with_columns(pl.col(column).replace("", float("NaN")).cast(dtype))
 
     # Apply filters
+    filtering_start = time.time()
     print(f"Initial rows: {df.height}")
     filtered_df = apply_filters(df, filter_map)
+    filtering_time = time.time() - filtering_start
     print(f"Rows after filtering: {filtered_df.height}")
+    print(f"✓ Filtering: {filtering_time:.3f}s")
 
     # Add a column named top with value 1
     filtered_df = filtered_df.with_columns(pl.lit(1).alias("top"))
     
+    # Output filtered data to parquet
+    output_start = time.time()
     if filtered_df.height == 0:
         print("Warning: No rows remain after filtering. Creating empty output file.")
-        # Create empty output file with same columns as input
-        filtered_df.write_csv(args.out)
-        return
-
-    # Output filtered data to csv
-    filtered_df.write_csv(args.out)
-    print(f"Filtered data written to: {args.out}")
+    
+    filtered_df.write_parquet(args.out)
+    output_time = time.time() - output_start
+    print(f"✓ Output: {output_time:.3f}s (wrote to {args.out})")
+    
+    total_time = time.time() - start_time
+    print(f"🎯 Total time: {total_time:.3f}s")
 
 if __name__ == "__main__":
     main() 

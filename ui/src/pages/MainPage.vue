@@ -8,6 +8,7 @@ import {
   PlBlockPage,
   PlBtnGhost,
   PlDropdownRef,
+  PlDropdown,
   PlNumberField,
   PlSectionSeparator,
   PlSlideModal,
@@ -40,39 +41,10 @@ function setAnchorColumn(ref: PlRef | undefined) {
 }
 
 const tableSettings = usePlDataTableSettingsV2({
-  sourceId: () => app.model.args.inputAnchor,
+  // Only set sourceId when table model exists to prevent loading state
+  sourceId: () => app.model.outputs.table ? app.model.args.inputAnchor : null,
   model: () => app.model.outputs.table,
   // filtersConfig: ({ column }) => ({ default: defaultFilters(column) }),
-});
-
-let defaultRankingLabel = 'Number of Samples';
-watch(() => [app.model.outputs.rankingOptions], (_) => {
-  const sampleNumber = app.model.outputs.rankingOptions?.find((o) => o.label.split(' / ')[0] === 'Number of Samples');
-  if (sampleNumber) {
-    defaultRankingLabel = sampleNumber.label;
-    app.model.args.rankingOrderDefault = {
-      value: {
-        anchorRef: sampleNumber.value.anchorRef,
-        anchorName: 'main',
-        column: sampleNumber.value.column,
-      },
-      rankingOrder: 'decreasing',
-    };
-  // if we didn't find 'Number of Samples' in ranking options, we just select the first option
-  } else {
-    const firstOption = app.model.outputs.rankingOptions?.[0];
-    if (firstOption) {
-      defaultRankingLabel = firstOption.label;
-      app.model.args.rankingOrderDefault = {
-        value: {
-          anchorRef: firstOption.value.anchorRef,
-          anchorName: 'main',
-          column: firstOption.value.column,
-        },
-        rankingOrder: 'decreasing',
-      };
-    }
-  }
 });
 
 const selection = ref<PlSelectionModel>({
@@ -84,6 +56,11 @@ const selection = ref<PlSelectionModel>({
 const kabatNumbering = computed<boolean>({
   get: () => (app.model.args.kabatNumbering ?? false),
   set: (v: boolean) => (app.model.args.kabatNumbering = v),
+});
+
+const disableClusterRanking = computed<boolean>({
+  get: () => (app.model.args.disableClusterRanking ?? false),
+  set: (v: boolean) => (app.model.args.disableClusterRanking = v),
 });
 
 // Detect if selected dataset is Immunoglobulins (IG) vs TCR
@@ -175,6 +152,32 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
       </PlNumberField>
 
       <RankList />
+      
+      <PlCheckbox v-if="isSamplingConfigured && app.model.outputs.hasClusterData" v-model="disableClusterRanking">
+        Disable cluster ranking
+        <PlTooltip class="info" position="top">
+          <PlIcon16 name="info"/>
+          <template #tooltip>
+            When enabled, skips automatic cluster size ranking. Use this when you want to rank only by the selected clonotype properties.
+          </template>
+        </PlTooltip>
+      </PlCheckbox>
+      
+      <PlDropdown
+        v-if="isSamplingConfigured && app.model.outputs.clusterColumnOptions && app.model.outputs.clusterColumnOptions.length > 1"
+        v-model="app.model.args.clusterColumn"
+        :options="app.model.outputs.clusterColumnOptions"
+        :style="{ width: '320px' }"
+        :disabled="disableClusterRanking"
+        label="Cluster column for sampling"
+        clearable
+        placeholder="Auto (use first available)"
+      >
+        <template #tooltip>
+          When multiple cluster columns are available, select which one to use for round-robin sampling. If not specified, the first cluster column will be used.
+        </template>
+      </PlDropdown>
+      
       <template v-if="isSamplingConfigured && isIGDataset">
         <PlSectionSeparator>
           Antibody numbering
@@ -190,9 +193,6 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
         </PlCheckbox>
       </template>
 
-      <PlAlert v-if="app.model.ui.rankingOrder.length === 0 && app.model.args.topClonotypes !== undefined" type="warn">
-        {{ "Warning: If you don't select any Clonotype Ranking columns to pick the top candidates, '" + defaultRankingLabel + "' will be used by default in decreasing order" }}
-      </PlAlert>
       <PlAlert
         v-if="app.model.args.topClonotypes !== undefined
           && app.model.args.rankingOrder.some((order) => order.value === undefined)" type="warn"

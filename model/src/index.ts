@@ -19,6 +19,21 @@ import { anchoredColumnId, getColumns } from './util';
 import type { PColumn, PColumnDataUniversal } from '@platforma-sdk/model';
 
 /**
+ * Checks if any cluster data is present by examining clusterId axes.
+ * Returns true if at least one column has a clusterId axis.
+ */
+function hasClusterData(columns: PColumn<PColumnDataUniversal>[]): boolean {
+  for (const col of columns) {
+    for (const axis of col.spec.axesSpec) {
+      if (axis.name === 'pl7.app/vdj/clusterId') {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * Checks if there are multiple upstream clustering blocks by examining clusterId axes.
  * Returns true if there are 2 or more unique clustering blockIds.
  */
@@ -113,9 +128,10 @@ export type BlockArgs = {
   inputAnchor?: PlRef;
   topClonotypes?: number;
   rankingOrder: RankingOrder[];
-  rankingOrderDefault?: RankingOrder;
   filters: Filter[];
   kabatNumbering?: boolean;
+  disableClusterRanking?: boolean;
+  clusterColumn?: string;
 };
 
 export type UiState = {
@@ -134,6 +150,8 @@ export const model = BlockModel.create()
   .withArgs<BlockArgs>({
     rankingOrder: [],
     filters: [],
+    disableClusterRanking: false,
+    clusterColumn: undefined,
   })
 
   .withUiState<UiState>({
@@ -210,7 +228,10 @@ export const model = BlockModel.create()
       return undefined;
 
     return deriveLabels(
-      columns.props.filter((c) => c.column.spec.valueType !== 'String'),
+      columns.props.filter((c) =>
+        c.column.spec.valueType !== 'String'
+        && c.column.spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true',
+      ),
       (c) => c.column.spec,
       { includeNativeLabel: true },
     ).map((o) => ({
@@ -225,7 +246,10 @@ export const model = BlockModel.create()
       return undefined;
 
     return deriveLabels(
-      columns.props.filter((c) => c.column.spec.annotations?.['pl7.app/isScore'] === 'true'),
+      columns.props.filter((c) =>
+        c.column.spec.annotations?.['pl7.app/isScore'] === 'true'
+        && c.column.spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true',
+      ),
       (c) => c.column.spec,
       { includeNativeLabel: true },
     ).map((o) => ({
@@ -242,6 +266,8 @@ export const model = BlockModel.create()
 
     return deriveLabels(
       columns.props.filter((c) => {
+        // Exclude linker columns from UI options
+        if (c.column.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true') return false;
         // Include numeric columns (like ranking)
         if (c.column.spec.valueType !== 'String') return true;
         // Include string columns with discrete values (categorical filters)
@@ -255,54 +281,6 @@ export const model = BlockModel.create()
       value: anchoredColumnId(o.value),
       column: o.value.column, // Add column for UI access to spec and discrete values
     }));
-  })
-
-  .output('rankingOrderDefault', (ctx) => {
-    const columns = getColumns(ctx);
-    if (columns === undefined)
-      return undefined;
-
-    // Use the first score column as default ranking
-    const scoreColumns = columns.props.filter((c) =>
-      c.column.spec.annotations?.['pl7.app/isScore'] === 'true'
-      && c.column.spec.valueType !== 'String',
-    );
-
-    if (scoreColumns.length > 0) {
-      return {
-        id: `default-rank-${scoreColumns[0].column.id}`,
-        value: anchoredColumnId(scoreColumns[0]),
-        rankingOrder: 'decreasing', // highest scores first
-        isExpanded: false,
-      };
-    }
-
-    // Fall back to any non-string column (like number of samples, counts, etc.)
-    const numericColumns = columns.props.filter((c) =>
-      c.column.spec.valueType !== 'String',
-    );
-
-    if (numericColumns.length > 0) {
-      return {
-        id: `default-rank-${numericColumns[0].column.id}`,
-        value: anchoredColumnId(numericColumns[0]),
-        rankingOrder: 'decreasing', // highest counts first
-        isExpanded: false,
-      };
-    }
-
-    // Last resort: use any available column
-    if (columns.props.length > 0) {
-      return {
-        id: `default-rank-${columns.props[0].column.id}`,
-        value: anchoredColumnId(columns.props[0]),
-        rankingOrder: 'increasing', // default for string columns
-        isExpanded: false,
-      };
-    }
-
-    // Should never reach here if columns exist
-    return undefined;
   })
 
   .output('defaultFilters', (ctx) => {
@@ -323,7 +301,7 @@ export const model = BlockModel.create()
   // Use the cdr3LengthsCalculated cols
   .output('spectratypePf', (ctx) => {
     // const pCols = ctx.outputs?.resolve('cdr3VspectratypePf')?.getPColumns();
-    const pCols = ctx.prerun?.resolve({
+    const pCols = ctx.outputs?.resolve({
       field: 'cdr3VspectratypePf',
       assertFieldType: 'Input',
       allowPermanentAbsence: true,
@@ -336,7 +314,7 @@ export const model = BlockModel.create()
   // Use the cdr3LengthsCalculated cols
   .output('vjUsagePf', (ctx) => {
     // const pCols = ctx.outputs?.resolve('vjUsagePf')?.getPColumns();
-    const pCols = ctx.prerun?.resolve({
+    const pCols = ctx.outputs?.resolve({
       field: 'vjUsagePf',
       assertFieldType: 'Input',
       allowPermanentAbsence: true,
@@ -351,45 +329,90 @@ export const model = BlockModel.create()
     if (columns === undefined)
       return undefined;
 
+    // Don't render table until workflow has been executed
+    if (!ctx.outputs) {
+      return undefined;
+    }
+
     const props = columns.props.map((c) => c.column);
 
-    // Get filtered/sampled rows from prerun
-    const sampledRows = ctx.prerun?.resolve({
+    // Resolve the sampledRows output
+    const sampledRowsAccessor = ctx.outputs.resolve({
       field: 'sampledRows',
       assertFieldType: 'Input',
       allowPermanentAbsence: true,
-    })?.getPColumns();
+    });
 
-    const assemblingKabatPf = ctx.prerun?.resolve({
+    // Get the actual data
+    const sampledRows = sampledRowsAccessor?.getPColumns();
+
+    // Check if sampledRows output is finalized (detects stale data after dataset change)
+    const sampledRowsAreFinal = sampledRowsAccessor?.getIsFinal() ?? false;
+
+    // Don't render table if sampledRows don't exist or aren't finalized
+    if (sampledRows === undefined || !sampledRowsAreFinal) {
+      return undefined;
+    }
+
+    // Verify sampledRows belong to current inputAnchor by checking axes
+    // This is critical to prevent showing data from a different dataset
+    if (ctx.args.inputAnchor !== undefined) {
+      const anchorSpec = ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor);
+      if (anchorSpec !== undefined) {
+        const samplingCol = sampledRows.find(
+          (col) => col.spec.name === 'pl7.app/vdj/sampling-column',
+        );
+        if (samplingCol !== undefined) {
+          const clonotypeAxisMatches = samplingCol.spec.axesSpec.some(
+            (axis) => JSON.stringify(axis) === JSON.stringify(anchorSpec.axesSpec[1]),
+          );
+          if (!clonotypeAxisMatches) {
+            return undefined;
+          }
+        }
+      }
+    }
+
+    const assemblingKabatPf = ctx.outputs?.resolve({
       field: 'assemblingKabatPf',
       assertFieldType: 'Input',
       allowPermanentAbsence: true,
     })?.getPColumns();
 
-    let ops: CreatePlDataTableOps = {};
-    const cols: Column[] = [];
+    // Use sampled rows (after validation that they're final)
+    const allColumns = [
+      ...props,
+      ...sampledRows,
+      ...(assemblingKabatPf ?? []),
+    ];
 
-    // Case where we just opened the block (no filters, no ranking)
-    if (sampledRows === undefined) { // case where we have changed parameters but not hit run
-      // Only update cluster column labels if we have multiple clustering blocks
-      cols.push(...(hasMultipleClusteringBlocks(props)
-        ? updateClusterColumnLabels(props)
-        : props));
-    } else {
-      // Use sampled rows if available (ranking applied), otherwise use filtered clonotypes
-      const allColumns = [
-        ...props,
-        ...(sampledRows ?? []),
-        ...(assemblingKabatPf ?? []),
+    // Only update cluster column labels if we have multiple clustering blocks
+    const cols = hasMultipleClusteringBlocks(allColumns)
+      ? updateClusterColumnLabels(allColumns)
+      : allColumns;
+
+    // Find ranking-order column if present (added by sampling workflow)
+    const rankingOrderCol = allColumns.find(
+      (col) => col.spec.name === 'pl7.app/vdj/ranking-order',
+    );
+
+    const ops: CreatePlDataTableOps = {
+      coreColumnPredicate: (col) => col.spec.name === 'pl7.app/vdj/sampling-column',
+      coreJoinType: 'inner',
+    };
+
+    // If ranking-order column is present, sort by it ascending
+    if (rankingOrderCol) {
+      ops.sorting = [
+        {
+          column: {
+            type: 'column',
+            id: rankingOrderCol.id,
+          },
+          ascending: true,
+          naAndAbsentAreLeastValues: false,
+        },
       ];
-      // Only update cluster column labels if we have multiple clustering blocks
-      cols.push(...(hasMultipleClusteringBlocks(allColumns)
-        ? updateClusterColumnLabels(allColumns)
-        : allColumns));
-      ops = {
-        coreColumnPredicate: (col) => col.spec.name === 'pl7.app/vdj/sampling-column',
-        coreJoinType: 'inner',
-      };
     }
 
     return createPlDataTableV2(
@@ -404,22 +427,17 @@ export const model = BlockModel.create()
     if (ctx.args.inputAnchor === undefined)
       return false;
 
-    const sampledReady = ctx.prerun?.resolve({
-      field: 'sampledRows',
-      assertFieldType: 'Input',
-      allowPermanentAbsence: true,
-    }) !== undefined;
+    // If outputs object doesn't exist yet, workflow hasn't been run - not calculating
+    if (!ctx.outputs) return false;
 
-    let kabatReady = true;
-    if (ctx.args.kabatNumbering === true) {
-      kabatReady = ctx.prerun?.resolve({
-        field: 'assemblingKabatPf',
-        assertFieldType: 'Input',
-        allowPermanentAbsence: true,
-      }) !== undefined;
-    }
+    // Check if outputs are currently being computed
+    const outputsState = ctx.outputs.getIsReadyOrError();
 
-    return !(sampledReady && kabatReady);
+    // If still computing, return true (actively calculating)
+    if (outputsState === false) return true;
+
+    // If errored or ready, we're done calculating
+    return false;
   })
 
   // Use UMAP output from ctx from clonotype-space block
@@ -444,9 +462,66 @@ export const model = BlockModel.create()
     // @TODO: if umap size is > 2 !
 
     // Get sampled rows from workflow prerun output (if ranking was applied)
-    const sampledRows = ctx.prerun?.resolve({ field: 'sampledRows', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
+    const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
 
     return createPFrameForGraphs(ctx, [...umap, ...(sampledRows ?? [])]);
+  })
+
+  .output('hasClusterData', (ctx) => {
+    const columns = getColumns(ctx);
+    if (columns === undefined)
+      return false;
+
+    // Check all available columns (props includes cloneProps, linkProps, and links)
+    return hasClusterData(columns.props.map((p) => p.column));
+  })
+
+  .output('clusterColumnOptions', (ctx) => {
+    const anchor = ctx.args.inputAnchor;
+    if (anchor === undefined)
+      return undefined;
+
+    const anchorSpec = ctx.resultPool.getPColumnSpecByRef(anchor);
+    if (anchorSpec === undefined)
+      return undefined;
+
+    const options: Array<{ label: string; value: string }> = [];
+
+    // Get linker columns (these become cluster columns in the workflow)
+    // For simplicity, always use clusterAxis_N_0 format which handles both cases:
+    // - When cluster sizes exist: matches workflow's clusterAxis naming directly
+    // - When no cluster sizes: Python script handles both formats via regex
+    let i = 0;
+    for (const idx of [0, 1]) {
+      let axesToMatch;
+      if (idx === 0) {
+        // clonotypeKey in second axis
+        axesToMatch = [{}, anchorSpec.axesSpec[1]];
+      } else {
+        // clonotypeKey in first axis
+        axesToMatch = [anchorSpec.axesSpec[1], {}];
+      }
+
+      // Get linkers as PlRefs (same as in util.ts)
+      const linkers = ctx.resultPool.getOptions([
+        {
+          axes: axesToMatch,
+          annotations: { 'pl7.app/isLinkerColumn': 'true' },
+        },
+      ]);
+
+      for (const link of linkers) {
+        // Always use clusterAxis_N_0 format
+        // Python script will match this to either clusterAxis_N_M or cluster_N in the actual data
+        options.push({
+          label: link.label || `Cluster ${i}`,
+          value: `clusterAxis_${i}_0`,
+        });
+        i++;
+      }
+    }
+
+    return options.length > 0 ? options : undefined;
   })
 
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)

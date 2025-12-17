@@ -11,7 +11,7 @@ getColumns := func(datasetSpec, addRanking) {
           domain: {},
           annotations: {
             "pl7.app/label": "Sampling column",
-            "pl7.app/table/visibility": "optional",
+            "pl7.app/table/visibility": "hidden",
             "pl7.app/isSubset": "true"
           }
         }
