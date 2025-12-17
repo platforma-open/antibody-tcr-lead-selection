@@ -204,17 +204,18 @@ wf.body(func(args) {
                     cloneTable.setAxisHeader(col.spec.axesSpec[0], "cluster_" + string(i))
                     linkerAxisSpec["cluster_" + string(i)] = col.spec.axesSpec[0]
                     clusterIdAxis = col.spec.axesSpec[0]
+                    addedCols = true
                 } else if datasetSpec.axesSpec[1].name == col.spec.axesSpec[0].name {
                     cloneTable.add(col, {header: "linker." + string(i)})
                     cloneTable.setAxisHeader(col.spec.axesSpec[1], "cluster_" + string(i))
                     linkerAxisSpec["cluster_" + string(i)] = col.spec.axesSpec[1]
                     clusterIdAxis = col.spec.axesSpec[1]
+                    addedCols = true
                 }
                 // Collect clusterId axes from linker columns to match cluster size columns
                 if !is_undefined(clusterIdAxis) && clusterIdAxis.name == "pl7.app/vdj/clusterId" {
                     linkerClusterIdAxes = append(linkerClusterIdAxes, clusterIdAxis)
                 }
-                addedCols = true
             }
         }
 
@@ -268,6 +269,17 @@ wf.body(func(args) {
                     }
                     clusterSizeIdx = clusterSizeIdx + 1
                 }
+            }
+        }
+
+        // Fallback: if no columns have been added yet, add at least one CDR3 sequence column
+        // This ensures the table can be built even when no filters/ranking columns are specified
+        if !addedCols {
+            cdr3Sequences := columns.getColumns("cdr3Sequences")
+            if len(cdr3Sequences) > 0 {
+                // Add the first CDR3 sequence as a fallback column
+                cloneTable.add(cdr3Sequences[0], {header: "cdr3_fallback"})
+                addedCols = true
             }
         }
 
