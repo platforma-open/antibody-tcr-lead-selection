@@ -8,7 +8,7 @@ render := import("@platforma-sdk/workflow-tengo:render")
 sampledColsConv := import(":sampled-cols-conv")
 json := import("json")
 
-self.defineOutputs("sampledRows", "finalClonotypesCsv")
+self.defineOutputs("sampledRows", "finalClonotypes")
 
 self.body(func(inputs) {
 
@@ -19,33 +19,33 @@ self.body(func(inputs) {
     topClonotypes := inputs.topClonotypes
 
     outputs := {}
-    finalClonotypesCsv := undefined
+    finalClonotypes := undefined
     
     // Run filtering script
     filterResult := exec.builder().
         software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.sample-clonotypes:filter")).
         mem("16GiB").
         cpu(1).
-        addFile("clonotypes.csv", cloneTable).
-        arg("--csv").arg("clonotypes.csv").
-        arg("--out").arg("filteredClonotypes.csv").
+        addFile("clonotypes.parquet", cloneTable).
+        arg("--parquet").arg("clonotypes.parquet").
+        arg("--out").arg("filteredClonotypes.parquet").
         arg("--filter-map").arg(string(json.encode(filterMap))).
-        saveFile("filteredClonotypes.csv").
+        saveFile("filteredClonotypes.parquet").
         printErrStreamToStdout().
         cache(24 * 60 * 60 * 1000).
         run()
 
-    // Save filtered CSV file
-    filteredClonotypesCsv := filterResult.getFile("filteredClonotypes.csv")
+    // Save filtered parquet file
+    filteredClonotypes := filterResult.getFile("filteredClonotypes.parquet")
 
     // Store outputs 
     sampledColsParams := sampledColsConv.getColumns(datasetSpec, false) // No ranking column
-    filteredClonotypesPf := xsv.importFile(filteredClonotypesCsv, "csv", sampledColsParams,
+    filteredClonotypesPf := xsv.importFile(filteredClonotypes, "parquet", sampledColsParams,
                                         {cpu: 1, mem: "16GiB"})
 
     // Prepare outputs in case there is no top ranking
     outputs["sampledRows"] = pframes.exportFrame(filteredClonotypesPf)
-    finalClonotypesCsv = filteredClonotypesCsv
+    finalClonotypes = filteredClonotypes
 
 	if topClonotypes != undefined {
 
@@ -55,8 +55,8 @@ self.body(func(inputs) {
 			software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.sample-clonotypes:main")).
 			mem("16GiB").
 			cpu(1).
-			addFile("filteredClonotypes.csv", filteredClonotypesCsv).
-			arg("--csv").arg("filteredClonotypes.csv").
+			addFile("filteredClonotypes.parquet", filteredClonotypes).
+			arg("--parquet").arg("filteredClonotypes.parquet").
 			arg("--n").arg(string(topClonotypes)).
 			arg("--ranking-map").arg(string(json.encode(rankingMap)))
 
@@ -69,23 +69,23 @@ self.body(func(inputs) {
 		}
 
 		sampleClones := builder.
-			arg("--out").arg("sampledClonotypes_top.csv").
-			saveFile("sampledClonotypes_top.csv").
+			arg("--out").arg("sampledClonotypes_top.parquet").
+			saveFile("sampledClonotypes_top.parquet").
 			printErrStreamToStdout().
 			cache(24 * 60 * 60 * 1000).
 			run()
 
-		// Save top clonotypes CSV file
-		finalClonotypesCsv = sampleClones.getFile("sampledClonotypes_top.csv")
+		// Save top clonotypes parquet file
+		finalClonotypes = sampleClones.getFile("sampledClonotypes_top.parquet")
 		
 		// Store outputs 
         sampledColsParams := sampledColsConv.getColumns(datasetSpec, true) // Add ranking column
-		sampledColumnsPf := xsv.importFile(finalClonotypesCsv, "csv", sampledColsParams,
+		sampledColumnsPf := xsv.importFile(finalClonotypes, "parquet", sampledColsParams,
 											{cpu: 1, mem: "16GiB"})
 		outputs["sampledRows"] = pframes.exportFrame(sampledColumnsPf)
 	} 
 
-    outputs["finalClonotypesCsv"] = finalClonotypesCsv
+    outputs["finalClonotypes"] = finalClonotypes
 
     return outputs
 }) 

@@ -126,7 +126,7 @@ wf.body(func(args) {
     
         ////////// Clonotype Filtering //////////
         // Build clonotype table
-        cloneTable := pframes.csvFileBuilder() 
+        cloneTable := pframes.parquetFileBuilder() 
         cloneTable.setAxisHeader(datasetSpec.axesSpec[1], "clonotypeKey")
 
         // Add Filters to table
@@ -335,13 +335,12 @@ wf.body(func(args) {
             // Get the filtered clonotypes from the template result
             outputs["sampledRows"] = filterSampleResult.output("sampledRows", 24 * 60 * 60 * 1000)
 
-            // Get the filtered and sampled clonotypes P-frame and CSV from the template result
-            finalClonotypesCsv := filterSampleResult.output("finalClonotypesCsv", 24 * 60 * 60 * 1000)
-            // outputs["sampledRows"] = filterSampleResult.output("sampledRows", 24 * 60 * 60 * 1000)
+            // Get the filtered and sampled clonotypes P-frame from the template result
+            finalClonotypes := filterSampleResult.output("finalClonotypes", 24 * 60 * 60 * 1000)
             
             ////////// CDR3 Length Calculation //////////
                 
-            cdr3SeqTable := pframes.tsvFileBuilder()
+            cdr3SeqTable := pframes.parquetFileBuilder()
             cdr3SeqTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
 
             // Must deal with multiple CDR3 sequences (two for each cell in single cell data)
@@ -409,16 +408,16 @@ wf.body(func(args) {
                 software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.spectratype:main")).
                 mem("16GiB").
                 cpu(1).
-                addFile("cdr3_sequences_input.tsv", cdr3SeqTableBuilt).
-                arg("--input_tsv").arg("cdr3_sequences_input.tsv").
+                addFile("cdr3_sequences_input.parquet", cdr3SeqTableBuilt).
+                arg("--input_parquet").arg("cdr3_sequences_input.parquet").
                 arg("--spectratype_tsv").arg("spectratype.tsv").
                 arg("--vj_usage_tsv").arg("vj_usage.tsv") // no dot here
 
             // Add top clonotypes argument and file to the builder if provided
-            if finalClonotypesCsv != undefined {
+            if finalClonotypes != undefined {
                 cdr3VspectratypeCmd = cdr3VspectratypeCmd.
-                    arg("--final_clonotypes_csv").arg("finalClonotypes.csv").
-                    addFile("finalClonotypes.csv", finalClonotypesCsv)
+                    arg("--final-clonotypes").arg("finalClonotypes.parquet").
+                    addFile("finalClonotypes.parquet", finalClonotypes)
             }
 
             cdr3VspectratypeCmd = cdr3VspectratypeCmd. // continue building the command
@@ -444,7 +443,7 @@ wf.body(func(args) {
 
             if args.kabatNumbering == true {
             ////////// Assembling AA sequences //////////
-                assemSeqTable := pframes.tsvFileBuilder()
+                assemSeqTable := pframes.parquetFileBuilder()
                 keyHeader := "clonotypeKey"
                 assemSeqTable.setAxisHeader(datasetSpec.axesSpec[1].name, keyHeader)
 
@@ -474,7 +473,7 @@ wf.body(func(args) {
                 assem := render.create(assemFastaTpl, {
                     inputTsv: assemSeqTableBuilt,
                     keyColumn: "clonotypeKey",
-                    finalClonotypesCsv: finalClonotypesCsv,
+                    finalClonotypes: finalClonotypes,
                     isSingleCell: isSingleCell,
                     bulkChain: bulkChain
                 })

@@ -12,11 +12,11 @@ packages:
 
 catalog:
   '@platforma-sdk/model': ^1.48.4
-  '@platforma-sdk/ui-vue': ^1.48.5
-  '@platforma-sdk/workflow-tengo': ^5.7.1
+  '@platforma-sdk/ui-vue': ^1.48.8
+  '@platforma-sdk/workflow-tengo': ^5.7.3
   '@platforma-sdk/block-tools': ^2.6.27
 
-  '@platforma-sdk/test': ^1.48.5
+  '@platforma-sdk/test': ^1.48.8
   '@platforma-sdk/tengo-builder': ^2.4.2
   '@platforma-sdk/package-builder': ^3.10.7
   '@platforma-sdk/eslint-config': ^1.2.0

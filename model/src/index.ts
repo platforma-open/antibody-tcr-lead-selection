@@ -229,7 +229,10 @@ export const model = BlockModel.create()
       return undefined;
 
     return deriveLabels(
-      columns.props.filter((c) => c.column.spec.valueType !== 'String'),
+      columns.props.filter((c) =>
+        c.column.spec.valueType !== 'String'
+        && c.column.spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true',
+      ),
       (c) => c.column.spec,
       { includeNativeLabel: true },
     ).map((o) => ({
@@ -244,7 +247,10 @@ export const model = BlockModel.create()
       return undefined;
 
     return deriveLabels(
-      columns.props.filter((c) => c.column.spec.annotations?.['pl7.app/isScore'] === 'true'),
+      columns.props.filter((c) =>
+        c.column.spec.annotations?.['pl7.app/isScore'] === 'true'
+        && c.column.spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true',
+      ),
       (c) => c.column.spec,
       { includeNativeLabel: true },
     ).map((o) => ({
@@ -261,6 +267,8 @@ export const model = BlockModel.create()
 
     return deriveLabels(
       columns.props.filter((c) => {
+        // Exclude linker columns from UI options
+        if (c.column.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true') return false;
         // Include numeric columns (like ranking)
         if (c.column.spec.valueType !== 'String') return true;
         // Include string columns with discrete values (categorical filters)
@@ -405,10 +413,29 @@ export const model = BlockModel.create()
       cols.push(...(hasMultipleClusteringBlocks(allColumns)
         ? updateClusterColumnLabels(allColumns)
         : allColumns));
+      // Find ranking-order column if present (added by sampling workflow)
+      const rankingOrderCol = allColumns.find(
+        (col) => col.spec.name === 'pl7.app/vdj/ranking-order',
+      );
+
       ops = {
         coreColumnPredicate: (col) => col.spec.name === 'pl7.app/vdj/sampling-column',
         coreJoinType: 'inner',
       };
+
+      // If ranking-order column is present, sort by it ascending
+      if (rankingOrderCol) {
+        ops.sorting = [
+          {
+            column: {
+              type: 'column',
+              id: rankingOrderCol.id,
+            },
+            ascending: true,
+            naAndAbsentAreLeastValues: false,
+          },
+        ];
+      }
     }
 
     return createPlDataTableV2(
@@ -428,10 +455,10 @@ export const model = BlockModel.create()
 
     // Check if outputs are currently being computed
     const outputsState = ctx.outputs.getIsReadyOrError();
-    
+
     // If still computing, return true (actively calculating)
     if (outputsState === false) return true;
-    
+
     // If errored or ready, we're done calculating
     return false;
   })
@@ -467,9 +494,9 @@ export const model = BlockModel.create()
     const columns = getColumns(ctx);
     if (columns === undefined)
       return false;
-    
+
     // Check all available columns (props includes cloneProps, linkProps, and links)
-    return hasClusterData(columns.props.map(p => p.column));
+    return hasClusterData(columns.props.map((p) => p.column));
   })
 
   .output('clusterColumnOptions', (ctx) => {
@@ -482,7 +509,7 @@ export const model = BlockModel.create()
       return undefined;
 
     const options: Array<{ label: string; value: string }> = [];
-    
+
     // Get linker columns (these become cluster columns in the workflow)
     // For simplicity, always use clusterAxis_N_0 format which handles both cases:
     // - When cluster sizes exist: matches workflow's clusterAxis naming directly
@@ -497,7 +524,7 @@ export const model = BlockModel.create()
         // clonotypeKey in first axis
         axesToMatch = [anchorSpec.axesSpec[1], {}];
       }
-      
+
       // Get linkers as PlRefs (same as in util.ts)
       const linkers = ctx.resultPool.getOptions([
         {
@@ -516,7 +543,7 @@ export const model = BlockModel.create()
         i++;
       }
     }
-    
+
     return options.length > 0 ? options : undefined;
   })
 

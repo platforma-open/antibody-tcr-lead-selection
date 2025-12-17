@@ -1,2 +1,1 @@
-# No external deps needed, use stdlib CSV
-
+polars-lts-cpu==1.33.1

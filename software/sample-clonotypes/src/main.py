@@ -10,9 +10,9 @@ import json
 
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Rank rows based on Col* columns and output top N rows.")
-    parser.add_argument("--csv", required=True, help="Path to input CSV file")
+    parser.add_argument("--parquet", required=True, help="Path to input Parquet file")
     parser.add_argument("--n", type=int, required=True, help="Number of top rows to output")
-    parser.add_argument("--out", required=True, help="Path to output CSV file")
+    parser.add_argument("--out", required=True, help="Path to output Parquet file")
     parser.add_argument("--ranking-map", type=str, help='JSON string specifying ranking direction for each column, e.g., {"Col0":"decreasing","Col1":"increasing"}')
     parser.add_argument("--disable-cluster-ranking", action="store_true", 
                         help="Disable automatic cluster ranking in backward compatibility mode")
@@ -388,16 +388,13 @@ def main():
     
     args = parse_arguments()
 
-    # Load CSV - try both comma and tab separated
+    # Load Parquet file
     load_start = time.time()
     try:
-        df = pl.read_csv(args.csv, separator=',')
-    except:
-        try:
-            df = pl.read_csv(args.csv, separator='\t')
-        except Exception as e:
-            print(f"Error reading file: {e}")
-            return
+        df = pl.read_parquet(args.parquet)
+    except Exception as e:
+        print(f"Error reading file: {e}")
+        return
     
     load_time = time.time() - load_start
     print(f"✓ Data loading: {load_time:.3f}s ({df.height:,} rows, {len(df.columns)} columns)")
@@ -477,7 +474,7 @@ def main():
         })
     
     # Output simplified version to main output file
-    simplified_df.write_csv(args.out)
+    simplified_df.write_parquet(args.out)
     output_time = time.time() - output_start
     print(f"✓ Output: {output_time:.3f}s (wrote to {args.out})")
     
