@@ -128,7 +128,6 @@ export type BlockArgs = {
   inputAnchor?: PlRef;
   topClonotypes?: number;
   rankingOrder: RankingOrder[];
-  rankingOrderDefault?: RankingOrder;
   filters: Filter[];
   kabatNumbering?: boolean;
   disableClusterRanking?: boolean;
@@ -282,54 +281,6 @@ export const model = BlockModel.create()
       value: anchoredColumnId(o.value),
       column: o.value.column, // Add column for UI access to spec and discrete values
     }));
-  })
-
-  .output('rankingOrderDefault', (ctx) => {
-    const columns = getColumns(ctx);
-    if (columns === undefined)
-      return undefined;
-
-    // Use the first score column as default ranking
-    const scoreColumns = columns.props.filter((c) =>
-      c.column.spec.annotations?.['pl7.app/isScore'] === 'true'
-      && c.column.spec.valueType !== 'String',
-    );
-
-    if (scoreColumns.length > 0) {
-      return {
-        id: `default-rank-${scoreColumns[0].column.id}`,
-        value: anchoredColumnId(scoreColumns[0]),
-        rankingOrder: 'decreasing', // highest scores first
-        isExpanded: false,
-      };
-    }
-
-    // Fall back to any non-string column (like number of samples, counts, etc.)
-    const numericColumns = columns.props.filter((c) =>
-      c.column.spec.valueType !== 'String',
-    );
-
-    if (numericColumns.length > 0) {
-      return {
-        id: `default-rank-${numericColumns[0].column.id}`,
-        value: anchoredColumnId(numericColumns[0]),
-        rankingOrder: 'decreasing', // highest counts first
-        isExpanded: false,
-      };
-    }
-
-    // Last resort: use any available column
-    if (columns.props.length > 0) {
-      return {
-        id: `default-rank-${columns.props[0].column.id}`,
-        value: anchoredColumnId(columns.props[0]),
-        rankingOrder: 'increasing', // default for string columns
-        isExpanded: false,
-      };
-    }
-
-    // Should never reach here if columns exist
-    return undefined;
   })
 
   .output('defaultFilters', (ctx) => {

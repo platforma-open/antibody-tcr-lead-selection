@@ -36,15 +36,6 @@ wf.prepare(func(args){
                 validRanks = true
             }
         }
-    } 
-    if !validRanks {
-        // @TODO: this is a temporal patch for issue where rankingOrderDefault 
-        // are not defined by the time prepare phase works
-        if args.rankingOrderDefault.value != undefined {
-            bundleBuilder.addAnchor(args.rankingOrderDefault.value.anchorName, 
-                                    args.rankingOrderDefault.value.anchorRef)
-            bundleBuilder.addSingle(args.rankingOrderDefault.value.column)
-        }
     }
 
     // Load filter columns
@@ -201,35 +192,6 @@ wf.body(func(args) {
                 }
             }
         }
-        // If we didn't have any ranking column or all where not valid
-        if !validRanks {
-            // @TODO: this is a temporal patch for issue where rankingOrderDefault 
-            // are not defined by the time prepare phase works
-            if args.rankingOrderDefault.value != undefined {
-                // Process the default ranking column
-                colsSpec := columns.getSpec(args.rankingOrderDefault.value.column)
-                linkerColumns := columns.getColumns("linkers")
-                result := utils.processRankingColumn(colsSpec, datasetSpec.axesSpec[1].name, linkerColumns, 0)
-                
-                header := ""
-                if result.isClusterProperty {
-                    header = result.header
-                    
-                    // Add cluster axis with matching index
-                    for na, ax in colsSpec.axesSpec {
-                        if ax.name != datasetSpec.axesSpec[1].name {
-                            cloneTable.setAxisHeader(ax, "cluster_" + string(result.clusterAxisIdx))
-                        }
-                    }
-                } else {
-                    header = "Col0"
-                }
-                
-                cloneTable.add(columns.getColumn(args.rankingOrderDefault.value.column), {header: header})
-                addedCols = true
-                rankingMap[header] = args.rankingOrderDefault.rankingOrder
-            }
-        }
 
         // Get linker columns if needed
         linkerAxisSpec := {}
@@ -322,7 +284,6 @@ wf.body(func(args) {
                 inputAnchor: args.inputAnchor,
                 cloneTable: cloneTable,
                 rankingOrder: args.rankingOrder,
-                rankingOrderDefault: args.rankingOrderDefault,
                 filters: args.filters,
                 filterMap: filterMap,
                 rankingMap: rankingMap,

@@ -202,6 +202,16 @@ def rank_rows(df, clonotype_col_columns, cluster_col_columns, linker_col_columns
         specified_cluster_column: Optional specific cluster column to use for Case B ranking
     """
     
+    # Convert ranking columns to numeric types if they're strings
+    all_ranking_cols = clonotype_col_columns + cluster_col_columns + linker_col_columns
+    for col in all_ranking_cols:
+        if col in df.columns and df[col].dtype == pl.Utf8:
+            try:
+                df = df.with_columns(pl.col(col).cast(pl.Float64))
+                print(f"Converted ranking column '{col}' from string to numeric")
+            except Exception as e:
+                print(f"Warning: Could not convert column '{col}' to numeric: {e}")
+    
     # Case A: No cluster columns OR cluster ranking disabled
     if not cluster_columns or disable_cluster_ranking:
         print("Ranking mode: Clonotype properties only (Case A)")

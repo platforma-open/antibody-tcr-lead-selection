@@ -46,36 +46,6 @@ const tableSettings = usePlDataTableSettingsV2({
   // filtersConfig: ({ column }) => ({ default: defaultFilters(column) }),
 });
 
-let defaultRankingLabel = 'Number of Samples';
-watch(() => [app.model.outputs.rankingOptions], (_) => {
-  const sampleNumber = app.model.outputs.rankingOptions?.find((o) => o.label.split(' / ')[0] === 'Number of Samples');
-  if (sampleNumber) {
-    defaultRankingLabel = sampleNumber.label;
-    app.model.args.rankingOrderDefault = {
-      value: {
-        anchorRef: sampleNumber.value.anchorRef,
-        anchorName: 'main',
-        column: sampleNumber.value.column,
-      },
-      rankingOrder: 'decreasing',
-    };
-  // if we didn't find 'Number of Samples' in ranking options, we just select the first option
-  } else {
-    const firstOption = app.model.outputs.rankingOptions?.[0];
-    if (firstOption) {
-      defaultRankingLabel = firstOption.label;
-      app.model.args.rankingOrderDefault = {
-        value: {
-          anchorRef: firstOption.value.anchorRef,
-          anchorName: 'main',
-          column: firstOption.value.column,
-        },
-        rankingOrder: 'decreasing',
-      };
-    }
-  }
-});
-
 const selection = ref<PlSelectionModel>({
   axesSpec: [],
   selectedKeys: [],
@@ -222,9 +192,6 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
         </PlCheckbox>
       </template>
 
-      <PlAlert v-if="app.model.ui.rankingOrder.length === 0 && app.model.args.topClonotypes !== undefined" type="warn">
-        {{ "Warning: If you don't select any Clonotype Ranking columns to pick the top candidates, '" + defaultRankingLabel + "' will be used by default in decreasing order" }}
-      </PlAlert>
       <PlAlert
         v-if="app.model.args.topClonotypes !== undefined
           && app.model.args.rankingOrder.some((order) => order.value === undefined)" type="warn"
