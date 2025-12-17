@@ -1,5 +1,16 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.12.0
+
+### Minor Changes
+
+- 4ecbe6b: Improve cluster-based ranking
+
+### Patch Changes
+
+- Updated dependencies [4ecbe6b]
+  - @platforma-open/milaboratories.top-antibodies.model@1.14.0
+
 ## 1.11.0
 
 ### Minor Changes

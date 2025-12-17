@@ -1,5 +1,16 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.16.0
+
+### Minor Changes
+
+- 4ecbe6b: Improve cluster-based ranking
+
+### Patch Changes
+
+- Updated dependencies [4ecbe6b]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.8.0
+
 ## 1.15.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 1.8.0
+
+### Minor Changes
+
+- 4ecbe6b: Improve cluster-based ranking
+
 ## 1.7.2
 
 ### Patch Changes

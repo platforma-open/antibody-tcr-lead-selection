@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.14.0
+
+### Minor Changes
+
+- 4ecbe6b: Improve cluster-based ranking
+
 ## 1.13.0
 
 ### Minor Changes
