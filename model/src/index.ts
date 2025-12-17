@@ -329,14 +329,49 @@ export const model = BlockModel.create()
     if (columns === undefined)
       return undefined;
 
+    // Don't render table until workflow has been executed
+    if (!ctx.outputs) {
+      return undefined;
+    }
+
     const props = columns.props.map((c) => c.column);
 
-    // Get filtered/sampled rows from prerun
-    const sampledRows = ctx.outputs?.resolve({
+    // Resolve the sampledRows output
+    const sampledRowsAccessor = ctx.outputs.resolve({
       field: 'sampledRows',
       assertFieldType: 'Input',
       allowPermanentAbsence: true,
-    })?.getPColumns();
+    });
+
+    // Get the actual data
+    const sampledRows = sampledRowsAccessor?.getPColumns();
+
+    // Check if sampledRows output is finalized (detects stale data after dataset change)
+    const sampledRowsAreFinal = sampledRowsAccessor?.getIsFinal() ?? false;
+
+    // Don't render table if sampledRows don't exist or aren't finalized
+    if (sampledRows === undefined || !sampledRowsAreFinal) {
+      return undefined;
+    }
+
+    // Verify sampledRows belong to current inputAnchor by checking axes
+    // This is critical to prevent showing data from a different dataset
+    if (ctx.args.inputAnchor !== undefined) {
+      const anchorSpec = ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor);
+      if (anchorSpec !== undefined) {
+        const samplingCol = sampledRows.find(
+          (col) => col.spec.name === 'pl7.app/vdj/sampling-column',
+        );
+        if (samplingCol !== undefined) {
+          const clonotypeAxisMatches = samplingCol.spec.axesSpec.some(
+            (axis) => JSON.stringify(axis) === JSON.stringify(anchorSpec.axesSpec[1]),
+          );
+          if (!clonotypeAxisMatches) {
+            return undefined;
+          }
+        }
+      }
+    }
 
     const assemblingKabatPf = ctx.outputs?.resolve({
       field: 'assemblingKabatPf',
@@ -344,49 +379,40 @@ export const model = BlockModel.create()
       allowPermanentAbsence: true,
     })?.getPColumns();
 
-    let ops: CreatePlDataTableOps = {};
-    const cols: Column[] = [];
+    // Use sampled rows (after validation that they're final)
+    const allColumns = [
+      ...props,
+      ...sampledRows,
+      ...(assemblingKabatPf ?? []),
+    ];
 
-    // Case where we just opened the block (no filters, no ranking)
-    if (sampledRows === undefined) { // case where we have changed parameters but not hit run
-      // Only update cluster column labels if we have multiple clustering blocks
-      cols.push(...(hasMultipleClusteringBlocks(props)
-        ? updateClusterColumnLabels(props)
-        : props));
-    } else {
-      // Use sampled rows if available (ranking applied), otherwise use filtered clonotypes
-      const allColumns = [
-        ...props,
-        ...(sampledRows ?? []),
-        ...(assemblingKabatPf ?? []),
-      ];
-      // Only update cluster column labels if we have multiple clustering blocks
-      cols.push(...(hasMultipleClusteringBlocks(allColumns)
-        ? updateClusterColumnLabels(allColumns)
-        : allColumns));
-      // Find ranking-order column if present (added by sampling workflow)
-      const rankingOrderCol = allColumns.find(
-        (col) => col.spec.name === 'pl7.app/vdj/ranking-order',
-      );
+    // Only update cluster column labels if we have multiple clustering blocks
+    const cols = hasMultipleClusteringBlocks(allColumns)
+      ? updateClusterColumnLabels(allColumns)
+      : allColumns;
 
-      ops = {
-        coreColumnPredicate: (col) => col.spec.name === 'pl7.app/vdj/sampling-column',
-        coreJoinType: 'inner',
-      };
+    // Find ranking-order column if present (added by sampling workflow)
+    const rankingOrderCol = allColumns.find(
+      (col) => col.spec.name === 'pl7.app/vdj/ranking-order',
+    );
 
-      // If ranking-order column is present, sort by it ascending
-      if (rankingOrderCol) {
-        ops.sorting = [
-          {
-            column: {
-              type: 'column',
-              id: rankingOrderCol.id,
-            },
-            ascending: true,
-            naAndAbsentAreLeastValues: false,
+    const ops: CreatePlDataTableOps = {
+      coreColumnPredicate: (col) => col.spec.name === 'pl7.app/vdj/sampling-column',
+      coreJoinType: 'inner',
+    };
+
+    // If ranking-order column is present, sort by it ascending
+    if (rankingOrderCol) {
+      ops.sorting = [
+        {
+          column: {
+            type: 'column',
+            id: rankingOrderCol.id,
           },
-        ];
-      }
+          ascending: true,
+          naAndAbsentAreLeastValues: false,
+        },
+      ];
     }
 
     return createPlDataTableV2(

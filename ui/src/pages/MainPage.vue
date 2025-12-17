@@ -41,7 +41,8 @@ function setAnchorColumn(ref: PlRef | undefined) {
 }
 
 const tableSettings = usePlDataTableSettingsV2({
-  sourceId: () => app.model.args.inputAnchor,
+  // Only set sourceId when table model exists to prevent loading state
+  sourceId: () => app.model.outputs.table ? app.model.args.inputAnchor : null,
   model: () => app.model.outputs.table,
   // filtersConfig: ({ column }) => ({ default: defaultFilters(column) }),
 });
