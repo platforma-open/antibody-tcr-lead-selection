@@ -453,19 +453,76 @@ export const model = BlockModel.create()
     // This ensures we're working with the same column objects used to calculate visibility
     const defaultVisible = getDefaultVisibleColumns(allColumns, filterColumnIds, rankingColumnIds);
     
-    // Modify column specs to add visibility annotations
+    // Modify column specs to add visibility and order priority annotations
     // Essential columns are set to 'default' (visible), all others are set to 'optional' (hidden)
     // Note: This only evaluates based on INITIAL filter/ranking values.
     // If user changes filters/rankings in the UI, they'll need to manually show those columns.
+    //
+    // Column order (higher priority = appears left):
+    // 1. Clone Label (Clonotype ID) - 1000000
+    // 2. Full Protein Sequences - 999000
+    // 3. Filter/Rank columns - 7000
+    // 4. Everything else - default/existing priority
     const allColumnsWithVisibility = allColumns.map((col) => {
+      const isVisible = defaultVisible.has(col.id);
+      const colIdStr = col.id as string;
+      const isFilterOrRankColumn = filterColumnIds.has(colIdStr) || rankingColumnIds.has(colIdStr);
+      
+      // Determine order priority
+      const annotations = col.spec.annotations || {};
+      let orderPriority = annotations['pl7.app/table/orderPriority'];
+      
+      // Check if this is a Clone Label column (label column for clonotype axis)
+      const isCloneLabelColumn = col.spec.name === 'pl7.app/label' 
+        && col.spec.axesSpec.length === 1
+        && (col.spec.axesSpec[0].name === 'pl7.app/vdj/clonotypeKey' 
+            || col.spec.axesSpec[0].name === 'pl7.app/vdj/scClonotypeKey');
+      
+      // Set highest priority for Clone Label
+      if (isCloneLabelColumn) {
+        orderPriority = '1000000';
+      }
+      // Set very high priority for full protein sequences (right after Clone Label)
+      else if (isFullProteinSequence(col.spec)) {
+        orderPriority = '999000';
+      }
+      // Set priority for filter/ranking columns
+      else if (isFilterOrRankColumn) {
+        orderPriority = '7000';
+      }
+      
+      const newAnnotations = {
+        ...col.spec.annotations,
+        'pl7.app/table/visibility': isVisible ? 'default' : 'optional',
+        ...(orderPriority && { 'pl7.app/table/orderPriority': orderPriority }),
+      };
+      
+      // Update axes annotations
+      const updatedAxesSpec = col.spec.axesSpec.map(axis => {
+        const isClonotypeAxis = axis.name === 'pl7.app/vdj/clonotypeKey' 
+          || axis.name === 'pl7.app/vdj/scClonotypeKey';
+        
+        // Set high priority on Clonotype axis in ALL columns
+        // This ensures the Clonotype ID axis column appears first
+        if (isClonotypeAxis) {
+          return {
+            ...axis,
+            annotations: {
+              ...axis.annotations,
+              'pl7.app/table/orderPriority': '1000000',
+            },
+          };
+        }
+        
+        return axis;
+      });
+      
       return {
         ...col,
         spec: {
           ...col.spec,
-          annotations: {
-            ...col.spec.annotations,
-            'pl7.app/table/visibility': defaultVisible.has(col.id) ? 'default' : 'optional',
-          },
+          annotations: newAnnotations,
+          axesSpec: updatedAxesSpec,
         },
       };
     });
