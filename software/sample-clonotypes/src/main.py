@@ -9,11 +9,11 @@ import json
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Rank rows based on Col* columns and output top N rows.")
+    parser = argparse.ArgumentParser(description="Rank rows based on Col* columns and output top N rows. Supports Col0, Col1 (clonotype properties), Col_cluster.0 (cluster properties), and Col_linker.0.0, Col_linker.0.1 (linker properties).")
     parser.add_argument("--parquet", required=True, help="Path to input Parquet file")
     parser.add_argument("--n", type=int, required=True, help="Number of top rows to output")
     parser.add_argument("--out", required=True, help="Path to output Parquet file")
-    parser.add_argument("--ranking-map", type=str, help='JSON string specifying ranking direction for each column, e.g., {"Col0":"decreasing","Col1":"increasing"}')
+    parser.add_argument("--ranking-map", type=str, help='JSON string specifying ranking direction for each column, e.g., {"Col0":"decreasing","Col1":"increasing","Col_linker.0.0":"decreasing"}')
     parser.add_argument("--disable-cluster-ranking", action="store_true", 
                         help="Disable automatic cluster ranking in backward compatibility mode")
     parser.add_argument("--cluster-column", type=str, 
@@ -74,9 +74,9 @@ def validate_column_format(df):
                                  key=lambda x: int(x.split('.')[1]))
     print("Found cluster ranking columns:", cluster_col_columns)
     
-    # Check for linker ranking columns (Col_linker.0, Col_linker.1, ...)
-    linker_col_columns = sorted([col for col in df.columns if re.match(r'^Col_linker\.\d+$', col)],
-                                key=lambda x: int(x.split('.')[1]))
+    # Check for linker ranking columns (Col_linker.0, Col_linker.0.0, Col_linker.0.1, etc.)
+    linker_col_columns = sorted([col for col in df.columns if re.match(r'^Col_linker\.\d+(?:\.\d+)?$', col)],
+                                key=lambda x: tuple(map(int, x.split('.')[1:])))
     print("Found linker ranking columns:", linker_col_columns)
     
     # Check for cluster size columns
@@ -126,9 +126,10 @@ def match_cluster_properties_to_columns(cluster_col_columns, linker_col_columns,
                 if not found:
                     print(f"Warning: No cluster column (cluster_{idx} or clusterAxis_{idx}_*) found for {col}")
     
-    # Match linker properties: extract index from Col_linker.\d+
+    # Match linker properties: extract index from Col_linker.\d+ or Col_linker.\d+.\d+
     for col in linker_col_columns:
-        match = re.match(r'^Col_linker\.(\d+)$', col)
+        # Support both old format (Col_linker.0) and new format (Col_linker.0.0)
+        match = re.match(r'^Col_linker\.(\d+)(?:\.\d+)?$', col)
         if match:
             idx = match.group(1)
             

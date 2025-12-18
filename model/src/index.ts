@@ -2,9 +2,11 @@ import type { GraphMakerState } from '@milaboratories/graph-maker';
 import type {
   CreatePlDataTableOps,
   InferOutputsType,
+  PColumnSpec,
   PFrameHandle,
   PlDataTableStateV2,
   PlMultiSequenceAlignmentModel,
+  PObjectId,
   PlRef,
 } from '@platforma-sdk/model';
 import {
@@ -14,7 +16,7 @@ import {
   createPlDataTableV2,
   deriveLabels,
 } from '@platforma-sdk/model';
-import type { AnchoredColumnId, Column, Filter, FilterUI, RankingOrder, RankingOrderUI } from './util';
+import type { AnchoredColumnId, Filter, FilterUI, RankingOrder, RankingOrderUI } from './util';
 import { anchoredColumnId, getColumns } from './util';
 import type { PColumn, PColumnDataUniversal } from '@platforma-sdk/model';
 
@@ -120,6 +122,52 @@ function updateClusterColumnLabels(columns: PColumn<PColumnDataUniversal>[]): PC
     }
     return col;
   });
+}
+
+/**
+ * Check if a column is a full protein sequence (main assembling feature, aminoacid)
+ */
+function isFullProteinSequence(spec: PColumnSpec): boolean {
+  return (
+    spec.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'
+    && spec.annotations?.['pl7.app/vdj/isMainSequence'] === 'true'
+    && spec.domain?.['pl7.app/alphabet'] === 'aminoacid'
+  );
+}
+
+/**
+ * Determine which columns should be visible by default
+ */
+function getDefaultVisibleColumns(
+  columns: PColumn<PColumnDataUniversal>[],
+  filterColumnIds: Set<string>,
+  rankingColumnIds: Set<string>,
+): Set<PObjectId> {
+  const visible = new Set<PObjectId>();
+
+  for (const col of columns) {
+    // Full protein sequences
+    if (isFullProteinSequence(col.spec)) {
+      visible.add(col.id);
+      continue;
+    }
+
+    // Rank column (pl7.app/vdj/ranking-order)
+    if (col.spec.name === 'pl7.app/vdj/ranking-order') {
+      visible.add(col.id);
+      continue;
+    }
+
+    // Filter and ranking columns - direct string comparison
+    // Both col.id and the IDs in the sets should be SUniversalPColumnId strings
+    const colIdStr = col.id as string;
+    if (filterColumnIds.has(colIdStr) || rankingColumnIds.has(colIdStr)) {
+      visible.add(col.id);
+      continue;
+    }
+  }
+
+  return visible;
 }
 
 export * from './converters';
@@ -386,10 +434,47 @@ export const model = BlockModel.create()
       ...(assemblingKabatPf ?? []),
     ];
 
+    // Extract column IDs from INITIAL filter/ranking settings BEFORE any transformations
+    // Column IDs are SUniversalPColumnId which are already canonical string representations
+    // Just use them directly for comparison
+    const filterColumnIds = new Set<string>(
+      ctx.args.filters
+        .filter((f) => f.value?.column !== undefined)
+        .map((f) => f.value!.column as string),
+    );
+
+    const rankingColumnIds = new Set<string>(
+      ctx.args.rankingOrder
+        .filter((r) => r.value?.column !== undefined)
+        .map((r) => r.value!.column as string),
+    );
+
+    // Apply visibility annotations FIRST, before any column transformations
+    // This ensures we're working with the same column objects used to calculate visibility
+    const defaultVisible = getDefaultVisibleColumns(allColumns, filterColumnIds, rankingColumnIds);
+    
+    // Modify column specs to add visibility annotations
+    // Essential columns are set to 'default' (visible), all others are set to 'optional' (hidden)
+    // Note: This only evaluates based on INITIAL filter/ranking values.
+    // If user changes filters/rankings in the UI, they'll need to manually show those columns.
+    const allColumnsWithVisibility = allColumns.map((col) => {
+      return {
+        ...col,
+        spec: {
+          ...col.spec,
+          annotations: {
+            ...col.spec.annotations,
+            'pl7.app/table/visibility': defaultVisible.has(col.id) ? 'default' : 'optional',
+          },
+        },
+      };
+    });
+
     // Only update cluster column labels if we have multiple clustering blocks
-    const cols = hasMultipleClusteringBlocks(allColumns)
-      ? updateClusterColumnLabels(allColumns)
-      : allColumns;
+    // Apply this AFTER visibility annotations
+    const cols = hasMultipleClusteringBlocks(allColumnsWithVisibility)
+      ? updateClusterColumnLabels(allColumnsWithVisibility)
+      : allColumnsWithVisibility;
 
     // Find ranking-order column if present (added by sampling workflow)
     const rankingOrderCol = allColumns.find(

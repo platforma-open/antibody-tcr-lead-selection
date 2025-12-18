@@ -156,6 +156,7 @@ wf.body(func(args) {
         validRanks := false
         clusterPropertyIdx := 0
         clonotypePropertyIdx := 0
+        linkerColumnCounters := {}  // Track column count per linker index
         
         if len(args.rankingOrder) > 0 {
             for i, col in args.rankingOrder {
@@ -170,8 +171,20 @@ wf.body(func(args) {
                     
                     header := ""
                     if result.isClusterProperty {
-                        header = result.header
-                        clusterPropertyIdx = result.newClusterPropertyIdx
+                        // Check if this column is from a linker
+                        if result.isLinkerColumn {
+                            // Track and use counter for this specific linker
+                            linkerKey := "linker_" + string(result.clusterAxisIdx)
+                            if is_undefined(linkerColumnCounters[linkerKey]) {
+                                linkerColumnCounters[linkerKey] = 0
+                            }
+                            counter := linkerColumnCounters[linkerKey]
+                            header = "Col_linker." + string(result.clusterAxisIdx) + "." + string(counter)
+                            linkerColumnCounters[linkerKey] = counter + 1
+                        } else {
+                            header = result.header
+                            clusterPropertyIdx = result.newClusterPropertyIdx
+                        }
                         
                         // Add cluster axis with matching index
                         for na, ax in colsSpec.axesSpec {
