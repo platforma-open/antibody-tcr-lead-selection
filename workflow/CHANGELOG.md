@@ -1,5 +1,19 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.17.0
+
+### Minor Changes
+
+- b201aaf: Improve cluster ranking, improve performance
+
+### Patch Changes
+
+- Updated dependencies [b201aaf]
+  - @platforma-open/milaboratories.top-antibodies.anarci-kabat@1.3.0
+  - @platforma-open/milaboratories.top-antibodies.assembling-fasta@1.3.0
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.9.0
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.8.0
+
 ## 1.16.0
 
 ### Minor Changes

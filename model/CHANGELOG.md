@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.15.0
+
+### Minor Changes
+
+- b201aaf: Improve cluster ranking, improve performance
+
 ## 1.14.0
 
 ### Minor Changes

@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.anarci-kabat
 
+## 1.3.0
+
+### Minor Changes
+
+- b201aaf: Improve cluster ranking, improve performance
+
 ## 1.2.1
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.spectratype
 
+## 1.8.0
+
+### Minor Changes
+
+- b201aaf: Improve cluster ranking, improve performance
+
 ## 1.7.1
 
 ### Patch Changes

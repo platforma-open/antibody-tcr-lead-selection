@@ -1,5 +1,18 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 1.4.0
+
+### Minor Changes
+
+- b201aaf: Improve cluster ranking, improve performance
+
+### Patch Changes
+
+- Updated dependencies [b201aaf]
+  - @platforma-open/milaboratories.top-antibodies.model@1.15.0
+  - @platforma-open/milaboratories.top-antibodies.ui@1.13.0
+  - @platforma-open/milaboratories.top-antibodies.workflow@1.17.0
+
 ## 1.3.2
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 1.9.0
+
+### Minor Changes
+
+- b201aaf: Improve cluster ranking, improve performance
+
 ## 1.8.0
 
 ### Minor Changes
