@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type { AnchoredColumnId, FilterUI } from '@platforma-open/milaboratories.top-antibodies.model';
 import type { PlTableFilter } from '@platforma-sdk/model';
+import { plRefsEqual } from '@platforma-sdk/model';
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from '@platforma-sdk/ui-vue';
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useApp } from '../../app';
 import FilterCard from './FilterCard.vue';
 
@@ -17,7 +18,7 @@ const generateUniqueId = () => {
 };
 
 const getColumnLabel = (columnId: AnchoredColumnId | undefined) => {
-  const column = app.model.outputs.allFilterableOptions?.find(
+  const column = app.model.outputs.filterConfig?.options?.find(
     (option) => option && option.value.column === columnId?.column,
   );
   return column?.label ?? 'Set filter';
@@ -39,7 +40,7 @@ const addFilter = () => {
 };
 
 const resetToDefaults = () => {
-  app.model.ui.filters = app.model.outputs.defaultFilters?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter }) => ({
+  app.model.ui.filters = app.model.outputs.filterConfig?.defaults?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter }) => ({
     id: generateUniqueId(),
     value: defaultFilter.column,
     filter: { ...defaultFilter.default }, // Create a deep copy to avoid reference rewriting issues
@@ -47,15 +48,64 @@ const resetToDefaults = () => {
   })) ?? [];
 };
 
-// set default filters when becomes available after inputAnchor is set
-// Only set defaults if topClonotypes is not set (user hasn't configured filtering yet)
-watch(() => app.model.outputs.defaultFilters, (newValue, oldValue) => {
-  if (oldValue === undefined && newValue !== undefined
-    && app.model.args.inputAnchor
-    && (!app.model.ui.filters || app.model.ui.filters.length === 0)) {
-    resetToDefaults();
-  }
+// Track which anchor's defaults we've applied
+const appliedForAnchor = ref<unknown>(null);
+
+// Extract the config's anchor key for efficient watching (avoids deep: true)
+const configAnchorKey = computed(() => {
+  const config = app.model.outputs.filterConfig;
+  if (!config?.options?.length) return null;
+  const mainOption = config.options.find((o: { value: AnchoredColumnId }) => o.value?.anchorName === 'main');
+  return mainOption?.value?.anchorRef ? JSON.stringify(mainOption.value.anchorRef) : null;
 });
+
+// Watch inputAnchor and the config's anchor key (lightweight alternative to deep: true)
+watch(
+  [() => app.model.args.inputAnchor, configAnchorKey],
+  ([currentAnchor, configKey]) => {
+    const config = app.model.outputs.filterConfig;
+
+    // No anchor = clear filters
+    if (!currentAnchor) {
+      app.model.ui.filters = [];
+      appliedForAnchor.value = null;
+      return;
+    }
+
+    // Already applied for this anchor? Skip
+    if (appliedForAnchor.value && plRefsEqual(appliedForAnchor.value as Parameters<typeof plRefsEqual>[0], currentAnchor)) {
+      return;
+    }
+
+    // No config yet = clear filters and reset tracking (wait for config)
+    if (!config || !configKey) {
+      app.model.ui.filters = [];
+      appliedForAnchor.value = null;
+      return;
+    }
+
+    // Verify config matches current anchor BEFORE checking defaults
+    const mainOption = config.options?.find((o: { value: AnchoredColumnId }) => o.value?.anchorName === 'main');
+    if (!mainOption?.value || !plRefsEqual(mainOption.value.anchorRef, currentAnchor)) {
+      // Config is stale - clear and wait for fresh config
+      app.model.ui.filters = [];
+      appliedForAnchor.value = null;
+      return;
+    }
+
+    // No defaults available - mark as applied (empty defaults is valid for this anchor)
+    if (!config.defaults || config.defaults.length === 0) {
+      app.model.ui.filters = [];
+      appliedForAnchor.value = currentAnchor;
+      return;
+    }
+
+    // Config is fresh and has defaults - apply them
+    appliedForAnchor.value = currentAnchor;
+    resetToDefaults();
+  },
+  { immediate: true },
+);
 
 </script>
 
@@ -81,7 +131,7 @@ watch(() => app.model.outputs.defaultFilters, (newValue, oldValue) => {
       <template #item-content="{ index }">
         <FilterCard
           v-model="app.model.ui.filters[index]"
-          :options="app.model.outputs.allFilterableOptions"
+          :options="app.model.outputs.filterConfig?.options"
         />
       </template>
     </PlElementList>

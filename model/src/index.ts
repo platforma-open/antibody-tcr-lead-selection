@@ -264,20 +264,35 @@ export const model = BlockModel.create()
     return ctx.resultPool.getPColumnSpecByRef(ref);
   }, { retentive: true })
 
-  .output('defaultRankingOrder', (ctx) => {
-    const anchor = ctx.args.inputAnchor;
-    if (anchor === undefined)
-      return undefined;
+  // Combined filter config - options and defaults together for atomic updates
+  .output('filterConfig', (ctx) => {
+    const columns = getColumns(ctx);
+    if (columns === undefined) return undefined;
 
-    return getColumns(ctx)?.defaultRankingOrder;
+    const options = deriveLabels(
+      columns.props.filter((c) => {
+        if (c.column.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true') return false;
+        if (c.column.spec.valueType !== 'String') return true;
+        if (c.column.spec.annotations?.['pl7.app/discreteValues']) return true;
+        return false;
+      }),
+      (c) => c.column.spec,
+      { includeNativeLabel: true },
+    ).map((o) => ({
+      ...o,
+      value: anchoredColumnId(o.value),
+      column: o.value.column,
+    }));
+
+    return { options, defaults: columns.defaultFilters };
   })
 
-  .output('rankingOptions', (ctx) => {
+  // Combined ranking config - options and defaults together for atomic updates
+  .output('rankingConfig', (ctx) => {
     const columns = getColumns(ctx);
-    if (columns === undefined)
-      return undefined;
+    if (columns === undefined) return undefined;
 
-    return deriveLabels(
+    const options = deriveLabels(
       columns.props.filter((c) =>
         c.column.spec.valueType !== 'String'
         && c.column.spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true',
@@ -288,57 +303,8 @@ export const model = BlockModel.create()
       ...o,
       value: anchoredColumnId(o.value),
     }));
-  })
 
-  .output('filterOptions', (ctx) => {
-    const columns = getColumns(ctx);
-    if (columns === undefined)
-      return undefined;
-
-    return deriveLabels(
-      columns.props.filter((c) =>
-        c.column.spec.annotations?.['pl7.app/isScore'] === 'true'
-        && c.column.spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true',
-      ),
-      (c) => c.column.spec,
-      { includeNativeLabel: true },
-    ).map((o) => ({
-      ...o,
-      value: anchoredColumnId(o.value),
-      column: o.value.column, // Add column for UI access to spec and discrete values
-    }));
-  })
-
-  .output('allFilterableOptions', (ctx) => {
-    const columns = getColumns(ctx);
-    if (columns === undefined)
-      return undefined;
-
-    return deriveLabels(
-      columns.props.filter((c) => {
-        // Exclude linker columns from UI options
-        if (c.column.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true') return false;
-        // Include numeric columns (like ranking)
-        if (c.column.spec.valueType !== 'String') return true;
-        // Include string columns with discrete values (categorical filters)
-        if (c.column.spec.annotations?.['pl7.app/discreteValues']) return true;
-        return false;
-      }),
-      (c) => c.column.spec,
-      { includeNativeLabel: true },
-    ).map((o) => ({
-      ...o,
-      value: anchoredColumnId(o.value),
-      column: o.value.column, // Add column for UI access to spec and discrete values
-    }));
-  })
-
-  .output('defaultFilters', (ctx) => {
-    const columns = getColumns(ctx);
-    if (columns === undefined)
-      return undefined;
-
-    return columns.defaultFilters;
+    return { options, defaults: columns.defaultRankingOrder };
   })
 
   .output('pf', (ctx) => {
@@ -685,4 +651,4 @@ export const model = BlockModel.create()
 
 export type BlockOutputs = InferOutputsType<typeof model>;
 
-export type { AnchoredColumnId, Filter, FilterUI, RankingOrder };
+export type { AnchoredColumnId, Filter, FilterUI, RankingOrder, RankingOrderUI };

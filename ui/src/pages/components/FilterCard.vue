@@ -192,7 +192,12 @@ const getCurrentColumnValueType = () => {
 watch(() => model.value.value?.column, (newColumn, oldColumn) => {
   // Only reset if the column actually changed
   if (newColumn === oldColumn) return;
+
   const newValueType = getCurrentColumnValueType();
+
+  // If column not found in options, don't reset - options may be stale during anchor transition
+  if (newValueType === undefined) return;
+
   const currentFilterType = model.value.filter?.type;
   // Determine if current filter type is compatible with new column type
   const isCompatible = (newValueType === 'String' && isStringFilter(currentFilterType))
