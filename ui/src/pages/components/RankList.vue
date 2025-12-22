@@ -41,16 +41,16 @@ const resetToDefaults = () => {
   app.model.ui.rankingOrder = app.model.outputs.defaultRankingOrder ?? [];
 };
 
-// set default ranking order when topClonotypes is set
-watch(() => app.model.args.topClonotypes, (newValue, oldValue) => {
-  if (oldValue === undefined && newValue !== undefined) {
+// set default ranking order when inputAnchor is set (topClonotypes is now always defined)
+watch(() => app.model.args.inputAnchor, (newValue, oldValue) => {
+  if (oldValue === undefined && newValue !== undefined && (!app.model.ui.rankingOrder || app.model.ui.rankingOrder.length === 0)) {
     resetToDefaults();
   }
 });
 </script>
 
 <template>
-  <div v-if="app.model.args.topClonotypes" class="d-flex flex-column gap-6">
+  <div class="d-flex flex-column gap-6">
     <PlRow>
       Rank by:
       <PlTooltip>

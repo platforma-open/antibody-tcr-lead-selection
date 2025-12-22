@@ -80,6 +80,16 @@ const isIGDataset = computed<boolean | undefined>(() => {
   return chain === 'IGHeavy' || chain === 'IGLight';
 });
 
+const validateTopClonotypes = (value: number | undefined): string | undefined => {
+  if (value === undefined) {
+    return 'This field is required';
+  }
+  if (value < 2) {
+    return 'Value must be higher or equal than 2';
+  }
+  return undefined;
+};
+
 // Disable and reset Kabat until sampling number is set
 const isSamplingConfigured = computed<boolean>(() => app.model.args.topClonotypes !== undefined);
 watch(() => app.model.args.topClonotypes, (newVal) => {
@@ -142,8 +152,8 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
         v-model="app.model.args.topClonotypes"
         :style="{ width: '320px' }"
         label="Pick top candidates"
-        :minValue="2"
         :step="1"
+        :error-message="validateTopClonotypes(app.model.args.topClonotypes)"
       >
         <template #tooltip>
           Choose how many top clonotypes to include, ranked by the columns to be
@@ -152,13 +162,13 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
       </PlNumberField>
 
       <RankList />
-      
+
       <PlCheckbox v-if="isSamplingConfigured && app.model.outputs.hasClusterData" v-model="disableClusterRanking">
         Disable cluster ranking
         <PlTooltip class="info" position="top">
           <PlIcon16 name="info"/>
           <template #tooltip>
-            When enabled, skips automatic cluster size ranking. Use this when you want to rank only by the selected clonotype properties.
+            When enabled, skips automatic cluster-based ranking. Use this when you want to rank only by the selected clonotype properties.
           </template>
         </PlTooltip>
       </PlCheckbox>
@@ -194,8 +204,7 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
       </template>
 
       <PlAlert
-        v-if="app.model.args.topClonotypes !== undefined
-          && app.model.args.rankingOrder.some((order) => order.value === undefined)" type="warn"
+        v-if="app.model.args.rankingOrder.some((order) => order.value === undefined)" type="warn"
         :style="{ width: '320px' }"
       >
         {{ "Warning: Please remove or assign values to empty ranking columns" }}

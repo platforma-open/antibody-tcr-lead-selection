@@ -174,7 +174,7 @@ export * from './converters';
 
 export type BlockArgs = {
   inputAnchor?: PlRef;
-  topClonotypes?: number;
+  topClonotypes: number;
   rankingOrder: RankingOrder[];
   filters: Filter[];
   kabatNumbering?: boolean;
@@ -196,6 +196,7 @@ export type UiState = {
 export const model = BlockModel.create()
 
   .withArgs<BlockArgs>({
+    topClonotypes: 100,
     rankingOrder: [],
     filters: [],
     disableClusterRanking: false,
@@ -237,6 +238,7 @@ export const model = BlockModel.create()
 
   // Activate "Run" button only after these conditions are satisfied
   .argsValid((ctx) => (ctx.args.inputAnchor !== undefined
+    && ctx.args.topClonotypes !== undefined
     && ctx.args.rankingOrder.every((order) => order.value !== undefined)),
   )
 
