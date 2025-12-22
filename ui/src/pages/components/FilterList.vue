@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import type { AnchoredColumnId, FilterUI } from '@platforma-open/milaboratories.top-antibodies.model';
 import type { PlTableFilter } from '@platforma-sdk/model';
-import { plRefsEqual } from '@platforma-sdk/model';
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from '@platforma-sdk/ui-vue';
-import { computed, ref, watch } from 'vue';
+import { ref } from 'vue';
 import { useApp } from '../../app';
+import { useAnchorSyncedDefaults } from '../../composables/useAnchorSyncedDefaults';
 import FilterCard from './FilterCard.vue';
 
 const app = useApp();
@@ -19,7 +19,7 @@ const generateUniqueId = () => {
 
 const getColumnLabel = (columnId: AnchoredColumnId | undefined) => {
   const column = app.model.outputs.filterConfig?.options?.find(
-    (option) => option && option.value.column === columnId?.column,
+    (option: { value: AnchoredColumnId; label: string }) => option && option.value.column === columnId?.column,
   );
   return column?.label ?? 'Set filter';
 };
@@ -43,70 +43,19 @@ const resetToDefaults = () => {
   app.model.ui.filters = app.model.outputs.filterConfig?.defaults?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter }) => ({
     id: generateUniqueId(),
     value: defaultFilter.column,
-    filter: { ...defaultFilter.default }, // Create a deep copy to avoid reference rewriting issues
+    filter: { ...defaultFilter.default },
     isExpanded: false,
   })) ?? [];
 };
 
-// Track which anchor's defaults we've applied
-const appliedForAnchor = ref<unknown>(null);
-
-// Extract the config's anchor key for efficient watching (avoids deep: true)
-const configAnchorKey = computed(() => {
-  const config = app.model.outputs.filterConfig;
-  if (!config?.options?.length) return null;
-  const mainOption = config.options.find((o: { value: AnchoredColumnId }) => o.value?.anchorName === 'main');
-  return mainOption?.value?.anchorRef ? JSON.stringify(mainOption.value.anchorRef) : null;
+// Use shared anchor sync logic
+useAnchorSyncedDefaults({
+  getAnchor: () => app.model.args.inputAnchor,
+  getConfig: () => app.model.outputs.filterConfig,
+  clearState: () => { app.model.ui.filters = []; },
+  applyDefaults: resetToDefaults,
+  hasDefaults: () => (app.model.outputs.filterConfig?.defaults?.length ?? 0) > 0,
 });
-
-// Watch inputAnchor and the config's anchor key (lightweight alternative to deep: true)
-watch(
-  [() => app.model.args.inputAnchor, configAnchorKey],
-  ([currentAnchor, configKey]) => {
-    const config = app.model.outputs.filterConfig;
-
-    // No anchor = clear filters
-    if (!currentAnchor) {
-      app.model.ui.filters = [];
-      appliedForAnchor.value = null;
-      return;
-    }
-
-    // Already applied for this anchor? Skip
-    if (appliedForAnchor.value && plRefsEqual(appliedForAnchor.value as Parameters<typeof plRefsEqual>[0], currentAnchor)) {
-      return;
-    }
-
-    // No config yet = clear filters and reset tracking (wait for config)
-    if (!config || !configKey) {
-      app.model.ui.filters = [];
-      appliedForAnchor.value = null;
-      return;
-    }
-
-    // Verify config matches current anchor BEFORE checking defaults
-    const mainOption = config.options?.find((o: { value: AnchoredColumnId }) => o.value?.anchorName === 'main');
-    if (!mainOption?.value || !plRefsEqual(mainOption.value.anchorRef, currentAnchor)) {
-      // Config is stale - clear and wait for fresh config
-      app.model.ui.filters = [];
-      appliedForAnchor.value = null;
-      return;
-    }
-
-    // No defaults available - mark as applied (empty defaults is valid for this anchor)
-    if (!config.defaults || config.defaults.length === 0) {
-      app.model.ui.filters = [];
-      appliedForAnchor.value = currentAnchor;
-      return;
-    }
-
-    // Config is fresh and has defaults - apply them
-    appliedForAnchor.value = currentAnchor;
-    resetToDefaults();
-  },
-  { immediate: true },
-);
-
 </script>
 
 <template>
