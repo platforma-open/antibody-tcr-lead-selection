@@ -206,7 +206,8 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefi
     props: [...links, ...cloneProps, ...linkProps],
     scores: scores,
     defaultFilters: defaultFilters,
-    defaultRankingOrder: scores
+    // Default rankings use only clonotype scores (not linked scores)
+    defaultRankingOrder: cloneScores
       .filter((s) => s.column.spec.valueType !== 'String')
       .map((s) => ({
         id: `default-rank-${s.column.id}`,

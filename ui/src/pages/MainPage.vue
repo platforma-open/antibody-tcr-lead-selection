@@ -7,14 +7,15 @@ import {
   PlAlert,
   PlBlockPage,
   PlBtnGhost,
-  PlDropdownRef,
+  PlCheckbox,
   PlDropdown,
+  PlDropdownRef,
+  PlIcon16,
   PlNumberField,
+  PlRow,
   PlSectionSeparator,
   PlSlideModal,
-  PlCheckbox,
   PlTooltip,
-  PlIcon16,
   usePlDataTableSettingsV2,
 } from '@platforma-sdk/ui-vue';
 import { PlMultiSequenceAlignment } from '@milaboratories/multi-sequence-alignment';
@@ -58,10 +59,67 @@ const kabatNumbering = computed<boolean>({
   set: (v: boolean) => (app.model.args.kabatNumbering = v),
 });
 
-const disableClusterRanking = computed<boolean>({
-  get: () => (app.model.args.disableClusterRanking ?? false),
-  set: (v: boolean) => (app.model.args.disableClusterRanking = v),
+// Special value for "No diversification" option
+const NO_DIVERSIFICATION_VALUE = '__no_diversification__';
+
+// Cluster property options with "No diversification" prepended
+const clusterPropertyOptionsWithNone = computed(() => {
+  const options = app.model.outputs.clusterPropertyOptions ?? [];
+  return [
+    { label: 'No diversification (allow similar antibodies)', value: NO_DIVERSIFICATION_VALUE },
+    ...options.map((opt: { label: string; value: unknown; clusterAxisIndex: number }) => ({
+      label: opt.label,
+      value: JSON.stringify(opt.value), // Serialize the AnchoredColumnId for comparison
+    })),
+  ];
 });
+
+// Selected cluster property value for the dropdown
+const selectedClusterPropertyValue = computed<string | undefined>({
+  get: () => {
+    if (app.model.args.disableClusterRanking) {
+      return NO_DIVERSIFICATION_VALUE;
+    }
+    if (app.model.args.clusterProperty) {
+      return JSON.stringify(app.model.args.clusterProperty);
+    }
+    return undefined;
+  },
+  set: (v: string | undefined) => {
+    if (v === NO_DIVERSIFICATION_VALUE || v === undefined) {
+      app.model.args.disableClusterRanking = true;
+      app.model.args.clusterProperty = undefined;
+    } else {
+      app.model.args.disableClusterRanking = false;
+      try {
+        app.model.args.clusterProperty = JSON.parse(v);
+      } catch {
+        app.model.args.clusterProperty = undefined;
+      }
+    }
+  },
+});
+
+// Auto-set default clusterProperty when options become available
+watch(
+  () => app.model.outputs.clusterPropertyOptions,
+  (options) => {
+    // Only set default if:
+    // - options are available
+    // - clusterProperty is not set
+    // - disableClusterRanking is not explicitly true
+    if (
+      options
+      && options.length > 0
+      && !app.model.args.clusterProperty
+      && !app.model.args.disableClusterRanking
+    ) {
+      app.model.args.clusterProperty = options[0].value;
+      app.model.args.disableClusterRanking = false;
+    }
+  },
+  { immediate: true },
+);
 
 // Detect if selected dataset is Immunoglobulins (IG) vs TCR
 const isIGDataset = computed<boolean | undefined>(() => {
@@ -99,6 +157,13 @@ watch(() => app.model.args.topClonotypes, (newVal) => {
 // Reset table state when dataset or Kabat toggle changes to re-apply defaults (like optional visibility)
 watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
   app.model.ui.tableState = createPlDataTableStateV2();
+});
+
+// Debug logging for Settings panel state
+watch(settingsOpen, (isOpen) => {
+  console.log('[MainPage] Settings panel:', isOpen ? 'OPENED' : 'CLOSED');
+  console.log('[MainPage] Current filters count:', app.model.ui.filters?.length ?? 0);
+  console.log('[MainPage] Current rankings count:', app.model.ui.rankingOrder?.length ?? 0);
 });
 </script>
 
@@ -143,61 +208,52 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
       />
 
       <!-- Clonotype filtering section -->
-      <PlSectionSeparator>Clonotype filtering</PlSectionSeparator>
+      <PlSectionSeparator>Filter Clonotypes</PlSectionSeparator>
       <FilterList />
 
       <!-- Clonotype sampling section -->
-      <PlSectionSeparator>Clonotype sampling</PlSectionSeparator>
+      <PlSectionSeparator>Select clonotypes</PlSectionSeparator>
+      <template v-if="isSamplingConfigured && app.model.outputs.clusterPropertyOptions && app.model.outputs.clusterPropertyOptions.length > 0">
+        <PlRow>
+          Diversify by:
+          <PlTooltip>
+            <PlIcon16 name="info" />
+            <template #tooltip>Defines how clonotypes are grouped to ensure diversity in the selected panel.</template>
+          </PlTooltip>
+        </PlRow>
+
+        <PlDropdown
+          v-model="selectedClusterPropertyValue"
+          :options="clusterPropertyOptionsWithNone"
+          :style="{ width: '320px' }"
+          label="Cluster property for diversification"
+        />
+      </template>
+
+      <RankList />
+
       <PlNumberField
         v-model="app.model.args.topClonotypes"
         :style="{ width: '320px' }"
-        label="Pick top candidates"
+        label="Number of clonotypes to select"
         :step="1"
         :error-message="validateTopClonotypes(app.model.args.topClonotypes)"
       >
         <template #tooltip>
-          Choose how many top clonotypes to include, ranked by the columns to be
-          selected in the "Rank by" section below
+          Total number of clonotypes that will be selected.
         </template>
       </PlNumberField>
-
-      <RankList />
-
-      <PlCheckbox v-if="isSamplingConfigured && app.model.outputs.hasClusterData" v-model="disableClusterRanking">
-        Disable cluster ranking
-        <PlTooltip class="info" position="top">
-          <PlIcon16 name="info"/>
-          <template #tooltip>
-            When enabled, skips automatic cluster-based ranking. Use this when you want to rank only by the selected clonotype properties.
-          </template>
-        </PlTooltip>
-      </PlCheckbox>
-      
-      <PlDropdown
-        v-if="isSamplingConfigured && app.model.outputs.clusterColumnOptions && app.model.outputs.clusterColumnOptions.length > 1"
-        v-model="app.model.args.clusterColumn"
-        :options="app.model.outputs.clusterColumnOptions"
-        :style="{ width: '320px' }"
-        :disabled="disableClusterRanking"
-        label="Cluster column for sampling"
-        clearable
-        placeholder="Auto (use first available)"
-      >
-        <template #tooltip>
-          When multiple cluster columns are available, select which one to use for round-robin sampling. If not specified, the first cluster column will be used.
-        </template>
-      </PlDropdown>
-      
       <template v-if="isSamplingConfigured && isIGDataset">
         <PlSectionSeparator>
-          Antibody numbering
+          Advanced Settings
         </PlSectionSeparator>
         <PlCheckbox v-model="kabatNumbering">
-          Kabat numbering
+          Apply Kabat numbering
           <PlTooltip class="info" position="top">
             <PlIcon16 name="info"/>
             <template #tooltip>
-              Applies Kabat numbering to the whole VDJ region amino acid sequences. Produces two columns: Kabat sequence and Kabat positions (per chain where applicable).
+              Applies Kabat residue numbering to the variable (VDJ) region amino acid
+              sequences and annotates sequences with Kabat positions (per chain where applicable).
             </template>
           </PlTooltip>
         </PlCheckbox>

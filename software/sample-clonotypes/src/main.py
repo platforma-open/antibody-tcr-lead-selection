@@ -18,6 +18,10 @@ def parse_arguments():
                         help="Disable automatic cluster ranking in backward compatibility mode")
     parser.add_argument("--cluster-column", type=str, 
                         help="Specify which cluster column to use for sampling (e.g., 'cluster_0', 'cluster_1')")
+    parser.add_argument("--cluster-property", type=str,
+                        help="Column name for cluster property to sort by for diversification (e.g., 'ClusterProperty')")
+    parser.add_argument("--cluster-axis", type=str,
+                        help="Column name for cluster axis to use for round-robin grouping (e.g., 'clusterPropertyAxis_0')")
     return parser.parse_args()
 
 
@@ -192,15 +196,17 @@ def find_matching_cluster_size(cluster_col, cluster_size_columns):
 def rank_rows(df, clonotype_col_columns, cluster_col_columns, linker_col_columns,
               cluster_columns, cluster_size_columns, ranking_map, 
               cluster_property_mapping, disable_cluster_ranking=False, 
-              specified_cluster_column=None):
+              specified_cluster_column=None, cluster_property_column=None):
     """
-    Rank rows based on three possible cases:
+    Rank rows based on multiple cases:
+    Case NEW: Cluster property column specified (new diversification approach)
     Case A: No cluster columns OR disable_cluster_ranking flag set
     Case B: Cluster columns exist, but NO cluster properties in ranking (backward compatibility)
     Case C: Cluster properties ARE in ranking (new behavior)
     
     Args:
         specified_cluster_column: Optional specific cluster column to use for Case B ranking
+        cluster_property_column: Column name for cluster property to sort by (highest priority)
     """
     
     # Convert ranking columns to numeric types if they're strings
@@ -212,6 +218,35 @@ def rank_rows(df, clonotype_col_columns, cluster_col_columns, linker_col_columns
                 print(f"Converted ranking column '{col}' from string to numeric")
             except Exception as e:
                 print(f"Warning: Could not convert column '{col}' to numeric: {e}")
+    
+    # Convert cluster property column to numeric if needed
+    if cluster_property_column and cluster_property_column in df.columns:
+        if df[cluster_property_column].dtype == pl.Utf8:
+            try:
+                df = df.with_columns(pl.col(cluster_property_column).cast(pl.Float64))
+                print(f"Converted cluster property column '{cluster_property_column}' from string to numeric")
+            except Exception as e:
+                print(f"Warning: Could not convert cluster property column '{cluster_property_column}' to numeric: {e}")
+    
+    # Case NEW: Cluster property column specified for diversification
+    if cluster_property_column and cluster_property_column in df.columns:
+        print(f"Ranking mode: Cluster property '{cluster_property_column}' + ranking columns (New diversification)")
+        
+        # Build sort columns: cluster property (descending), then ranking columns, then clonotypeKey
+        sort_columns = [cluster_property_column]
+        sort_descending = [True]  # Cluster property sorts descending (larger values first)
+        
+        # Add ranking columns in order
+        if clonotype_col_columns:
+            col_descending = [ranking_map.get(col, "decreasing") == "decreasing" for col in clonotype_col_columns]
+            sort_columns += clonotype_col_columns
+            sort_descending += col_descending
+        
+        sort_columns.append('clonotypeKey')
+        sort_descending.append(False)
+        
+        print(f"  Sorting by: {' → '.join(sort_columns)}")
+        return df.sort(sort_columns, descending=sort_descending)
     
     # Case A: No cluster columns OR cluster ranking disabled
     if not cluster_columns or disable_cluster_ranking:
@@ -312,7 +347,7 @@ def rank_rows(df, clonotype_col_columns, cluster_col_columns, linker_col_columns
 
 
 def select_top_n(df, n, cluster_columns, cluster_property_mapping=None, specified_cluster_column=None, 
-                 disable_cluster_ranking=False):
+                 disable_cluster_ranking=False, cluster_axis_column=None):
     """
     Select top N rows using round-robin sampling if cluster columns exist.
     
@@ -323,25 +358,33 @@ def select_top_n(df, n, cluster_columns, cluster_property_mapping=None, specifie
         cluster_property_mapping: Dict mapping cluster properties to cluster columns
         specified_cluster_column: Optional specific cluster column to use for sampling
         disable_cluster_ranking: If True, skip cluster-based sampling even if clusters exist
+        cluster_axis_column: Column name for cluster axis to use for grouping (highest priority)
     """
-    if not cluster_columns or disable_cluster_ranking:
-        # If no cluster column or cluster ranking disabled, just take top N
-        if disable_cluster_ranking and cluster_columns:
-            print("Cluster-based sampling disabled by flag - using sequential selection")
+    if disable_cluster_ranking:
+        print("Cluster-based sampling disabled by flag - using sequential selection")
         return df.head(n)
     
-    # Determine which cluster column to use
+    # Determine which cluster column to use for grouping
     cluster_col = None
     
-    # Priority 1: User-specified cluster column
-    if specified_cluster_column:
+    # Priority 0: Explicit cluster axis from new diversification approach
+    if cluster_axis_column and cluster_axis_column in df.columns:
+        cluster_col = cluster_axis_column
+        print(f"Using cluster axis column for sampling: {cluster_axis_column}")
+    
+    # Priority 1: User-specified cluster column (legacy)
+    elif specified_cluster_column:
         if specified_cluster_column in cluster_columns:
+            cluster_col = specified_cluster_column
+            print(f"Using specified cluster column for sampling: {specified_cluster_column}")
+        elif specified_cluster_column in df.columns:
             cluster_col = specified_cluster_column
             print(f"Using specified cluster column for sampling: {specified_cluster_column}")
         else:
             print(f"Warning: Specified cluster column '{specified_cluster_column}' not found. Available: {cluster_columns}")
-            cluster_col = cluster_columns[0]
-            print(f"  Using first available cluster column: {cluster_col}")
+            if cluster_columns:
+                cluster_col = cluster_columns[0]
+                print(f"  Using first available cluster column: {cluster_col}")
     
     # Priority 2: If cluster properties were used in ranking, use the first one's cluster column
     elif cluster_property_mapping and len(cluster_property_mapping) > 0:
@@ -350,14 +393,19 @@ def select_top_n(df, n, cluster_columns, cluster_property_mapping=None, specifie
         if first_cluster_col in cluster_columns:
             cluster_col = first_cluster_col
             print(f"Using cluster column from ranking properties: {cluster_col}")
-        else:
+        elif cluster_columns:
             cluster_col = cluster_columns[0]
             print(f"Using first available cluster column: {cluster_col}")
     
     # Priority 3: Default to first cluster column
-    else:
+    elif cluster_columns:
         cluster_col = cluster_columns[0]
         print(f"Using first cluster column for sampling: {cluster_col}")
+    
+    # If no cluster column found, just take top N
+    if not cluster_col:
+        print("No cluster column available - using sequential selection")
+        return df.head(n)
     
     # Get unique groups - exactly like pandas
     groups = df[cluster_col].unique(maintain_order=True).to_list()
@@ -421,9 +469,10 @@ def main():
 
     # Check for cluster columns and validate
     validation_start = time.time()
-    # Support both old format (cluster_*) and new format (clusterAxis_*)
+    # Support old format (cluster_*), new format (clusterAxis_*_*), and clusterPropertyAxis_*
     cluster_columns = ([col for col in df.columns if re.match(r'^cluster_\d+$', col)] + 
-                      [col for col in df.columns if re.match(r'^clusterAxis_\d+_\d+$', col)])
+                      [col for col in df.columns if re.match(r'^clusterAxis_\d+_\d+$', col)] +
+                      [col for col in df.columns if re.match(r'^clusterPropertyAxis_\d+$', col)])
     clonotype_col_columns, cluster_col_columns, linker_col_columns, cluster_size_columns = validate_column_format(df)
     validation_time = time.time() - validation_start
     
@@ -446,7 +495,7 @@ def main():
     
     # Ranking step
     ranking_start = time.time()
-    if not clonotype_col_columns and not cluster_col_columns and not linker_col_columns:
+    if not clonotype_col_columns and not cluster_col_columns and not linker_col_columns and not args.cluster_property:
         print("WARNING: No ranking columns provided, selection will be done in table order")
         ranked_df = df.clone()
     else:
@@ -454,14 +503,15 @@ def main():
         ranked_df = rank_rows(df, clonotype_col_columns, cluster_col_columns, linker_col_columns,
                              cluster_columns, cluster_size_columns, ranking_map,
                              cluster_property_mapping, args.disable_cluster_ranking, 
-                             args.cluster_column)
+                             args.cluster_column, args.cluster_property)
     ranking_time = time.time() - ranking_start
     print(f"✓ Ranking: {ranking_time:.3f}s")
     
     # Select top N rows
     selection_start = time.time()
     top_n = select_top_n(ranked_df, args.n, cluster_columns, 
-                        cluster_property_mapping, args.cluster_column, args.disable_cluster_ranking)
+                        cluster_property_mapping, args.cluster_column, args.disable_cluster_ranking,
+                        args.cluster_axis)
     # Always add ranked_order column after selection (like original pandas implementation)
     top_n = top_n.with_columns(pl.arange(1, top_n.height + 1).alias("ranked_order"))
     selection_time = time.time() - selection_start
@@ -469,10 +519,17 @@ def main():
 
     # Create and output simplified version with top clonotypes only
     output_start = time.time()
-    if cluster_columns and not args.disable_cluster_ranking:
-        cluster_col = cluster_columns[0]
+    
+    # Determine which cluster axis column to include in output
+    output_cluster_col = None
+    if args.cluster_axis and args.cluster_axis in top_n.columns:
+        output_cluster_col = args.cluster_axis
+    elif cluster_columns and not args.disable_cluster_ranking:
+        output_cluster_col = cluster_columns[0]
+    
+    if output_cluster_col and output_cluster_col in top_n.columns:
         simplified_df = pl.DataFrame({
-            cluster_col: top_n[cluster_col],
+            output_cluster_col: top_n[output_cluster_col],
             'clonotypeKey': top_n['clonotypeKey'],
             'top': [1] * top_n.height,
             'ranked_order': top_n['ranked_order']
