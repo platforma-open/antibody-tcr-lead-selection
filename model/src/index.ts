@@ -2,9 +2,11 @@ import type { GraphMakerState } from '@milaboratories/graph-maker';
 import type {
   CreatePlDataTableOps,
   InferOutputsType,
+  PColumnSpec,
   PFrameHandle,
   PlDataTableStateV2,
   PlMultiSequenceAlignmentModel,
+  PObjectId,
   PlRef,
 } from '@platforma-sdk/model';
 import {
@@ -14,7 +16,7 @@ import {
   createPlDataTableV2,
   deriveLabels,
 } from '@platforma-sdk/model';
-import type { AnchoredColumnId, Column, Filter, FilterUI, RankingOrder, RankingOrderUI } from './util';
+import type { AnchoredColumnId, Filter, FilterUI, RankingOrder, RankingOrderUI } from './util';
 import { anchoredColumnId, getColumns } from './util';
 import type { PColumn, PColumnDataUniversal } from '@platforma-sdk/model';
 
@@ -122,16 +124,72 @@ function updateClusterColumnLabels(columns: PColumn<PColumnDataUniversal>[]): PC
   });
 }
 
+/**
+ * Check if a column is a full protein sequence (main assembling feature, aminoacid)
+ */
+function isFullProteinSequence(spec: PColumnSpec): boolean {
+  return (
+    spec.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'
+    && spec.annotations?.['pl7.app/vdj/isMainSequence'] === 'true'
+    && spec.domain?.['pl7.app/alphabet'] === 'aminoacid'
+  );
+}
+
+/**
+ * Determine which columns should be visible by default
+ */
+function getDefaultVisibleColumns(
+  columns: PColumn<PColumnDataUniversal>[],
+  filterColumnIds: Set<string>,
+  rankingColumnIds: Set<string>,
+  clusterPropertyColumnId?: string,
+): Set<PObjectId> {
+  const visible = new Set<PObjectId>();
+
+  for (const col of columns) {
+    // Full protein sequences
+    if (isFullProteinSequence(col.spec)) {
+      visible.add(col.id);
+      continue;
+    }
+
+    // Rank column (pl7.app/vdj/ranking-order)
+    if (col.spec.name === 'pl7.app/vdj/ranking-order') {
+      visible.add(col.id);
+      continue;
+    }
+
+    // Filter and ranking columns - direct string comparison
+    // Both col.id and the IDs in the sets should be SUniversalPColumnId strings
+    const colIdStr = col.id as string;
+    if (filterColumnIds.has(colIdStr) || rankingColumnIds.has(colIdStr)) {
+      visible.add(col.id);
+      continue;
+    }
+
+    // Cluster property column for diversification
+    if (clusterPropertyColumnId && colIdStr === clusterPropertyColumnId) {
+      visible.add(col.id);
+      continue;
+    }
+  }
+
+  return visible;
+}
+
 export * from './converters';
 
 export type BlockArgs = {
   inputAnchor?: PlRef;
-  topClonotypes?: number;
+  topClonotypes: number;
   rankingOrder: RankingOrder[];
   filters: Filter[];
   kabatNumbering?: boolean;
   disableClusterRanking?: boolean;
+  /** @deprecated Use clusterProperty instead */
   clusterColumn?: string;
+  /** Selected cluster property for diversification (grouping and sorting) */
+  clusterProperty?: AnchoredColumnId;
 };
 
 export type UiState = {
@@ -143,15 +201,21 @@ export type UiState = {
   alignmentModel: PlMultiSequenceAlignmentModel;
   rankingOrder: RankingOrderUI[];
   filters: FilterUI[];
+  /** Tracks which anchor's filter defaults have been applied (prevents re-applying on panel reopen) */
+  filtersInitializedForAnchor?: string;
+  /** Tracks which anchor's ranking defaults have been applied (prevents re-applying on panel reopen) */
+  rankingsInitializedForAnchor?: string;
 };
 
 export const model = BlockModel.create()
 
   .withArgs<BlockArgs>({
+    topClonotypes: 100,
     rankingOrder: [],
     filters: [],
     disableClusterRanking: false,
     clusterColumn: undefined,
+    clusterProperty: undefined,
   })
 
   .withUiState<UiState>({
@@ -189,6 +253,7 @@ export const model = BlockModel.create()
 
   // Activate "Run" button only after these conditions are satisfied
   .argsValid((ctx) => (ctx.args.inputAnchor !== undefined
+    && ctx.args.topClonotypes !== undefined
     && ctx.args.rankingOrder.every((order) => order.value !== undefined)),
   )
 
@@ -214,20 +279,35 @@ export const model = BlockModel.create()
     return ctx.resultPool.getPColumnSpecByRef(ref);
   }, { retentive: true })
 
-  .output('defaultRankingOrder', (ctx) => {
-    const anchor = ctx.args.inputAnchor;
-    if (anchor === undefined)
-      return undefined;
+  // Combined filter config - options and defaults together for atomic updates
+  .output('filterConfig', (ctx) => {
+    const columns = getColumns(ctx);
+    if (columns === undefined) return undefined;
 
-    return getColumns(ctx)?.defaultRankingOrder;
+    const options = deriveLabels(
+      columns.props.filter((c) => {
+        if (c.column.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true') return false;
+        if (c.column.spec.valueType !== 'String') return true;
+        if (c.column.spec.annotations?.['pl7.app/discreteValues']) return true;
+        return false;
+      }),
+      (c) => c.column.spec,
+      { includeNativeLabel: true },
+    ).map((o) => ({
+      ...o,
+      value: anchoredColumnId(o.value),
+      column: o.value.column,
+    }));
+
+    return { options, defaults: columns.defaultFilters };
   })
 
-  .output('rankingOptions', (ctx) => {
+  // Combined ranking config - options and defaults together for atomic updates
+  .output('rankingConfig', (ctx) => {
     const columns = getColumns(ctx);
-    if (columns === undefined)
-      return undefined;
+    if (columns === undefined) return undefined;
 
-    return deriveLabels(
+    const options = deriveLabels(
       columns.props.filter((c) =>
         c.column.spec.valueType !== 'String'
         && c.column.spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true',
@@ -238,57 +318,8 @@ export const model = BlockModel.create()
       ...o,
       value: anchoredColumnId(o.value),
     }));
-  })
 
-  .output('filterOptions', (ctx) => {
-    const columns = getColumns(ctx);
-    if (columns === undefined)
-      return undefined;
-
-    return deriveLabels(
-      columns.props.filter((c) =>
-        c.column.spec.annotations?.['pl7.app/isScore'] === 'true'
-        && c.column.spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true',
-      ),
-      (c) => c.column.spec,
-      { includeNativeLabel: true },
-    ).map((o) => ({
-      ...o,
-      value: anchoredColumnId(o.value),
-      column: o.value.column, // Add column for UI access to spec and discrete values
-    }));
-  })
-
-  .output('allFilterableOptions', (ctx) => {
-    const columns = getColumns(ctx);
-    if (columns === undefined)
-      return undefined;
-
-    return deriveLabels(
-      columns.props.filter((c) => {
-        // Exclude linker columns from UI options
-        if (c.column.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true') return false;
-        // Include numeric columns (like ranking)
-        if (c.column.spec.valueType !== 'String') return true;
-        // Include string columns with discrete values (categorical filters)
-        if (c.column.spec.annotations?.['pl7.app/discreteValues']) return true;
-        return false;
-      }),
-      (c) => c.column.spec,
-      { includeNativeLabel: true },
-    ).map((o) => ({
-      ...o,
-      value: anchoredColumnId(o.value),
-      column: o.value.column, // Add column for UI access to spec and discrete values
-    }));
-  })
-
-  .output('defaultFilters', (ctx) => {
-    const columns = getColumns(ctx);
-    if (columns === undefined)
-      return undefined;
-
-    return columns.defaultFilters;
+    return { options, defaults: columns.defaultRankingOrder };
   })
 
   .output('pf', (ctx) => {
@@ -386,10 +417,108 @@ export const model = BlockModel.create()
       ...(assemblingKabatPf ?? []),
     ];
 
+    // Extract column IDs from INITIAL filter/ranking settings BEFORE any transformations
+    // Column IDs are SUniversalPColumnId which are already canonical string representations
+    // Just use them directly for comparison
+    const filterColumnIds = new Set<string>(
+      ctx.args.filters
+        .filter((f) => f.value?.column !== undefined)
+        .map((f) => f.value!.column as string),
+    );
+
+    const rankingColumnIds = new Set<string>(
+      ctx.args.rankingOrder
+        .filter((r) => r.value?.column !== undefined)
+        .map((r) => r.value!.column as string),
+    );
+
+    // Get cluster property column ID for visibility
+    const clusterPropertyColumnId = ctx.args.clusterProperty?.column as string | undefined;
+
+    // Apply visibility annotations FIRST, before any column transformations
+    // This ensures we're working with the same column objects used to calculate visibility
+    const defaultVisible = getDefaultVisibleColumns(allColumns, filterColumnIds, rankingColumnIds, clusterPropertyColumnId);
+    
+    // Modify column specs to add visibility and order priority annotations
+    // Essential columns are set to 'default' (visible), all others are set to 'optional' (hidden)
+    // Note: This only evaluates based on INITIAL filter/ranking values.
+    // If user changes filters/rankings in the UI, they'll need to manually show those columns.
+    //
+    // Column order (higher priority = appears left):
+    // 1. Clone Label (Clonotype ID) - 1000000
+    // 2. Full Protein Sequences - 999000
+    // 3. Filter/Rank columns - 7000
+    // 4. Everything else - default/existing priority
+    const allColumnsWithVisibility = allColumns.map((col) => {
+      const isVisible = defaultVisible.has(col.id);
+      const colIdStr = col.id as string;
+      const isFilterOrRankColumn = filterColumnIds.has(colIdStr) || rankingColumnIds.has(colIdStr);
+      const isClusterPropertyColumn = clusterPropertyColumnId && colIdStr === clusterPropertyColumnId;
+      
+      // Determine order priority
+      const annotations = col.spec.annotations || {};
+      let orderPriority = annotations['pl7.app/table/orderPriority'];
+      
+      // Check if this is a Clone Label column (label column for clonotype axis)
+      const isCloneLabelColumn = col.spec.name === 'pl7.app/label' 
+        && col.spec.axesSpec.length === 1
+        && (col.spec.axesSpec[0].name === 'pl7.app/vdj/clonotypeKey' 
+            || col.spec.axesSpec[0].name === 'pl7.app/vdj/scClonotypeKey');
+      
+      // Set highest priority for Clone Label
+      if (isCloneLabelColumn) {
+        orderPriority = '1000000';
+      }
+      // Set very high priority for full protein sequences (right after Clone Label)
+      else if (isFullProteinSequence(col.spec)) {
+        orderPriority = '999000';
+      }
+      // Set priority for filter/ranking/clusterProperty columns
+      else if (isFilterOrRankColumn || isClusterPropertyColumn) {
+        orderPriority = '7000';
+      }
+      
+      const newAnnotations = {
+        ...col.spec.annotations,
+        'pl7.app/table/visibility': isVisible ? 'default' : 'optional',
+        ...(orderPriority && { 'pl7.app/table/orderPriority': orderPriority }),
+      };
+      
+      // Update axes annotations
+      const updatedAxesSpec = col.spec.axesSpec.map(axis => {
+        const isClonotypeAxis = axis.name === 'pl7.app/vdj/clonotypeKey' 
+          || axis.name === 'pl7.app/vdj/scClonotypeKey';
+        
+        // Set high priority on Clonotype axis in ALL columns
+        // This ensures the Clonotype ID axis column appears first
+        if (isClonotypeAxis) {
+          return {
+            ...axis,
+            annotations: {
+              ...axis.annotations,
+              'pl7.app/table/orderPriority': '1000000',
+            },
+          };
+        }
+        
+        return axis;
+      });
+      
+      return {
+        ...col,
+        spec: {
+          ...col.spec,
+          annotations: newAnnotations,
+          axesSpec: updatedAxesSpec,
+        },
+      };
+    });
+
     // Only update cluster column labels if we have multiple clustering blocks
-    const cols = hasMultipleClusteringBlocks(allColumns)
-      ? updateClusterColumnLabels(allColumns)
-      : allColumns;
+    // Apply this AFTER visibility annotations
+    const cols = hasMultipleClusteringBlocks(allColumnsWithVisibility)
+      ? updateClusterColumnLabels(allColumnsWithVisibility)
+      : allColumnsWithVisibility;
 
     // Find ranking-order column if present (added by sampling workflow)
     const rankingOrderCol = allColumns.find(
@@ -524,6 +653,109 @@ export const model = BlockModel.create()
     return options.length > 0 ? options : undefined;
   })
 
+  // Cluster property options for the "Diversify by" dropdown
+  // Returns all cluster-related properties (cluster size, abundance per cluster, etc.)
+  .output('clusterPropertyOptions', (ctx) => {
+    const columns = getColumns(ctx);
+    if (columns === undefined) return undefined;
+
+    const anchor = ctx.args.inputAnchor;
+    if (anchor === undefined) return undefined;
+
+    const anchorSpec = ctx.resultPool.getPColumnSpecByRef(anchor);
+    if (anchorSpec === undefined) return undefined;
+
+    // Filter to cluster-related properties:
+    // 1. Columns with pl7.app/vdj/clustering/ prefix (cluster size, etc.)
+    // 2. Numeric columns with clusterId axis (abundance per cluster, etc.)
+    const clusterProperties = columns.props.filter((c) => {
+      const spec = c.column.spec;
+
+      // Skip linker columns themselves
+      if (spec.annotations?.['pl7.app/isLinkerColumn'] === 'true') return false;
+
+      // Skip string columns (we need numeric for sorting)
+      if (spec.valueType === 'String') return false;
+
+      // Include clustering prefix columns (cluster size, etc.)
+      if (spec.name.startsWith('pl7.app/vdj/clustering/')) {
+        return true;
+      }
+
+      // Include numeric columns with clusterId axis
+      const hasClusterIdAxis = spec.axesSpec.some(
+        (axis) => axis.name === 'pl7.app/vdj/clusterId',
+      );
+      if (hasClusterIdAxis) {
+        return true;
+      }
+
+      return false;
+    });
+
+    if (clusterProperties.length === 0) return undefined;
+
+    // Derive labels for display
+    const labeledOptions = deriveLabels(
+      clusterProperties,
+      (c) => c.column.spec,
+      { includeNativeLabel: true },
+    );
+
+    // Build options with column reference and cluster axis index
+    const options = labeledOptions.map((o) => {
+      // Find the clusterId axis to determine cluster axis index
+      const clusterIdAxis = o.value.column.spec.axesSpec.find(
+        (axis) => axis.name === 'pl7.app/vdj/clusterId',
+      );
+
+      // Determine cluster axis index based on linker position
+      // Default to 0 if we can't determine
+      let clusterAxisIndex = 0;
+
+      if (clusterIdAxis?.domain) {
+        // Try to match with linker columns to find the index
+        const blockId = clusterIdAxis.domain['pl7.app/vdj/clustering/blockId'];
+        if (blockId) {
+          // Find matching linker by comparing clusterId axis domains
+          let linkerIdx = 0;
+          for (const idx of [0, 1]) {
+            const axesToMatch = idx === 0
+              ? [{}, anchorSpec.axesSpec[1]]
+              : [anchorSpec.axesSpec[1], {}];
+
+            const linkers = ctx.resultPool.getAnchoredPColumns(
+              { main: anchor },
+              [{
+                axes: axesToMatch,
+                annotations: { 'pl7.app/isLinkerColumn': 'true' },
+              }],
+            ) ?? [];
+
+            for (const linker of linkers) {
+              const linkerClusterIdAxis = linker.spec.axesSpec.find(
+                (axis) => axis.name === 'pl7.app/vdj/clusterId',
+              );
+              if (linkerClusterIdAxis?.domain?.['pl7.app/vdj/clustering/blockId'] === blockId) {
+                clusterAxisIndex = linkerIdx;
+                break;
+              }
+              linkerIdx++;
+            }
+          }
+        }
+      }
+
+      return {
+        label: o.label,
+        value: anchoredColumnId(o.value),
+        clusterAxisIndex,
+      };
+    });
+
+    return options;
+  })
+
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)
 
   .title((ctx) => ctx.uiState.title ?? 'Antibody/TCR Leads')
@@ -541,4 +773,4 @@ export const model = BlockModel.create()
 
 export type BlockOutputs = InferOutputsType<typeof model>;
 
-export type { AnchoredColumnId, Filter, FilterUI, RankingOrder };
+export type { AnchoredColumnId, Filter, FilterUI, RankingOrder, RankingOrderUI };

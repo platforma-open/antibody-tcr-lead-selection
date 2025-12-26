@@ -67,6 +67,14 @@ self.body(func(inputs) {
 		if inputs.clusterColumn != undefined && inputs.clusterColumn != "" {
 			builder = builder.arg("--cluster-column").arg(inputs.clusterColumn)
 		}
+		// Pass cluster property column header for diversification sorting
+		if inputs.clusterPropertyHeader != undefined && inputs.clusterPropertyHeader != "" {
+			builder = builder.arg("--cluster-property").arg(inputs.clusterPropertyHeader)
+		}
+		// Pass cluster axis column header for diversification grouping
+		if inputs.clusterAxisHeader != undefined && inputs.clusterAxisHeader != "" {
+			builder = builder.arg("--cluster-axis").arg(inputs.clusterAxisHeader)
+		}
 
 		sampleClones := builder.
 			arg("--out").arg("sampledClonotypes_top.parquet").
