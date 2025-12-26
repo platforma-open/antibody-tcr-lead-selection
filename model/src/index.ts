@@ -309,8 +309,7 @@ export const model = BlockModel.create()
 
     const options = deriveLabels(
       columns.props.filter((c) =>
-        c.anchorName === 'main' // Only clonotype properties, not linked columns
-        && c.column.spec.valueType !== 'String'
+        c.column.spec.valueType !== 'String'
         && c.column.spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true',
       ),
       (c) => c.column.spec,

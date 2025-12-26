@@ -100,6 +100,18 @@ const selectedClusterPropertyValue = computed<string | undefined>({
   },
 });
 
+// Clear clusterProperty when inputAnchor changes (old value is invalid for new dataset)
+watch(
+  () => app.model.args.inputAnchor,
+  (newAnchor, oldAnchor) => {
+    // Only clear if anchor actually changed (not on initial load)
+    if (oldAnchor && newAnchor && JSON.stringify(oldAnchor) !== JSON.stringify(newAnchor)) {
+      app.model.args.clusterProperty = undefined;
+      // Don't reset disableClusterRanking - preserve user's diversification preference
+    }
+  },
+);
+
 // Auto-set default clusterProperty when options become available
 watch(
   () => app.model.outputs.clusterPropertyOptions,

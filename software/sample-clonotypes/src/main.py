@@ -232,11 +232,22 @@ def rank_rows(df, clonotype_col_columns, cluster_col_columns, linker_col_columns
     if cluster_property_column and cluster_property_column in df.columns:
         print(f"Ranking mode: Cluster property '{cluster_property_column}' + ranking columns (New diversification)")
         
-        # Build sort columns: cluster property (descending), then ranking columns, then clonotypeKey
+        # Build sort columns: cluster property (descending), then all ranking columns, then clonotypeKey
         sort_columns = [cluster_property_column]
         sort_descending = [True]  # Cluster property sorts descending (larger values first)
         
-        # Add ranking columns in order
+        # Add cluster/linker ranking columns first (if any)
+        if cluster_col_columns:
+            col_descending = [ranking_map.get(col, "decreasing") == "decreasing" for col in cluster_col_columns]
+            sort_columns += cluster_col_columns
+            sort_descending += col_descending
+        
+        if linker_col_columns:
+            col_descending = [ranking_map.get(col, "decreasing") == "decreasing" for col in linker_col_columns]
+            sort_columns += linker_col_columns
+            sort_descending += col_descending
+        
+        # Add clonotype ranking columns
         if clonotype_col_columns:
             col_descending = [ranking_map.get(col, "decreasing") == "decreasing" for col in clonotype_col_columns]
             sort_columns += clonotype_col_columns
