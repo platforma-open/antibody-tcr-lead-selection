@@ -253,9 +253,6 @@ watch(settingsOpen, (isOpen) => {
       <RankList />
 
       <template v-if="isSamplingConfigured && isIGDataset">
-        <PlSectionSeparator>
-          Advanced Settings
-        </PlSectionSeparator>
         <PlCheckbox v-model="kabatNumbering">
           Apply Kabat numbering
           <PlTooltip class="info" position="top">
