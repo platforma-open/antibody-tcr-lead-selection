@@ -62,72 +62,69 @@ const kabatNumbering = computed<boolean>({
 // Special value for "No diversification" option
 const NO_DIVERSIFICATION_VALUE = '__no_diversification__';
 
-// Cluster property options with "No diversification" prepended
-const clusterPropertyOptionsWithNone = computed(() => {
-  const options = app.model.outputs.clusterPropertyOptions ?? [];
+// Cluster column options with "No diversification" prepended
+// Transform ref-based options to value-based options using JSON.stringify
+const clusterColumnOptionsWithNone = computed(() => {
+  const options = app.model.outputs.clusterColumnOptions ?? [];
   return [
-    { label: 'No diversification (allow similar antibodies)', value: NO_DIVERSIFICATION_VALUE },
-    ...options.map((opt: { label: string; value: unknown; clusterAxisIndex: number }) => ({
-      label: opt.label,
-      value: JSON.stringify(opt.value), // Serialize the AnchoredColumnId for comparison
+    { label: 'No diversification (allow similar clonotypes)', value: NO_DIVERSIFICATION_VALUE },
+    ...options.map((o) => ({
+      label: o.label,
+      value: JSON.stringify(o.ref),
     })),
   ];
 });
 
-// Selected cluster property value for the dropdown
-const selectedClusterPropertyValue = computed<string | undefined>({
+// Selected cluster column value for the dropdown
+const selectedClusterColumnValue = computed<string | undefined>({
   get: () => {
     if (app.model.args.disableClusterRanking) {
       return NO_DIVERSIFICATION_VALUE;
     }
-    if (app.model.args.clusterProperty) {
-      return JSON.stringify(app.model.args.clusterProperty);
+    if (app.model.args.clusterColumn) {
+      return JSON.stringify(app.model.args.clusterColumn);
     }
     return undefined;
   },
   set: (v: string | undefined) => {
     if (v === NO_DIVERSIFICATION_VALUE || v === undefined) {
       app.model.args.disableClusterRanking = true;
-      app.model.args.clusterProperty = undefined;
+      app.model.args.clusterColumn = undefined;
     } else {
-      app.model.args.disableClusterRanking = false;
-      try {
-        app.model.args.clusterProperty = JSON.parse(v);
-      } catch {
-        app.model.args.clusterProperty = undefined;
-      }
+      app.model.args.disableClusterRanking = undefined; // Clear flag when cluster column is selected
+      app.model.args.clusterColumn = JSON.parse(v) as PlRef;
     }
   },
 });
 
-// Clear clusterProperty when inputAnchor changes (old value is invalid for new dataset)
+// Clear clusterColumn when inputAnchor changes (old value is invalid for new dataset)
 watch(
   () => app.model.args.inputAnchor,
   (newAnchor, oldAnchor) => {
     // Only clear if anchor actually changed (not on initial load)
     if (oldAnchor && newAnchor && JSON.stringify(oldAnchor) !== JSON.stringify(newAnchor)) {
-      app.model.args.clusterProperty = undefined;
+      app.model.args.clusterColumn = undefined;
       // Don't reset disableClusterRanking - preserve user's diversification preference
     }
   },
 );
 
-// Auto-set default clusterProperty when options become available
+// Auto-set default clusterColumn when options become available
 watch(
-  () => app.model.outputs.clusterPropertyOptions,
+  () => app.model.outputs.clusterColumnOptions,
   (options) => {
     // Only set default if:
     // - options are available
-    // - clusterProperty is not set
+    // - clusterColumn is not set
     // - disableClusterRanking is not explicitly true
     if (
       options
       && options.length > 0
-      && !app.model.args.clusterProperty
-      && !app.model.args.disableClusterRanking
+      && !app.model.args.clusterColumn
+      && app.model.args.disableClusterRanking !== true
     ) {
-      app.model.args.clusterProperty = options[0].value;
-      app.model.args.disableClusterRanking = false;
+      app.model.args.clusterColumn = options[0].ref;
+      app.model.args.disableClusterRanking = undefined; // Clear flag (not disabled)
     }
   },
   { immediate: true },
@@ -225,7 +222,7 @@ watch(settingsOpen, (isOpen) => {
 
       <!-- Clonotype sampling section -->
       <PlSectionSeparator>Select clonotypes</PlSectionSeparator>
-      <template v-if="isSamplingConfigured && app.model.outputs.clusterPropertyOptions && app.model.outputs.clusterPropertyOptions.length > 0">
+      <template v-if="isSamplingConfigured && app.model.outputs.clusterColumnOptions && app.model.outputs.clusterColumnOptions.length > 0">
         <PlRow>
           Diversify by:
           <PlTooltip>
@@ -235,10 +232,10 @@ watch(settingsOpen, (isOpen) => {
         </PlRow>
 
         <PlDropdown
-          v-model="selectedClusterPropertyValue"
-          :options="clusterPropertyOptionsWithNone"
+          v-model="selectedClusterColumnValue"
+          :options="clusterColumnOptionsWithNone"
           :style="{ width: '320px' }"
-          label="Cluster property for diversification"
+          label="Cluster for diversification"
         />
       </template>
 

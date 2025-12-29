@@ -47,20 +47,19 @@ wf.prepare(func(args){
             }
         }
     }
-
-    // Load clusterProperty column if specified (for diversification)
-    if args.clusterProperty != undefined {
-        bundleBuilder.addAnchor(args.clusterProperty.anchorName, args.clusterProperty.anchorRef)
-        bundleBuilder.addSingle(args.clusterProperty.column)
-    }
     
 
-    // Add linker column
+    // Add linker columns
     bundleBuilder.addMulti({
         axes: [{ anchor: "main", idx: 1 }], // this will do partial axes match (unlike in the model)
         annotations: { "pl7.app/isLinkerColumn": "true" },
         partialAxesMatch: true
     }, "linkers")
+    
+    // Add clusterColumn as a named anchor for matching in body phase
+    if !is_undefined(args.clusterColumn) {
+        bundleBuilder.addAnchor("selectedCluster", args.clusterColumn)
+    }
 
     // Add cluster size columns from clustering blocks
     bundleBuilder.addMulti({
@@ -128,7 +127,6 @@ wf.body(func(args) {
 
         // Add Filters to table
         addedAxes := []
-        addedAxesHeaders := {}  // Map axis name to its header
         filterMap := {}
         rankingMap := {}
         addedCols := false
@@ -150,14 +148,31 @@ wf.body(func(args) {
                     if !slices.hasElement(axesNames, datasetSpec.axesSpec[1].name) {
                         for na, ax in colsSpec.axesSpec {
                             if ax.name != datasetSpec.axesSpec[1].name {
-                                axHeader := "cluster_" + string(i) + string(na)
-                                cloneTable.setAxisHeader(ax, axHeader)
+                                cloneTable.setAxisHeader(ax, "cluster_" + string(i) + string(na))
                                 addedAxes = append(addedAxes, ax.name)
-                                addedAxesHeaders[ax.name] = axHeader
                             }
                         }
                     }	
                 }
+            }
+        }
+
+        // Build linker list in SAME ORDER as model (index.ts util.ts):
+        // 1. First: linkers where clonotypeKey is in SECOND axis
+        // 2. Then: linkers where clonotypeKey is in FIRST axis
+        // NO SORTING - must match the order from getOptions/getColumns to align with linker-N indices
+        allLinkersUnsorted := columns.getColumns("linkers")
+        
+        // Collect linkers by axis position (same iteration order as model)
+        sortedLinkers := []
+        for col in allLinkersUnsorted {
+            if datasetSpec.axesSpec[1].name == col.spec.axesSpec[1].name {
+                sortedLinkers = append(sortedLinkers, col)
+            }
+        }
+        for col in allLinkersUnsorted {
+            if datasetSpec.axesSpec[1].name == col.spec.axesSpec[0].name {
+                sortedLinkers = append(sortedLinkers, col)
             }
         }
 
@@ -166,7 +181,6 @@ wf.body(func(args) {
         clusterPropertyIdx := 0
         clonotypePropertyIdx := 0
         linkerColumnCounters := {}  // Track column count per linker index
-        addedColumnIds := {}  // Track added column IDs to headers
         
         if len(args.rankingOrder) > 0 {
             for i, col in args.rankingOrder {
@@ -176,11 +190,10 @@ wf.body(func(args) {
                     
                     // Process the ranking column to determine header and cluster axis
                     colsSpec := columns.getSpec(col.value.column)
-                    linkerColumns := columns.getColumns("linkers")
-                    result := utils.processRankingColumn(colsSpec, datasetSpec.axesSpec[1].name, linkerColumns, clusterPropertyIdx)
+                    // Use sortedLinkers for consistent ordering with model
+                    result := utils.processRankingColumn(colsSpec, datasetSpec.axesSpec[1].name, sortedLinkers, clusterPropertyIdx)
                     
                     header := ""
-                    clusterAxisHeaderForCol := ""
                     if result.isClusterProperty {
                         // Check if this column is from a linker
                         if result.isLinkerColumn {
@@ -200,13 +213,9 @@ wf.body(func(args) {
                         // Add cluster axis with matching index
                         for na, ax in colsSpec.axesSpec {
                             if ax.name != datasetSpec.axesSpec[1].name && !slices.hasElement(addedAxes, ax.name) {
-                                clusterAxisHeaderForCol = "cluster_" + string(result.clusterAxisIdx)
-                                cloneTable.setAxisHeader(ax, clusterAxisHeaderForCol)
+                                axisHeader := "cluster_" + string(result.clusterAxisIdx)
+                                cloneTable.setAxisHeader(ax, axisHeader)
                                 addedAxes = append(addedAxes, ax.name)
-                                addedAxesHeaders[ax.name] = clusterAxisHeaderForCol
-                            } else if ax.name != datasetSpec.axesSpec[1].name {
-                                // Axis already added, get its header
-                                clusterAxisHeaderForCol = addedAxesHeaders[ax.name]
                             }
                         }
                     } else {
@@ -217,44 +226,40 @@ wf.body(func(args) {
                     cloneTable.add(columns.getColumn(col.value.column), {header: header})
                     addedCols = true
                     rankingMap[header] = col.rankingOrder
-                    
-                    // Track this column ID and its header/axis
-                    addedColumnIds[string(col.value.column)] = {
-                        header: header,
-                        clusterAxisHeader: clusterAxisHeaderForCol
-                    }
                 }
             }
         }
 
         // Get linker columns if needed
+        // Use sortedLinkers which was already built above with proper ordering
         linkerAxisSpec := {}
-        linkerClusterIdAxes := []
-        if len(columns.getColumns("linkers")) > 0 {
-            for i, col in columns.getColumns("linkers") {
-                clusterIdAxis := undefined
-                axHeader := "cluster_" + string(i)
-                if datasetSpec.axesSpec[1].name == col.spec.axesSpec[1].name {
-                    cloneTable.add(col, {header: "linker." + string(i)})
-                    cloneTable.setAxisHeader(col.spec.axesSpec[0], axHeader)
-                    linkerAxisSpec[axHeader] = col.spec.axesSpec[0]
-                    clusterIdAxis = col.spec.axesSpec[0]
-                    addedAxes = append(addedAxes, clusterIdAxis.name)
-                    addedAxesHeaders[clusterIdAxis.name] = axHeader
-                    addedCols = true
-                } else if datasetSpec.axesSpec[1].name == col.spec.axesSpec[0].name {
-                    cloneTable.add(col, {header: "linker." + string(i)})
-                    cloneTable.setAxisHeader(col.spec.axesSpec[1], axHeader)
-                    linkerAxisSpec[axHeader] = col.spec.axesSpec[1]
-                    clusterIdAxis = col.spec.axesSpec[1]
-                    addedAxes = append(addedAxes, clusterIdAxis.name)
-                    addedAxesHeaders[clusterIdAxis.name] = axHeader
-                    addedCols = true
-                }
-                // Collect clusterId axes from linker columns to match cluster size columns
-                if !is_undefined(clusterIdAxis) && clusterIdAxis.name == "pl7.app/vdj/clusterId" {
-                    linkerClusterIdAxes = append(linkerClusterIdAxes, clusterIdAxis)
-                }
+        // Store both the axis AND the original linker index for cluster size matching
+        linkerClusterIdAxesWithIdx := []
+        
+        for linkerIdx, col in sortedLinkers {
+            clusterIdAxis := undefined
+            if datasetSpec.axesSpec[1].name == col.spec.axesSpec[1].name {
+                // clonotypeKey is in second axis
+                cloneTable.add(col, {header: "linker." + string(linkerIdx)})
+                cloneTable.setAxisHeader(col.spec.axesSpec[0], "cluster_" + string(linkerIdx))
+                linkerAxisSpec["cluster_" + string(linkerIdx)] = col.spec.axesSpec[0]
+                clusterIdAxis = col.spec.axesSpec[0]
+                addedCols = true
+            } else if datasetSpec.axesSpec[1].name == col.spec.axesSpec[0].name {
+                // clonotypeKey is in first axis
+                cloneTable.add(col, {header: "linker." + string(linkerIdx)})
+                cloneTable.setAxisHeader(col.spec.axesSpec[1], "cluster_" + string(linkerIdx))
+                linkerAxisSpec["cluster_" + string(linkerIdx)] = col.spec.axesSpec[1]
+                clusterIdAxis = col.spec.axesSpec[1]
+                addedCols = true
+            }
+            // Collect clusterId axes from linker columns to match cluster size columns
+            // Store both axis and original linker index to preserve correct mapping
+            if !is_undefined(clusterIdAxis) && clusterIdAxis.name == "pl7.app/vdj/clusterId" {
+                linkerClusterIdAxesWithIdx = append(linkerClusterIdAxesWithIdx, {
+                    axis: clusterIdAxis,
+                    linkerIdx: linkerIdx
+                })
             }
         }
 
@@ -273,22 +278,25 @@ wf.body(func(args) {
                 }
                 
                 // Only add if we have linker columns and this cluster size matches one of them
-                shouldAdd := false
-                if len(linkerClusterIdAxes) > 0 && !is_undefined(clusterSizeClusterIdAxis) {
+                // Also find the matching linker index to use for consistent naming
+                matchingLinkerIdx := -1
+                if len(linkerClusterIdAxesWithIdx) > 0 && !is_undefined(clusterSizeClusterIdAxis) {
                     // Check if this cluster size column matches any linker's clusterId axis
-                    for linkerAxis in linkerClusterIdAxes {
+                    for entry in linkerClusterIdAxesWithIdx {
+                        linkerAxis := entry.axis
                         // Compare domains - they must match exactly for same clustering run
                         if clusterSizeClusterIdAxis.name == linkerAxis.name &&
                            clusterSizeClusterIdAxis.type == linkerAxis.type &&
                            utils.clusterAxisDomainsMatch(clusterSizeClusterIdAxis, linkerAxis) {
-                            shouldAdd = true
+                            // Use the original linker index, not the array index
+                            matchingLinkerIdx = entry.linkerIdx
                             break
                         }
                     }
                 }
                 
                 // Only add cluster size columns that match a linker column's clustering run
-                if shouldAdd {
+                if matchingLinkerIdx >= 0 {
                     // Trace elements are already present in col.spec from the clustering block.
                     // deriveLabels (in label.ts) will use these existing trace elements to construct
                     // distinguishing labels when multiple clustering blocks are joined, similar to
@@ -298,75 +306,17 @@ wf.body(func(args) {
                     // - "milaboratories.clonotype-clustering.clustering" trace element
                     // No modification needed - just preserve the existing trace.
                     
-                    cloneTable.add(col, {header: "clusterSize." + string(clusterSizeIdx)})
+                    // Use matching linker index for clusterSize header to maintain consistency
+                    cloneTable.add(col, {header: "clusterSize." + string(matchingLinkerIdx)})
                     addedCols = true
-                    // Add the cluster axis header
+                    // Add the cluster axis header using matching linker index
+                    // This ensures cluster_N from linker processing matches clusterAxis_N_M from cluster size
                     for axisIdx, axis in col.spec.axesSpec {
                         if axis.name != datasetSpec.axesSpec[1].name {
-                            axHeader := "clusterAxis_" + string(clusterSizeIdx) + "_" + string(axisIdx)
-                            cloneTable.setAxisHeader(axis, axHeader)
-                            if !slices.hasElement(addedAxes, axis.name) {
-                                addedAxes = append(addedAxes, axis.name)
-                            }
-                            addedAxesHeaders[axis.name] = axHeader
+                            cloneTable.setAxisHeader(axis, "clusterAxis_" + string(matchingLinkerIdx) + "_" + string(axisIdx))
                         }
                     }
                     clusterSizeIdx = clusterSizeIdx + 1
-                }
-            }
-        }
-
-        // Add clusterProperty column for diversification if specified
-        clusterPropertyHeader := ""
-        clusterAxisHeader := ""
-        if args.clusterProperty != undefined && !args.disableClusterRanking {
-            clusterPropertyColId := string(args.clusterProperty.column)
-            
-            // Check if this column was already added through ranking columns
-            existingEntry := addedColumnIds[clusterPropertyColId]
-            if !is_undefined(existingEntry) {
-                // Column already added, use existing headers
-                clusterPropertyHeader = existingEntry.header
-                clusterAxisHeader = existingEntry.clusterAxisHeader
-                
-                // If clusterAxisHeader wasn't set, try to find it from the column spec
-                if clusterAxisHeader == "" || is_undefined(clusterAxisHeader) {
-                    colsSpec := columns.getSpec(args.clusterProperty.column)
-                    for axisIdx, ax in colsSpec.axesSpec {
-                        if ax.name != datasetSpec.axesSpec[1].name {
-                            existingAxisHeader := addedAxesHeaders[ax.name]
-                            if !is_undefined(existingAxisHeader) && existingAxisHeader != "" {
-                                clusterAxisHeader = existingAxisHeader
-                                break
-                            }
-                        }
-                    }
-                }
-            } else {
-                // Column not yet added, add it now
-                clusterPropertyCol := columns.getColumn(args.clusterProperty.column)
-                if clusterPropertyCol.spec != undefined {
-                    clusterPropertyHeader = "ClusterProperty"
-                    cloneTable.add(clusterPropertyCol, {header: clusterPropertyHeader, id: "cluster_property"})
-                    addedCols = true
-                    
-                    // Add cluster axis for this column
-                    colsSpec := columns.getSpec(args.clusterProperty.column)
-                    for axisIdx, ax in colsSpec.axesSpec {
-                        if ax.name != datasetSpec.axesSpec[1].name {
-                            existingAxisHeader := addedAxesHeaders[ax.name]
-                            if !is_undefined(existingAxisHeader) && existingAxisHeader != "" {
-                                // Axis already added, use its existing header
-                                clusterAxisHeader = existingAxisHeader
-                            } else if !slices.hasElement(addedAxes, ax.name) {
-                                // Axis not added yet, add it now
-                                clusterAxisHeader = "clusterPropertyAxis_" + string(axisIdx)
-                                cloneTable.setAxisHeader(ax, clusterAxisHeader)
-                                addedAxes = append(addedAxes, ax.name)
-                                addedAxesHeaders[ax.name] = clusterAxisHeader
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -390,6 +340,42 @@ wf.body(func(args) {
             cloneTable.cpu(1)
             cloneTable = cloneTable.build()
 
+            // Resolve clusterColumn ref to header name by matching against sortedLinkers
+            clusterColumnHeader := undefined
+            if !is_undefined(args.clusterColumn) {
+                // Get the spec for the selected cluster column (added as anchor in prepare phase)
+                selectedLinkerSpec := columns.getSpec(args.clusterColumn)
+                if !is_undefined(selectedLinkerSpec) {
+                    // Find the clusterId axis in the selected linker
+                    selectedClusterIdAxis := undefined
+                    for axis in selectedLinkerSpec.axesSpec {
+                        if axis.name == "pl7.app/vdj/clusterId" {
+                            selectedClusterIdAxis = axis
+                            break
+                        }
+                    }
+                    
+                    if !is_undefined(selectedClusterIdAxis) {
+                        // Find matching linker by comparing clusterId axis domains
+                        for linkerIdx, col in sortedLinkers {
+                            // Get the clusterId axis from this linker
+                            for axis in col.spec.axesSpec {
+                                if axis.name == "pl7.app/vdj/clusterId" {
+                                    // Use clusterAxisDomainsMatch for proper domain comparison
+                                    if utils.clusterAxisDomainsMatch(selectedClusterIdAxis, axis) {
+                                        clusterColumnHeader = "clusterAxis_" + string(linkerIdx) + "_0"
+                                        break
+                                    }
+                                }
+                            }
+                            if !is_undefined(clusterColumnHeader) {
+                                break
+                            }
+                        }
+                    }
+                }
+            }
+
             // Use ender.create to call the filter-clonotypes template
             filterSampleResult := render.create(filterAndSampleTpl, {
                 inputAnchor: args.inputAnchor,
@@ -401,9 +387,7 @@ wf.body(func(args) {
                 datasetSpec: datasetSpec,
                 topClonotypes: args.topClonotypes,
                 disableClusterRanking: args.disableClusterRanking,
-                clusterColumn: args.clusterColumn,
-                clusterPropertyHeader: clusterPropertyHeader,
-                clusterAxisHeader: clusterAxisHeader
+                clusterColumn: clusterColumnHeader
             })
             
             // Get the filtered clonotypes from the template result
