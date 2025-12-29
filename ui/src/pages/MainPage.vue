@@ -216,12 +216,23 @@ watch(settingsOpen, (isOpen) => {
         @update:model-value="setAnchorColumn"
       />
 
+      <!-- Number of clonotypes to select -->
+      <PlNumberField
+        v-model="app.model.args.topClonotypes"
+        :style="{ width: '320px' }"
+        label="Number of clonotypes to select"
+        :step="1"
+        :error-message="validateTopClonotypes(app.model.args.topClonotypes)"
+      >
+        <template #tooltip>
+          Total number of clonotypes that will be selected.
+        </template>
+      </PlNumberField>
+
       <!-- Clonotype filtering section -->
-      <PlSectionSeparator>Filter Clonotypes</PlSectionSeparator>
       <FilterList />
 
       <!-- Clonotype sampling section -->
-      <PlSectionSeparator>Select clonotypes</PlSectionSeparator>
       <template v-if="isSamplingConfigured && app.model.outputs.clusterColumnOptions && app.model.outputs.clusterColumnOptions.length > 0">
         <PlRow>
           Diversify by:
@@ -241,17 +252,6 @@ watch(settingsOpen, (isOpen) => {
 
       <RankList />
 
-      <PlNumberField
-        v-model="app.model.args.topClonotypes"
-        :style="{ width: '320px' }"
-        label="Number of clonotypes to select"
-        :step="1"
-        :error-message="validateTopClonotypes(app.model.args.topClonotypes)"
-      >
-        <template #tooltip>
-          Total number of clonotypes that will be selected.
-        </template>
-      </PlNumberField>
       <template v-if="isSamplingConfigured && isIGDataset">
         <PlSectionSeparator>
           Advanced Settings
