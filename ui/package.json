@@ -3,12 +3,13 @@
   "version": "1.13.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "watch": "vue-tsc && vite build --watch",
-    "build": "vue-tsc -b && vite build",
+    "dev": "ts-builder build --target browser --watch",
+    "watch": "ts-builder build --target browser --watch",
+    "build": "ts-builder build --target browser",
+    "type-check": "ts-builder types --target browser",
     "lint": "eslint .",
-    "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "do-pack": "rm -f *.tgz && pnpm pack && mv *.tgz package.tgz"
   },
   "dependencies": {
     "@milaboratories/graph-maker": "catalog:",
@@ -16,17 +17,18 @@
     "@platforma-sdk/model": "catalog:",
     "@platforma-sdk/ui-vue": "catalog:",
     "@milaboratories/multi-sequence-alignment": "catalog:",
-    "@types/lodash.debounce": "^4.0.9",
-    "lodash.debounce": "^4.0.8",
+    "@types/lodash.debounce": "catalog:",
+    "lodash.debounce": "catalog:",
     "sass-embedded": "catalog:",
     "vue": "catalog:"
   },
   "devDependencies": {
+    "@milaboratories/ts-builder": "catalog:",
+    "@milaboratories/ts-configs": "catalog:",
     "@platforma-sdk/eslint-config": "catalog:",
-    "@vitejs/plugin-vue": "catalog:",
     "typescript": "catalog:",
-    "vite": "catalog:",
     "vitest": "catalog:",
-    "vue-tsc": "catalog:"
+    "vite": "catalog:",
+    "eslint": "catalog:"
   }
 }

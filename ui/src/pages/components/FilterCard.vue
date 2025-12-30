@@ -153,7 +153,7 @@ const filterType = computed({
       // Preserve the current reference value if compatible with the new filter type
       const currentReference = getReferenceValue(model.value.filter);
       const newFilter = createFilter(value);
-      
+
       // Try to preserve the value if types are compatible
       if (currentReference !== undefined && hasReference(newFilter)) {
         if (isNumberFilter(value) && typeof currentReference === 'number') {
@@ -173,7 +173,7 @@ const filterType = computed({
           newFilter.reference = String(currentReference);
         }
       }
-      
+
       model.value.filter = newFilter;
     }
   },

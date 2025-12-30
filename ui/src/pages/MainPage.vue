@@ -13,7 +13,6 @@ import {
   PlIcon16,
   PlNumberField,
   PlRow,
-  PlSectionSeparator,
   PlSlideModal,
   PlTooltip,
   usePlDataTableSettingsV2,
