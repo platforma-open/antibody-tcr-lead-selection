@@ -1,5 +1,6 @@
 import {
   isLabelColumn,
+  type AxisSpec,
   type DataInfo,
   type PColumn,
   type PColumnValues,
@@ -62,6 +63,67 @@ export type Columns = {
   defaultFilters: PlTableFiltersDefault[];
   defaultRankingOrder: RankingOrder[];
 };
+
+/**
+ * Checks if two cluster axes match by comparing their domains.
+ * Used to identify which specific cluster axis is being used.
+ */
+export function clusterAxisDomainsMatch(axis1: AxisSpec, axis2: AxisSpec): boolean {
+  // Both must be clusterId axes
+  if (axis1.name !== 'pl7.app/vdj/clusterId' || axis2.name !== 'pl7.app/vdj/clusterId') {
+    return false;
+  }
+
+  // If either has no domain, they don't match (or both have no domain = match)
+  if (!axis1.domain && !axis2.domain) return true;
+  if (!axis1.domain || !axis2.domain) return false;
+
+  // Compare all domain keys and values
+  const keys1 = Object.keys(axis1.domain);
+  const keys2 = Object.keys(axis2.domain);
+
+  if (keys1.length !== keys2.length) return false;
+
+  return keys1.every((key) => axis1.domain![key] === axis2.domain![key]);
+}
+
+/**
+ * Determines which specific cluster axes should be visible based on filter/ranking column usage.
+ * Returns an array of cluster axis specs that should be shown.
+ *
+ * @param allColumns - All columns in the table
+ * @param filterColumnIds - Set of column IDs used in filters
+ * @param rankingColumnIds - Set of column IDs used in rankings
+ * @returns Array of cluster axes that should be visible
+ */
+export function getVisibleClusterAxes<T extends { id: unknown; spec: { axesSpec: AxisSpec[] } }>(
+  allColumns: T[],
+  filterColumnIds: Set<string>,
+  rankingColumnIds: Set<string>,
+): AxisSpec[] {
+  const visibleClusterAxes: AxisSpec[] = [];
+
+  for (const col of allColumns) {
+    const colIdStr = col.id as string;
+    const isFilterOrRankColumn = filterColumnIds.has(colIdStr) || rankingColumnIds.has(colIdStr);
+    if (!isFilterOrRankColumn) continue;
+
+    // Check each axis in this column
+    for (const axis of col.spec.axesSpec) {
+      if (axis.name === 'pl7.app/vdj/clusterId') {
+        // Check if we already have a matching cluster axis
+        const alreadyAdded = visibleClusterAxes.some((existingAxis) =>
+          clusterAxisDomainsMatch(existingAxis, axis),
+        );
+        if (!alreadyAdded) {
+          visibleClusterAxes.push(axis);
+        }
+      }
+    }
+  }
+
+  return visibleClusterAxes;
+}
 
 export function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefined {
   const anchor = ctx.args.inputAnchor;

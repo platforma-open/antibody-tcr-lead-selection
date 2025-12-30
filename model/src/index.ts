@@ -8,6 +8,7 @@ import type {
   PlMultiSequenceAlignmentModel,
   PObjectId,
   PlRef,
+  AxisSpec,
 } from '@platforma-sdk/model';
 import {
   BlockModel,
@@ -17,7 +18,7 @@ import {
   deriveLabels,
 } from '@platforma-sdk/model';
 import type { AnchoredColumnId, Filter, FilterUI, RankingOrder, RankingOrderUI } from './util';
-import { anchoredColumnId, getColumns } from './util';
+import { anchoredColumnId, getColumns, getVisibleClusterAxes, clusterAxisDomainsMatch } from './util';
 import type { PColumn, PColumnDataUniversal } from '@platforma-sdk/model';
 
 /**
@@ -422,6 +423,10 @@ export const model = BlockModel.create()
         .map((r) => r.value!.column as string),
     );
 
+    // Determine which specific cluster axes should be visible:
+    // Collect all unique cluster axes from columns that are used in filters/rankings
+    const visibleClusterAxes: AxisSpec[] = getVisibleClusterAxes(allColumns, filterColumnIds, rankingColumnIds);
+
     // Apply visibility annotations FIRST, before any column transformations
     // This ensures we're working with the same column objects used to calculate visibility
     const defaultVisible = getDefaultVisibleColumns(allColumns, filterColumnIds, rankingColumnIds);
@@ -440,6 +445,9 @@ export const model = BlockModel.create()
       const isVisible = defaultVisible.has(col.id);
       const colIdStr = col.id as string;
       const isFilterOrRankColumn = filterColumnIds.has(colIdStr) || rankingColumnIds.has(colIdStr);
+
+      // Check if this is a linker column (should be completely hidden from column controls)
+      const isLinkerColumn = col.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true';
 
       // Determine order priority
       const annotations = col.spec.annotations || {};
@@ -462,9 +470,14 @@ export const model = BlockModel.create()
         orderPriority = '7000';
       }
 
+      // Determine visibility:
+      // - Linker columns: hidden (don't show in column controls at all)
+      // - Other columns: default (visible) or optional (hidden by default but can be shown)
+      const visibility = isLinkerColumn ? 'hidden' : (isVisible ? 'default' : 'optional');
+
       const newAnnotations = {
         ...col.spec.annotations,
-        'pl7.app/table/visibility': isVisible ? 'default' : 'optional',
+        'pl7.app/table/visibility': visibility,
         ...(orderPriority && { 'pl7.app/table/orderPriority': orderPriority }),
       };
 
@@ -472,6 +485,7 @@ export const model = BlockModel.create()
       const updatedAxesSpec = col.spec.axesSpec.map((axis) => {
         const isClonotypeAxis = axis.name === 'pl7.app/vdj/clonotypeKey'
           || axis.name === 'pl7.app/vdj/scClonotypeKey';
+        const isClusterAxis = axis.name === 'pl7.app/vdj/clusterId';
 
         // Set high priority on Clonotype axis in ALL columns
         // This ensures the Clonotype ID axis column appears first
@@ -483,6 +497,23 @@ export const model = BlockModel.create()
               'pl7.app/table/orderPriority': '1000000',
             },
           };
+        }
+
+        // Hide cluster axes by default unless they match one of the visible cluster axes
+        if (isClusterAxis) {
+          const shouldBeVisible = visibleClusterAxes.some((visibleAxis: AxisSpec) =>
+            clusterAxisDomainsMatch(visibleAxis, axis),
+          );
+
+          if (!shouldBeVisible) {
+            return {
+              ...axis,
+              annotations: {
+                ...axis.annotations,
+                'pl7.app/table/visibility': 'optional',
+              },
+            };
+          }
         }
 
         return axis;
