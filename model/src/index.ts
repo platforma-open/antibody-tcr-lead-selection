@@ -412,13 +412,13 @@ export const model = BlockModel.create()
     // Column IDs are SUniversalPColumnId which are already canonical string representations
     // Just use them directly for comparison
     const filterColumnIds = new Set<string>(
-      ctx.args.filters
+      ctx.activeArgs?.filters
         .filter((f) => f.value?.column !== undefined)
         .map((f) => f.value!.column as string),
     );
 
     const rankingColumnIds = new Set<string>(
-      ctx.args.rankingOrder
+      ctx.activeArgs?.rankingOrder
         .filter((r) => r.value?.column !== undefined)
         .map((r) => r.value!.column as string),
     );
@@ -649,7 +649,11 @@ export const model = BlockModel.create()
           axes: axesToMatch,
           annotations: { 'pl7.app/isLinkerColumn': 'true' },
         },
-      ]);
+      ], {
+        label: {
+          forceTraceElements: ['milaboratories.clonotype-clustering.clustering'],
+        },
+      });
 
       for (const link of linkers) {
         options.push({
