@@ -121,260 +121,19 @@ wf.body(func(args) {
 	    isSingleCell := datasetSpec.axesSpec[1].name == "pl7.app/vdj/scClonotypeKey"
     
         ////////// Clonotype Filtering //////////
-        // Build clonotype table
-        cloneTable := pframes.parquetFileBuilder() 
-        cloneTable.setAxisHeader(datasetSpec.axesSpec[1], "clonotypeKey")
-
-        // Add Filters to table
-        addedAxes := []
-        filterMap := {}
-        rankingMap := {}
-        addedCols := false
-        if len(args.filters) > 0 {
-            for i, filter in args.filters {
-                // we check for value presence and for actual pcolumn (cases where upstream block is deleted)
-                if filter.value != undefined && columns.getColumn(filter.value.column).spec != undefined {
-                    // Columns added here might also be in ranking list, so we add default IDs
-                    cloneTable.add(columns.getColumn(filter.value.column), 
-                                    {header: "Filter_" + string(i), id: "filter_" + string(i)})
-                    addedCols = true
-                    // Store reference value and filter type associated to this column
-                    filterMap["Filter_" + string(i)] = filter.filter
-                    filterMap["Filter_" + string(i)]["valueType"] = columns.getSpec(filter.value.column).valueType
-                
-                    // If column does not have main anchor axis we have to include theirs
-                    colsSpec := columns.getSpec(filter.value.column)
-                    axesNames := slices.map(colsSpec.axesSpec, func (a) { return a.name})
-                    if !slices.hasElement(axesNames, datasetSpec.axesSpec[1].name) {
-                        for na, ax in colsSpec.axesSpec {
-                            if ax.name != datasetSpec.axesSpec[1].name {
-                                cloneTable.setAxisHeader(ax, "cluster_" + string(i) + string(na))
-                                addedAxes = append(addedAxes, ax.name)
-                            }
-                        }
-                    }	
-                }
-            }
-        }
-
-        // Build linker list in SAME ORDER as model (index.ts util.ts):
-        // 1. First: linkers where clonotypeKey is in SECOND axis
-        // 2. Then: linkers where clonotypeKey is in FIRST axis
-        // NO SORTING - must match the order from getOptions/getColumns to align with linker-N indices
-        allLinkersUnsorted := columns.getColumns("linkers")
-        
-        // Collect linkers by axis position (same iteration order as model)
-        sortedLinkers := []
-        for col in allLinkersUnsorted {
-            if datasetSpec.axesSpec[1].name == col.spec.axesSpec[1].name {
-                sortedLinkers = append(sortedLinkers, col)
-            }
-        }
-        for col in allLinkersUnsorted {
-            if datasetSpec.axesSpec[1].name == col.spec.axesSpec[0].name {
-                sortedLinkers = append(sortedLinkers, col)
-            }
-        }
-
-        // Add ranking columns to table
-        validRanks := false
-        clusterPropertyIdx := 0
-        clonotypePropertyIdx := 0
-        linkerColumnCounters := {}  // Track column count per linker index
-        
-        if len(args.rankingOrder) > 0 {
-            for i, col in args.rankingOrder {
-                // we check for value presence and for actual pcolumn (cases where upstream block is deleted)
-                if col.value != undefined && columns.getColumn(col.value.column).spec != undefined {
-                    validRanks = true
-                    
-                    // Process the ranking column to determine header and cluster axis
-                    colsSpec := columns.getSpec(col.value.column)
-                    // Use sortedLinkers for consistent ordering with model
-                    result := utils.processRankingColumn(colsSpec, datasetSpec.axesSpec[1].name, sortedLinkers, clusterPropertyIdx)
-                    
-                    header := ""
-                    if result.isClusterProperty {
-                        // Check if this column is from a linker
-                        if result.isLinkerColumn {
-                            // Track and use counter for this specific linker
-                            linkerKey := "linker_" + string(result.clusterAxisIdx)
-                            if is_undefined(linkerColumnCounters[linkerKey]) {
-                                linkerColumnCounters[linkerKey] = 0
-                            }
-                            counter := linkerColumnCounters[linkerKey]
-                            header = "Col_linker." + string(result.clusterAxisIdx) + "." + string(counter)
-                            linkerColumnCounters[linkerKey] = counter + 1
-                        } else {
-                            header = result.header
-                            clusterPropertyIdx = result.newClusterPropertyIdx
-                        }
-                        
-                        // Add cluster axis with matching index
-                        for na, ax in colsSpec.axesSpec {
-                            if ax.name != datasetSpec.axesSpec[1].name && !slices.hasElement(addedAxes, ax.name) {
-                                axisHeader := "cluster_" + string(result.clusterAxisIdx)
-                                cloneTable.setAxisHeader(ax, axisHeader)
-                                addedAxes = append(addedAxes, ax.name)
-                            }
-                        }
-                    } else {
-                        header = "Col" + string(clonotypePropertyIdx)
-                        clonotypePropertyIdx = clonotypePropertyIdx + 1
-                    }
-                    
-                    cloneTable.add(columns.getColumn(col.value.column), {header: header})
-                    addedCols = true
-                    rankingMap[header] = col.rankingOrder
-                }
-            }
-        }
-
-        // Get linker columns if needed
-        // Use sortedLinkers which was already built above with proper ordering
-        linkerAxisSpec := {}
-        // Store both the axis AND the original linker index for cluster size matching
-        linkerClusterIdAxesWithIdx := []
-        
-        for linkerIdx, col in sortedLinkers {
-            clusterIdAxis := undefined
-            if datasetSpec.axesSpec[1].name == col.spec.axesSpec[1].name {
-                // clonotypeKey is in second axis
-                cloneTable.add(col, {header: "linker." + string(linkerIdx)})
-                cloneTable.setAxisHeader(col.spec.axesSpec[0], "cluster_" + string(linkerIdx))
-                linkerAxisSpec["cluster_" + string(linkerIdx)] = col.spec.axesSpec[0]
-                clusterIdAxis = col.spec.axesSpec[0]
-                addedCols = true
-            } else if datasetSpec.axesSpec[1].name == col.spec.axesSpec[0].name {
-                // clonotypeKey is in first axis
-                cloneTable.add(col, {header: "linker." + string(linkerIdx)})
-                cloneTable.setAxisHeader(col.spec.axesSpec[1], "cluster_" + string(linkerIdx))
-                linkerAxisSpec["cluster_" + string(linkerIdx)] = col.spec.axesSpec[1]
-                clusterIdAxis = col.spec.axesSpec[1]
-                addedCols = true
-            }
-            // Collect clusterId axes from linker columns to match cluster size columns
-            // Store both axis and original linker index to preserve correct mapping
-            if !is_undefined(clusterIdAxis) && clusterIdAxis.name == "pl7.app/vdj/clusterId" {
-                linkerClusterIdAxesWithIdx = append(linkerClusterIdAxesWithIdx, {
-                    axis: clusterIdAxis,
-                    linkerIdx: linkerIdx
-                })
-            }
-        }
-
-        // Add cluster size columns if available, but only those matching linker columns' clusterId axes
-        // This ensures we only join columns from the same clustering run
-        if len(columns.getColumns("clusterSizes")) > 0 {
-            clusterSizeIdx := 0
-            for col in columns.getColumns("clusterSizes") {
-                // Find the clusterId axis in this cluster size column
-                clusterSizeClusterIdAxis := undefined
-                for axis in col.spec.axesSpec {
-                    if axis.name == "pl7.app/vdj/clusterId" {
-                        clusterSizeClusterIdAxis = axis
-                        break
-                    }
-                }
-                
-                // Only add if we have linker columns and this cluster size matches one of them
-                // Also find the matching linker index to use for consistent naming
-                matchingLinkerIdx := -1
-                if len(linkerClusterIdAxesWithIdx) > 0 && !is_undefined(clusterSizeClusterIdAxis) {
-                    // Check if this cluster size column matches any linker's clusterId axis
-                    for entry in linkerClusterIdAxesWithIdx {
-                        linkerAxis := entry.axis
-                        // Compare domains - they must match exactly for same clustering run
-                        if clusterSizeClusterIdAxis.name == linkerAxis.name &&
-                           clusterSizeClusterIdAxis.type == linkerAxis.type &&
-                           utils.clusterAxisDomainsMatch(clusterSizeClusterIdAxis, linkerAxis) {
-                            // Use the original linker index, not the array index
-                            matchingLinkerIdx = entry.linkerIdx
-                            break
-                        }
-                    }
-                }
-                
-                // Only add cluster size columns that match a linker column's clustering run
-                if matchingLinkerIdx >= 0 {
-                    // Trace elements are already present in col.spec from the clustering block.
-                    // deriveLabels (in label.ts) will use these existing trace elements to construct
-                    // distinguishing labels when multiple clustering blocks are joined, similar to
-                    // how LabelTypeFull ('__LABEL__@1') works. The trace includes:
-                    // - Original dataset trace
-                    // - "milaboratories.clonotype-clustering.sequences" trace element
-                    // - "milaboratories.clonotype-clustering.clustering" trace element
-                    // No modification needed - just preserve the existing trace.
-                    
-                    // Use matching linker index for clusterSize header to maintain consistency
-                    cloneTable.add(col, {header: "clusterSize." + string(matchingLinkerIdx)})
-                    addedCols = true
-                    // Add the cluster axis header using matching linker index
-                    // This ensures cluster_N from linker processing matches clusterAxis_N_M from cluster size
-                    for axisIdx, axis in col.spec.axesSpec {
-                        if axis.name != datasetSpec.axesSpec[1].name {
-                            cloneTable.setAxisHeader(axis, "clusterAxis_" + string(matchingLinkerIdx) + "_" + string(axisIdx))
-                        }
-                    }
-                    clusterSizeIdx = clusterSizeIdx + 1
-                }
-            }
-        }
-
-        // Fallback: if no columns have been added yet, add at least one CDR3 sequence column
-        // This ensures the table can be built even when no filters/ranking columns are specified
-        if !addedCols {
-            cdr3Sequences := columns.getColumns("cdr3Sequences")
-            if len(cdr3Sequences) > 0 {
-                // Add the first CDR3 sequence as a fallback column
-                cloneTable.add(cdr3Sequences[0], {header: "cdr3_fallback"})
-                addedCols = true
-            }
-        }
+        // Initialize and build clone table with all columns
+        tableInit := utils.initializeCloneTable(pframes, columns, args, datasetSpec)
+        cloneTable := tableInit.cloneTable
+        filterMap := tableInit.filterMap
+        rankingMap := tableInit.rankingMap
+        sortedLinkers := tableInit.sortedLinkers
+        clusterColumnHeader := tableInit.clusterColumnHeader
+        addedCols := tableInit.addedCols
 
         // Continue only if we have at least a column
         // This condition prevents temporal intermittent error while filters are 
         // being processed and possibly in other situations too
         if addedCols {
-            cloneTable.mem("16GiB")
-            cloneTable.cpu(1)
-            cloneTable = cloneTable.build()
-
-            // Resolve clusterColumn ref to header name by matching against sortedLinkers
-            clusterColumnHeader := undefined
-            if !is_undefined(args.clusterColumn) {
-                // Get the spec for the selected cluster column (added as anchor in prepare phase)
-                selectedLinkerSpec := columns.getSpec(args.clusterColumn)
-                if !is_undefined(selectedLinkerSpec) {
-                    // Find the clusterId axis in the selected linker
-                    selectedClusterIdAxis := undefined
-                    for axis in selectedLinkerSpec.axesSpec {
-                        if axis.name == "pl7.app/vdj/clusterId" {
-                            selectedClusterIdAxis = axis
-                            break
-                        }
-                    }
-                    
-                    if !is_undefined(selectedClusterIdAxis) {
-                        // Find matching linker by comparing clusterId axis domains
-                        for linkerIdx, col in sortedLinkers {
-                            // Get the clusterId axis from this linker
-                            for axis in col.spec.axesSpec {
-                                if axis.name == "pl7.app/vdj/clusterId" {
-                                    // Use clusterAxisDomainsMatch for proper domain comparison
-                                    if utils.clusterAxisDomainsMatch(selectedClusterIdAxis, axis) {
-                                        clusterColumnHeader = "clusterAxis_" + string(linkerIdx) + "_0"
-                                        break
-                                    }
-                                }
-                            }
-                            if !is_undefined(clusterColumnHeader) {
-                                break
-                            }
-                        }
-                    }
-                }
-            }
 
             // Use ender.create to call the filter-clonotypes template
             filterSampleResult := render.create(filterAndSampleTpl, {
@@ -397,70 +156,8 @@ wf.body(func(args) {
             finalClonotypes := filterSampleResult.output("finalClonotypes", 24 * 60 * 60 * 1000)
             
             ////////// CDR3 Length Calculation //////////
-                
-            cdr3SeqTable := pframes.parquetFileBuilder()
-            cdr3SeqTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
-
-            // Must deal with multiple CDR3 sequences (two for each cell in single cell data)
-            // Chain will be added in the header as cdr3Sequence.chain and used in python script
-            // Notice chain is in spec.domain for single cell data and spec.axesSpec[0].domain for bulk data
-
-            // Helper function to add chain information to the headers dynamically
-            chainMapping := {
-                "IG": { "A": "Heavy", "B": "Light" },
-                "TCRAB": { "A": "TRA", "B": "TRB" },
-                "TCRGD": { "A": "TRG", "B": "TRD" }
-            }
-
-            makeHeaderName := func(col, baseHeaderName, isSingleCell) {
-                if isSingleCell {
-                    chain := col.spec.domain["pl7.app/vdj/scClonotypeChain"]  // e.g., "A", "B"
-                    receptor := col.spec.axesSpec[0].domain["pl7.app/vdj/receptor"]  // e.g., "IG", "TCRAB", "TCRGD"
-                    chainLabel := chainMapping[receptor][chain]
-                    return baseHeaderName + "." + chainLabel // e.g., "cdr3Sequence.Heavy"
-                } else {
-                    // For bulk, if chain info is available (e.g. IGH, IGK, IGL)
-                    chainFromDomain := col.spec.axesSpec[0].domain["pl7.app/vdj/chain"] // e.g. "IGH", "IGK"
-                    if chainFromDomain != undefined {
-                        return baseHeaderName + "." + chainFromDomain // e.g., "cdr3Sequence.IGH"
-                    }
-                }
-                return baseHeaderName
-            };
-
-            // Process CDR3 sequences
-            cdr3Sequences := columns.getColumns("cdr3Sequences")
-
-            for col in cdr3Sequences {
-                headerName := makeHeaderName(col, "cdr3Sequence", isSingleCell)
-                if isSingleCell {
-                    if col.spec.domain["pl7.app/vdj/scClonotypeChain/index"] == "primary" {
-                        cdr3SeqTable.add(col, {header: headerName})
-                    }
-                } else {
-                    cdr3SeqTable.add(col, {header: headerName})
-                }
-            }
-
-            // Process V genes
-            vGenes := columns.getColumns("VGenes")	
-
-            for col in vGenes {
-                headerName := makeHeaderName(col, "vGene", isSingleCell)
-                cdr3SeqTable.add(col, {header: headerName})
-            }
-
-            // Process J genes
-            jGenes := columns.getColumns("JGenes")	
-
-            for col in jGenes {
-                headerName := makeHeaderName(col, "jGene", isSingleCell)
-                cdr3SeqTable.add(col, {header: headerName})
-            }
-
-            cdr3SeqTable.mem("16GiB")
-            cdr3SeqTable.cpu(1)
-            cdr3SeqTableBuilt := cdr3SeqTable.build()
+            // Initialize and build CDR3 sequence table
+            cdr3SeqTableBuilt := utils.initializeCdr3SeqTable(pframes, columns, datasetSpec, isSingleCell)
 
             cdr3VspectratypeCmd := exec.builder().
                 software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.spectratype:main")).
@@ -501,33 +198,14 @@ wf.body(func(args) {
 
             if args.kabatNumbering == true {
             ////////// Assembling AA sequences //////////
-                assemSeqTable := pframes.parquetFileBuilder()
-                keyHeader := "clonotypeKey"
-                assemSeqTable.setAxisHeader(datasetSpec.axesSpec[1].name, keyHeader)
-
-                seqCols := columns.getColumns("assemblingAaSeqs")
-                for col in seqCols {
-                    headerName := makeHeaderName(col, "assemblingFeature", isSingleCell)
-                    assemSeqTable.add(col, {header: headerName})
-                }
-
-                assemSeqTable.mem("16GiB")
-                assemSeqTable.cpu(1)
-                assemSeqTableBuilt := assemSeqTable.build()
+                // Initialize and build assembling sequence table
+                assemInit := utils.initializeAssemSeqTable(pframes, columns, datasetSpec, isSingleCell)
+                assemSeqTableBuilt := assemInit.assemSeqTable
+                bulkChain := assemInit.bulkChain
+                seqCols := assemInit.seqCols
 
                 // Convert assembling feature sequences to FASTA via sub-template
                 assemFastaTpl := assets.importTemplate(":assembling-fasta")
-                bulkChain := undefined
-                if !isSingleCell {
-                    // infer bulk chain by header names of incoming seq columns (domain uses IGHeavy / IGLight)
-                    chainDetected := "KL"
-                    for col in seqCols {
-                        ch := col.spec.axesSpec[0].domain["pl7.app/vdj/chain"] // e.g., IGHeavy, IGLight
-                        if ch == "IGHeavy" { chainDetected = "H"; break }
-                        if ch == "IGLight" { chainDetected = "KL" }
-                    }
-                    bulkChain = chainDetected
-                }
                 assem := render.create(assemFastaTpl, {
                     inputTsv: assemSeqTableBuilt,
                     keyColumn: "clonotypeKey",
