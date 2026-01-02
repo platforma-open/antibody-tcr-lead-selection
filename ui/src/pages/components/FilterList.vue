@@ -2,8 +2,9 @@
 import type { AnchoredColumnId, FilterUI } from '@platforma-open/milaboratories.top-antibodies.model';
 import type { PlTableFilter } from '@platforma-sdk/model';
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from '@platforma-sdk/ui-vue';
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 import { useApp } from '../../app';
+import { useAnchorSyncedDefaults } from '../../composables/useAnchorSyncedDefaults';
 import FilterCard from './FilterCard.vue';
 
 const app = useApp();
@@ -17,8 +18,8 @@ const generateUniqueId = () => {
 };
 
 const getColumnLabel = (columnId: AnchoredColumnId | undefined) => {
-  const column = app.model.outputs.allFilterableOptions?.find(
-    (option) => option && option.value.column === columnId?.column,
+  const column = app.model.outputs.filterConfig?.options?.find(
+    (option: { value: AnchoredColumnId; label: string }) => option && option.value.column === columnId?.column,
   );
   return column?.label ?? 'Set filter';
 };
@@ -39,33 +40,72 @@ const addFilter = () => {
 };
 
 const resetToDefaults = () => {
-  app.model.ui.filters = app.model.outputs.defaultFilters?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter }) => ({
+  app.model.ui.filters = app.model.outputs.filterConfig?.defaults?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter }) => ({
     id: generateUniqueId(),
     value: defaultFilter.column,
-    filter: { ...defaultFilter.default }, // Create a deep copy to avoid reference rewriting issues
+    filter: { ...defaultFilter.default },
     isExpanded: false,
   })) ?? [];
 };
 
-// set default filters when becomes available after inputAnchor is set
-// Only set defaults if topClonotypes is not set (user hasn't configured filtering yet)
-watch(() => app.model.outputs.defaultFilters, (newValue, oldValue) => {
-  if (oldValue === undefined && newValue !== undefined
-    && app.model.args.inputAnchor
-    && (!app.model.ui.filters || app.model.ui.filters.length === 0)) {
+// Use shared anchor sync logic
+useAnchorSyncedDefaults({
+  getAnchor: () => app.model.args.inputAnchor,
+  getConfig: () => app.model.outputs.filterConfig,
+  clearState: () => {
+    console.log('[FilterList] clearState called, current filters:', app.model.ui.filters?.length ?? 0);
+    app.model.ui.filters = [];
+  },
+  applyDefaults: () => {
+    console.log('[FilterList] applyDefaults called');
     resetToDefaults();
-  }
+  },
+  hasDefaults: () => (app.model.outputs.filterConfig?.defaults?.length ?? 0) > 0,
+  // Preserve existing user selections on component remount (e.g., when Settings panel reopens)
+  // Returns true if existing state uses columns from the current config
+  hasExistingStateForConfig: (config) => {
+    const items = app.model.ui.filters ?? [];
+    if (items.length === 0) {
+      console.log('[FilterList] hasExistingStateForConfig: no items');
+      return false;
+    }
+    const configColumnIds = new Set(config.options?.map((o) => o.value.column) ?? []);
+    // Check if at least one item uses a column from current config
+    const result = items.some((item) => {
+      if (!item.value?.column) return false;
+      const matches = configColumnIds.has(item.value.column);
+      console.log('[FilterList] Checking column:', item.value.column, 'matches:', matches);
+      return matches;
+    });
+    console.log('[FilterList] hasExistingStateForConfig:', result, 'items:', items.length);
+    return result;
+  },
+  // Check if there are any items at all (used to avoid clearing on remount before config loads)
+  hasAnyItems: () => {
+    const count = app.model.ui.filters?.length ?? 0;
+    console.log('[FilterList] hasAnyItems:', count);
+    return count > 0;
+  },
+  // Persisted tracking of which anchor's defaults have been applied
+  getInitializedAnchorKey: () => {
+    const key = app.model.ui.filtersInitializedForAnchor;
+    console.log('[FilterList] getInitializedAnchorKey:', key?.slice(0, 50));
+    return key;
+  },
+  setInitializedAnchorKey: (key) => {
+    console.log('[FilterList] setInitializedAnchorKey:', key?.slice(0, 50));
+    app.model.ui.filtersInitializedForAnchor = key;
+  },
 });
-
 </script>
 
 <template>
   <div class="d-flex flex-column gap-6">
     <PlRow>
-      Filter by:
+      Keep clonotypes that:
       <PlTooltip>
         <PlIcon16 name="info" />
-        <template #tooltip> Select columns to use for filtering the data. </template>
+        <template #tooltip> Only clonotypes that satisfy these conditions will be kept. All others will be excluded. </template>
       </PlTooltip>
     </PlRow>
 
@@ -81,7 +121,7 @@ watch(() => app.model.outputs.defaultFilters, (newValue, oldValue) => {
       <template #item-content="{ index }">
         <FilterCard
           v-model="app.model.ui.filters[index]"
-          :options="app.model.outputs.allFilterableOptions"
+          :options="app.model.outputs.filterConfig?.options"
         />
       </template>
     </PlElementList>

@@ -1,34 +1,23 @@
 {
-  "name": "@platforma-open/milaboratories.top-antibodies",
-  "version": "1.0.0",
   "scripts": {
-    "pretty": "prettier --write \"./**/*.{js,jsx,mjs,cjs,ts,tsx,json,vue}\"",
     "build": "turbo run build",
     "build:dev": "env PL_PKG_DEV=local turbo run build",
-    "test": "turbo run test --concurrency 1 --env-mode=loose",
+    "lint": "turbo run lint",
+    "type-check": "turbo run type-check",
+    "test": "env PL_PKG_DEV=local turbo run test --concurrency 1 --env-mode=loose",
+    "test:dry-run": "env PL_PKG_DEV=local turbo run test --dry-run=json",
     "mark-stable": "turbo run mark-stable",
+    "do-pack": "turbo run do-pack",
     "watch": "turbo watch build",
     "changeset": "changeset",
     "version-packages": "changeset version",
-    "update-sdk": "pl-blocks-deps-updater"
+    "update-sdk": "block-tools update-deps"
   },
-  "files": [
-    "index.d.ts",
-    "index.js"
-  ],
   "devDependencies": {
-    "turbo": "catalog:",
     "@changesets/cli": "catalog:",
-    "@platforma-sdk/blocks-deps-updater": "catalog:"
-  },
-  "//pnpm": {
-    "overrides": {
-      "@milaboratories/pl-model-common": "file:/Users/poslavskysv/Projects/milab/platforma/platforma-sdk/lib/model/common/package.tgz",
-      "@platforma-sdk/model": "file:/Users/poslavskysv/Projects/milab/platforma/platforma-sdk/sdk/model/package.tgz",
-      "@platforma-sdk/ui-vue": "file:/Users/poslavskysv/Projects/milab/platforma/platforma-sdk/sdk/ui-vue/package.tgz",
-      "@platforma-sdk/workflow-tengo": "file:/Users/poslavskysv/Projects/milab/platforma/platforma-sdk/sdk/workflow-tengo/package.tgz",
-      "@milaboratories/uikit": "file:/Users/poslavskysv/Projects/milab/platforma/platforma-sdk/lib/ui/uikit/package.tgz"
-    }
+    "@platforma-sdk/block-tools": "catalog:",
+    "turbo": "catalog:",
+    "typescript": "catalog:"
   },
   "packageManager": "pnpm@9.12.0"
 }

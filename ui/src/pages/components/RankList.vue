@@ -1,8 +1,9 @@
-<script setup lang="ts" generic="T = unknown">
+<script setup lang="ts">
 import type { AnchoredColumnId } from '@platforma-open/milaboratories.top-antibodies.model';
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from '@platforma-sdk/ui-vue';
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 import { useApp } from '../../app';
+import { useAnchorSyncedDefaults } from '../../composables/useAnchorSyncedDefaults';
 import RankCard from './RankCard.vue';
 
 const app = useApp();
@@ -16,7 +17,7 @@ const generateUniqueId = () => {
 };
 
 const getMetricLabel = (value: AnchoredColumnId | undefined) => {
-  const column = app.model.outputs.rankingOptions?.find(
+  const column = app.model.outputs.rankingConfig?.options?.find(
     (option) => option && option.value.column === value?.column,
   );
   return column?.label ?? 'Set rank';
@@ -38,24 +39,72 @@ const addRankColumn = () => {
 };
 
 const resetToDefaults = () => {
-  app.model.ui.rankingOrder = app.model.outputs.defaultRankingOrder ?? [];
+  app.model.ui.rankingOrder = app.model.outputs.rankingConfig?.defaults?.map((defaultRank) => ({
+    id: generateUniqueId(),
+    value: defaultRank.value,
+    rankingOrder: defaultRank.rankingOrder,
+    isExpanded: false,
+  })) ?? [];
 };
 
-// set default ranking order when topClonotypes is set
-watch(() => app.model.args.topClonotypes, (newValue, oldValue) => {
-  if (oldValue === undefined && newValue !== undefined) {
+// Use shared anchor sync logic
+useAnchorSyncedDefaults({
+  getAnchor: () => app.model.args.inputAnchor,
+  getConfig: () => app.model.outputs.rankingConfig,
+  clearState: () => {
+    console.log('[RankList] clearState called, current rankings:', app.model.ui.rankingOrder?.length ?? 0);
+    app.model.ui.rankingOrder = [];
+  },
+  applyDefaults: () => {
+    console.log('[RankList] applyDefaults called');
     resetToDefaults();
-  }
+  },
+  hasDefaults: () => (app.model.outputs.rankingConfig?.defaults?.length ?? 0) > 0,
+  // Preserve existing user selections on component remount (e.g., when Settings panel reopens)
+  // Returns true if existing state uses columns from the current config
+  hasExistingStateForConfig: (config) => {
+    const items = app.model.ui.rankingOrder ?? [];
+    if (items.length === 0) {
+      console.log('[RankList] hasExistingStateForConfig: no items');
+      return false;
+    }
+    const configColumnIds = new Set(config.options?.map((o) => o.value.column) ?? []);
+    // Check if at least one item uses a column from current config
+    const result = items.some((item) => {
+      if (!item.value?.column) return false;
+      const matches = configColumnIds.has(item.value.column);
+      console.log('[RankList] Checking column:', item.value.column, 'matches:', matches);
+      return matches;
+    });
+    console.log('[RankList] hasExistingStateForConfig:', result, 'items:', items.length);
+    return result;
+  },
+  // Check if there are any items at all (used to avoid clearing on remount before config loads)
+  hasAnyItems: () => {
+    const count = app.model.ui.rankingOrder?.length ?? 0;
+    console.log('[RankList] hasAnyItems:', count);
+    return count > 0;
+  },
+  // Persisted tracking of which anchor's defaults have been applied
+  getInitializedAnchorKey: () => {
+    const key = app.model.ui.rankingsInitializedForAnchor;
+    console.log('[RankList] getInitializedAnchorKey:', key?.slice(0, 50));
+    return key;
+  },
+  setInitializedAnchorKey: (key) => {
+    console.log('[RankList] setInitializedAnchorKey:', key?.slice(0, 50));
+    app.model.ui.rankingsInitializedForAnchor = key;
+  },
 });
 </script>
 
 <template>
-  <div v-if="app.model.args.topClonotypes" class="d-flex flex-column gap-6">
+  <div class="d-flex flex-column gap-6">
     <PlRow>
-      Rank by:
+      Choose the best clonotypes by:
       <PlTooltip>
         <PlIcon16 name="info" />
-        <template #tooltip> Select columns to use for ranking the clonotypes. If none selected, "Number of Samples" will be used by default. </template>
+        <template #tooltip> Select the criteria used to prioritize clonotypes during selection.</template>
       </PlTooltip>
     </PlRow>
 
@@ -71,7 +120,7 @@ watch(() => app.model.args.topClonotypes, (newValue, oldValue) => {
       <template #item-content="{ index }">
         <RankCard
           v-model="app.model.ui.rankingOrder[index]"
-          :options="app.model.outputs.rankingOptions"
+          :options="app.model.outputs.rankingConfig?.options"
         />
       </template>
     </PlElementList>
