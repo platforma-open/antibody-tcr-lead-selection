@@ -143,6 +143,7 @@ function getDefaultVisibleColumns(
   columns: PColumn<PColumnDataUniversal>[],
   filterColumnIds: Set<string>,
   rankingColumnIds: Set<string>,
+  kabatEnabled: boolean,
 ): Set<PObjectId> {
   const visible = new Set<PObjectId>();
 
@@ -155,6 +156,12 @@ function getDefaultVisibleColumns(
 
     // Rank column (pl7.app/vdj/ranking-order)
     if (col.spec.name === 'pl7.app/vdj/ranking-order') {
+      visible.add(col.id);
+      continue;
+    }
+
+    // KABAT columns (kabatSequence and kabatPositions) when KABAT numbering is enabled
+    if (kabatEnabled && col.spec.name.startsWith('pl7.app/vdj/kabat')) {
       visible.add(col.id);
       continue;
     }
@@ -429,7 +436,8 @@ export const model = BlockModel.create()
 
     // Apply visibility annotations FIRST, before any column transformations
     // This ensures we're working with the same column objects used to calculate visibility
-    const defaultVisible = getDefaultVisibleColumns(allColumns, filterColumnIds, rankingColumnIds);
+    const kabatEnabled = ctx.activeArgs?.kabatNumbering ?? false;
+    const defaultVisible = getDefaultVisibleColumns(allColumns, filterColumnIds, rankingColumnIds, kabatEnabled);
 
     // Modify column specs to add visibility and order priority annotations
     // Essential columns are set to 'default' (visible), all others are set to 'optional' (hidden)
