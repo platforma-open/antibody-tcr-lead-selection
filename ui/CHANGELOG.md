@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.13.3
+
+### Patch Changes
+
+- 1ec3ac8: Make KABAT columns visible by default
+- Updated dependencies [1ec3ac8]
+  - @platforma-open/milaboratories.top-antibodies.model@1.15.2
+
 ## 1.13.2
 
 ### Patch Changes
