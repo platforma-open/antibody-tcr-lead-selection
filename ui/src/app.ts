@@ -12,7 +12,7 @@ export const sdkPlugin = defineApp(model, (app) => {
     () => app.model.ui.rankingOrder,
     debounce((value) => {
       app.model.args.rankingOrder = convertRankingOrderUI(value ?? []);
-    }, 500),
+    }, 250),
     { immediate: true, deep: true },
   );
 
@@ -20,7 +20,7 @@ export const sdkPlugin = defineApp(model, (app) => {
     () => app.model.ui.filters,
     debounce((value) => {
       app.model.args.filters = convertFilterUI(value ?? []);
-    }, 500),
+    }, 250),
     { immediate: true, deep: true },
   );
 
