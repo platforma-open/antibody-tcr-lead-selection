@@ -3,4 +3,4 @@
 "@platforma-open/milaboratories.top-antibodies.spectratype": patch
 ---
 
-Fix Windonws encoding in python scripts
+Fix Windows encoding in python scripts
