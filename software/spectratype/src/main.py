@@ -28,12 +28,12 @@ def main():
     load_start = time.time()
     df = pd.read_parquet(args.input_parquet)
     load_time = time.time() - load_start
-    print(f"✓ Data loading: {load_time:.3f}s ({len(df):,} rows, {len(df.columns)} columns)")
+    print(f"Data loading: {load_time:.3f}s ({len(df):,} rows, {len(df.columns)} columns)")
 
     # Read final clonotypes if provided (now in Parquet format)
     if args.final_clonotypes:
         final_clonotypes = pd.read_parquet(args.final_clonotypes)
-        print(f"✓ Loaded final clonotypes: {len(final_clonotypes):,} rows")
+        print(f"Loaded final clonotypes: {len(final_clonotypes):,} rows")
     else:
         final_clonotypes = None
 
@@ -41,7 +41,7 @@ def main():
     processing_start = time.time()
     if final_clonotypes is not None:
         df = pd.merge(df, final_clonotypes, on='clonotypeKey', how='inner')
-        print(f"✓ Merged with final clonotypes: {len(df):,} rows remaining")
+        print(f"Merged with final clonotypes: {len(df):,} rows remaining")
 
     # Transform data to long format
     df_long = pd.wide_to_long(
@@ -78,21 +78,21 @@ def main():
                       .reset_index(name='count')
                       .sort_values('count'))
         
-        print(f"✓ Generated spectratype: {len(spectratype_df):,} entries")
-        print(f"✓ Generated V/J usage: {len(vj_usage_df):,} entries")
+        print(f"Generated spectratype: {len(spectratype_df):,} entries")
+        print(f"Generated V/J usage: {len(vj_usage_df):,} entries")
     
     processing_time = time.time() - processing_start
-    print(f"✓ Processing: {processing_time:.3f}s")
+    print(f"Processing: {processing_time:.3f}s")
 
     # Write outputs
     output_start = time.time()
     spectratype_df.to_csv(args.spectratype_tsv, sep="\t", index=False)
     vj_usage_df.to_csv(args.vj_usage_tsv, sep="\t", index=False)
     output_time = time.time() - output_start
-    print(f"✓ Output: {output_time:.3f}s")
+    print(f"Output: {output_time:.3f}s")
     
     total_time = time.time() - start_time
-    print(f"🎯 Total time: {total_time:.3f}s")
+    print(f"Total time: {total_time:.3f}s")
 
 
 if __name__ == "__main__":

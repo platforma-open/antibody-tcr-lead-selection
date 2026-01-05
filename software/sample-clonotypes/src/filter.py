@@ -123,7 +123,7 @@ def main():
         return
     
     load_time = time.time() - load_start
-    print(f"✓ Data loading: {load_time:.3f}s ({df.height:,} rows, {len(df.columns)} columns)")
+    print(f"Data loading: {load_time:.3f}s ({df.height:,} rows, {len(df.columns)} columns)")
 
     # Check if file is empty
     if df.height == 0:
@@ -136,7 +136,7 @@ def main():
         empty_df.write_parquet(args.out)
         total_time = time.time() - start_time
         print(f"Empty output file created: {args.out}")
-        print(f"🎯 Total time: {total_time:.3f}s")
+        print(f"Total time: {total_time:.3f}s")
         return
 
     # Parse filter map from JSON string
@@ -184,7 +184,7 @@ def main():
     filtered_df = apply_filters(df, filter_map)
     filtering_time = time.time() - filtering_start
     print(f"Rows after filtering: {filtered_df.height}")
-    print(f"✓ Filtering: {filtering_time:.3f}s")
+    print(f"Filtering: {filtering_time:.3f}s")
 
     # Add a column named top with value 1
     filtered_df = filtered_df.with_columns(pl.lit(1).alias("top"))
@@ -196,10 +196,10 @@ def main():
     
     filtered_df.write_parquet(args.out)
     output_time = time.time() - output_start
-    print(f"✓ Output: {output_time:.3f}s (wrote to {args.out})")
+    print(f"Output: {output_time:.3f}s (wrote to {args.out})")
     
     total_time = time.time() - start_time
-    print(f"🎯 Total time: {total_time:.3f}s")
+    print(f"Total time: {total_time:.3f}s")
 
 if __name__ == "__main__":
     main() 

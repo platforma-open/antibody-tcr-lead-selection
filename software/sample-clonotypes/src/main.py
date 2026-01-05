@@ -411,7 +411,7 @@ def main():
         return
     
     load_time = time.time() - load_start
-    print(f"✓ Data loading: {load_time:.3f}s ({df.height:,} rows, {len(df.columns)} columns)")
+    print(f"Data loading: {load_time:.3f}s ({df.height:,} rows, {len(df.columns)} columns)")
 
     # Validate N
     if args.n <= 0:
@@ -431,7 +431,7 @@ def main():
     validation_time = time.time() - validation_start
     
     total_ranking_cols = len(clonotype_col_columns) + len(cluster_col_columns) + len(linker_col_columns)
-    print(f"✓ Validation: {validation_time:.3f}s")
+    print(f"Validation: {validation_time:.3f}s")
     print(f"  Found {len(cluster_columns)} cluster columns, {total_ranking_cols} ranking columns " +
           f"({len(clonotype_col_columns)} clonotype, {len(cluster_col_columns)} cluster, " +
           f"{len(linker_col_columns)} linker), {len(cluster_size_columns)} cluster size columns")
@@ -459,7 +459,7 @@ def main():
                              cluster_property_mapping, args.disable_cluster_ranking, 
                              args.cluster_column)
     ranking_time = time.time() - ranking_start
-    print(f"✓ Ranking: {ranking_time:.3f}s")
+    print(f"Ranking: {ranking_time:.3f}s")
     
     # Select top N rows
     selection_start = time.time()
@@ -468,7 +468,7 @@ def main():
     # Always add ranked_order column after selection (like original pandas implementation)
     top_n = top_n.with_columns(pl.arange(1, top_n.height + 1).alias("ranked_order"))
     selection_time = time.time() - selection_start
-    print(f"✓ Selection: {selection_time:.3f}s (selected {top_n.height} clonotypes)")
+    print(f"Selection: {selection_time:.3f}s (selected {top_n.height} clonotypes)")
 
     # Create and output simplified version with top clonotypes only
     output_start = time.time()
@@ -490,10 +490,10 @@ def main():
     # Output simplified version to main output file
     simplified_df.write_parquet(args.out)
     output_time = time.time() - output_start
-    print(f"✓ Output: {output_time:.3f}s (wrote to {args.out})")
+    print(f"Output: {output_time:.3f}s (wrote to {args.out})")
     
     total_time = time.time() - start_time
-    print(f"🎯 Total time: {total_time:.3f}s")
+    print(f"Total time: {total_time:.3f}s")
 
 
 if __name__ == "__main__":
