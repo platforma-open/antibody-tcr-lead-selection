@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.13.1
+
+### Patch Changes
+
+- 0b57c1b: Show only specific columns be default: Clone, Cluster Id, AA sequence and filter/rank columns
+- Updated dependencies [0b57c1b]
+  - @platforma-open/milaboratories.top-antibodies.model@1.15.1
+
 ## 1.13.0
 
 ### Minor Changes

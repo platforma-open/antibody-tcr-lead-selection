@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.17.1
+
+### Patch Changes
+
+- 0b57c1b: Show only specific columns be default: Clone, Cluster Id, AA sequence and filter/rank columns
+- Updated dependencies [0b57c1b]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.9.1
+
 ## 1.17.0
 
 ### Minor Changes
