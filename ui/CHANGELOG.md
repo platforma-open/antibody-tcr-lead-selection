@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.13.2
+
+### Patch Changes
+
+- 5ab7052: Downgrade UI SDK version
+
 ## 1.13.1
 
 ### Patch Changes
