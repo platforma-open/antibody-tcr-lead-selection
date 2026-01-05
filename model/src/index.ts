@@ -565,7 +565,7 @@ export const model = BlockModel.create()
       ctx.uiState.tableState,
       ops,
     );
-  }, { retentive: true })
+  }, { retentive: true, withStatus: true })
 
   .output('calculating', (ctx) => {
     if (ctx.args.inputAnchor === undefined)
