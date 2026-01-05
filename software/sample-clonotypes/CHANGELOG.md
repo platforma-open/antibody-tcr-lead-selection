@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 1.9.2
+
+### Patch Changes
+
+- 5857c20: Fix Windows encoding in python scripts
+
 ## 1.9.1
 
 ### Patch Changes

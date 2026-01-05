@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.17.2
+
+### Patch Changes
+
+- Updated dependencies [5857c20]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@1.9.2
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.8.1
+
 ## 1.17.1
 
 ### Patch Changes

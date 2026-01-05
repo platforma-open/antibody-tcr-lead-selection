@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.spectratype
 
+## 1.8.1
+
+### Patch Changes
+
+- 5857c20: Fix Windows encoding in python scripts
+
 ## 1.8.0
 
 ### Minor Changes
