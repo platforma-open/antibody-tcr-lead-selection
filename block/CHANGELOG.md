@@ -1,5 +1,14 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 1.4.5
+
+### Patch Changes
+
+- accb214: correct table headers
+- Updated dependencies [accb214]
+  - @platforma-open/milaboratories.top-antibodies.model@1.15.3
+  - @platforma-open/milaboratories.top-antibodies.ui@1.13.4
+
 ## 1.4.4
 
 ### Patch Changes
