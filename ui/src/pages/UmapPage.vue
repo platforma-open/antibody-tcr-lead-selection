@@ -94,7 +94,7 @@ const multipleSequenceAlignmentOpen = ref(false);
       <PlMultiSequenceAlignment
         v-model="app.model.ui.alignmentModel"
         :sequence-column-predicate="isSequenceColumn"
-        :p-frame="app.model.outputs.pf"
+        :p-frame="app.model.outputs.pf?.ok ? app.model.outputs.pf.value : undefined"
         :selection="selection"
       />
     </PlSlideModal>

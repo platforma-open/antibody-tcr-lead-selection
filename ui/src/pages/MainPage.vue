@@ -41,10 +41,7 @@ function setAnchorColumn(ref: PlRef | undefined) {
 }
 
 const tableSettings = usePlDataTableSettingsV2({
-  // Only set sourceId when table model exists to prevent loading state
-  sourceId: () => app.model.outputs.table ? app.model.args.inputAnchor : null,
   model: () => app.model.outputs.table,
-  // filtersConfig: ({ column }) => ({ default: defaultFilters(column) }),
 });
 
 const selection = ref<PlSelectionModel>({
@@ -280,7 +277,7 @@ watch(settingsOpen, (isOpen) => {
       <PlMultiSequenceAlignment
         v-model="app.model.ui.alignmentModel"
         :sequence-column-predicate="isSequenceColumn"
-        :p-frame="app.model.outputs.pf"
+        :p-frame="app.model.outputs.pf?.ok ? app.model.outputs.pf.value : undefined"
         :selection="selection"
       />
     </PlSlideModal>
