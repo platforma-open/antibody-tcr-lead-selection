@@ -163,13 +163,6 @@ watch(() => app.model.args.topClonotypes, (newVal) => {
 watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
   app.model.ui.tableState = createPlDataTableStateV2();
 });
-
-// Debug logging for Settings panel state
-watch(settingsOpen, (isOpen) => {
-  console.log('[MainPage] Settings panel:', isOpen ? 'OPENED' : 'CLOSED');
-  console.log('[MainPage] Current filters count:', app.model.ui.filters?.length ?? 0);
-  console.log('[MainPage] Current rankings count:', app.model.ui.rankingOrder?.length ?? 0);
-});
 </script>
 
 <template>

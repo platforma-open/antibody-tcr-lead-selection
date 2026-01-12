@@ -53,11 +53,9 @@ useAnchorSyncedDefaults({
   getAnchor: () => app.model.args.inputAnchor,
   getConfig: () => app.model.outputs.filterConfig,
   clearState: () => {
-    console.log('[FilterList] clearState called, current filters:', app.model.ui.filters?.length ?? 0);
     app.model.ui.filters = [];
   },
   applyDefaults: () => {
-    console.log('[FilterList] applyDefaults called');
     resetToDefaults();
   },
   hasDefaults: () => (app.model.outputs.filterConfig?.defaults?.length ?? 0) > 0,
@@ -66,7 +64,6 @@ useAnchorSyncedDefaults({
   hasExistingStateForConfig: (config) => {
     const items = app.model.ui.filters ?? [];
     if (items.length === 0) {
-      console.log('[FilterList] hasExistingStateForConfig: no items');
       return false;
     }
     const configColumnIds = new Set(config.options?.map((o) => o.value.column) ?? []);
@@ -74,26 +71,21 @@ useAnchorSyncedDefaults({
     const result = items.some((item) => {
       if (!item.value?.column) return false;
       const matches = configColumnIds.has(item.value.column);
-      console.log('[FilterList] Checking column:', item.value.column, 'matches:', matches);
       return matches;
     });
-    console.log('[FilterList] hasExistingStateForConfig:', result, 'items:', items.length);
     return result;
   },
   // Check if there are any items at all (used to avoid clearing on remount before config loads)
   hasAnyItems: () => {
     const count = app.model.ui.filters?.length ?? 0;
-    console.log('[FilterList] hasAnyItems:', count);
     return count > 0;
   },
   // Persisted tracking of which anchor's defaults have been applied
   getInitializedAnchorKey: () => {
     const key = app.model.ui.filtersInitializedForAnchor;
-    console.log('[FilterList] getInitializedAnchorKey:', key?.slice(0, 50));
     return key;
   },
   setInitializedAnchorKey: (key) => {
-    console.log('[FilterList] setInitializedAnchorKey:', key?.slice(0, 50));
     app.model.ui.filtersInitializedForAnchor = key;
   },
 });
