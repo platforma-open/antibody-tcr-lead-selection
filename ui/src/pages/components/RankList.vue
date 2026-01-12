@@ -52,11 +52,9 @@ useAnchorSyncedDefaults({
   getAnchor: () => app.model.args.inputAnchor,
   getConfig: () => app.model.outputs.rankingConfig,
   clearState: () => {
-    console.log('[RankList] clearState called, current rankings:', app.model.ui.rankingOrder?.length ?? 0);
     app.model.ui.rankingOrder = [];
   },
   applyDefaults: () => {
-    console.log('[RankList] applyDefaults called');
     resetToDefaults();
   },
   hasDefaults: () => (app.model.outputs.rankingConfig?.defaults?.length ?? 0) > 0,
@@ -65,7 +63,6 @@ useAnchorSyncedDefaults({
   hasExistingStateForConfig: (config) => {
     const items = app.model.ui.rankingOrder ?? [];
     if (items.length === 0) {
-      console.log('[RankList] hasExistingStateForConfig: no items');
       return false;
     }
     const configColumnIds = new Set(config.options?.map((o) => o.value.column) ?? []);
@@ -73,26 +70,21 @@ useAnchorSyncedDefaults({
     const result = items.some((item) => {
       if (!item.value?.column) return false;
       const matches = configColumnIds.has(item.value.column);
-      console.log('[RankList] Checking column:', item.value.column, 'matches:', matches);
       return matches;
     });
-    console.log('[RankList] hasExistingStateForConfig:', result, 'items:', items.length);
     return result;
   },
   // Check if there are any items at all (used to avoid clearing on remount before config loads)
   hasAnyItems: () => {
     const count = app.model.ui.rankingOrder?.length ?? 0;
-    console.log('[RankList] hasAnyItems:', count);
     return count > 0;
   },
   // Persisted tracking of which anchor's defaults have been applied
   getInitializedAnchorKey: () => {
     const key = app.model.ui.rankingsInitializedForAnchor;
-    console.log('[RankList] getInitializedAnchorKey:', key?.slice(0, 50));
     return key;
   },
   setInitializedAnchorKey: (key) => {
-    console.log('[RankList] setInitializedAnchorKey:', key?.slice(0, 50));
     app.model.ui.rankingsInitializedForAnchor = key;
   },
 });

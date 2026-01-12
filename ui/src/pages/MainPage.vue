@@ -41,10 +41,7 @@ function setAnchorColumn(ref: PlRef | undefined) {
 }
 
 const tableSettings = usePlDataTableSettingsV2({
-  // Only set sourceId when table model exists to prevent loading state
-  sourceId: () => app.model.outputs.table ? app.model.args.inputAnchor : null,
   model: () => app.model.outputs.table,
-  // filtersConfig: ({ column }) => ({ default: defaultFilters(column) }),
 });
 
 const selection = ref<PlSelectionModel>({
@@ -165,13 +162,6 @@ watch(() => app.model.args.topClonotypes, (newVal) => {
 // Reset table state when dataset or Kabat toggle changes to re-apply defaults (like optional visibility)
 watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
   app.model.ui.tableState = createPlDataTableStateV2();
-});
-
-// Debug logging for Settings panel state
-watch(settingsOpen, (isOpen) => {
-  console.log('[MainPage] Settings panel:', isOpen ? 'OPENED' : 'CLOSED');
-  console.log('[MainPage] Current filters count:', app.model.ui.filters?.length ?? 0);
-  console.log('[MainPage] Current rankings count:', app.model.ui.rankingOrder?.length ?? 0);
 });
 </script>
 

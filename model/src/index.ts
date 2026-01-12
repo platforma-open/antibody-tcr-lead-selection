@@ -3,7 +3,6 @@ import type {
   CreatePlDataTableOps,
   InferOutputsType,
   PColumnSpec,
-  PFrameHandle,
   PlDataTableStateV2,
   PlMultiSequenceAlignmentModel,
   PObjectId,
@@ -279,7 +278,7 @@ export const model = BlockModel.create()
 
   // Combined filter config - options and defaults together for atomic updates
   .output('filterConfig', (ctx) => {
-    const columns = getColumns(ctx);
+    const columns = getColumns(ctx, ctx.args.inputAnchor);
     if (columns === undefined) return undefined;
 
     const options = deriveLabels(
@@ -302,7 +301,7 @@ export const model = BlockModel.create()
 
   // Combined ranking config - options and defaults together for atomic updates
   .output('rankingConfig', (ctx) => {
-    const columns = getColumns(ctx);
+    const columns = getColumns(ctx, ctx.args.inputAnchor);
     if (columns === undefined) return undefined;
 
     const options = deriveLabels(
@@ -321,14 +320,14 @@ export const model = BlockModel.create()
   })
 
   .output('pf', (ctx) => {
-    const columns = getColumns(ctx);
+    const columns = getColumns(ctx, ctx.args.inputAnchor);
     if (!columns) return undefined;
 
     return createPFrameForGraphs(ctx, columns.props.map((c) => c.column));
   })
 
   // Use the cdr3LengthsCalculated cols
-  .output('spectratypePf', (ctx) => {
+  .outputWithStatus('spectratypePf', (ctx) => {
     // const pCols = ctx.outputs?.resolve('cdr3VspectratypePf')?.getPColumns();
     const pCols = ctx.outputs?.resolve({
       field: 'cdr3VspectratypePf',
@@ -341,7 +340,7 @@ export const model = BlockModel.create()
   })
 
   // Use the cdr3LengthsCalculated cols
-  .output('vjUsagePf', (ctx) => {
+  .outputWithStatus('vjUsagePf', (ctx) => {
     // const pCols = ctx.outputs?.resolve('vjUsagePf')?.getPColumns();
     const pCols = ctx.outputs?.resolve({
       field: 'vjUsagePf',
@@ -353,8 +352,8 @@ export const model = BlockModel.create()
     return createPFrameForGraphs(ctx, pCols);
   })
 
-  .output('table', (ctx) => {
-    const columns = getColumns(ctx);
+  .outputWithStatus('table', (ctx) => {
+    const columns = getColumns(ctx, ctx.activeArgs?.inputAnchor);
     if (columns === undefined)
       return undefined;
 
@@ -385,8 +384,8 @@ export const model = BlockModel.create()
 
     // Verify sampledRows belong to current inputAnchor by checking axes
     // This is critical to prevent showing data from a different dataset
-    if (ctx.args.inputAnchor !== undefined) {
-      const anchorSpec = ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor);
+    if (ctx.activeArgs?.inputAnchor !== undefined) {
+      const anchorSpec = ctx.resultPool.getPColumnSpecByRef(ctx.activeArgs.inputAnchor);
       if (anchorSpec !== undefined) {
         const samplingCol = sampledRows.find(
           (col) => col.spec.name === 'pl7.app/vdj/sampling-column',
@@ -573,7 +572,7 @@ export const model = BlockModel.create()
       ctx.uiState.tableState,
       ops,
     );
-  }, { retentive: true, withStatus: true })
+  })
 
   .output('calculating', (ctx) => {
     if (ctx.args.inputAnchor === undefined)
@@ -593,7 +592,7 @@ export const model = BlockModel.create()
   })
 
   // Use UMAP output from ctx from clonotype-space block
-  .output('umapPf', (ctx): PFrameHandle | undefined => {
+  .outputWithStatus('umapPf', (ctx) => {
     const anchor = ctx.args.inputAnchor;
     if (anchor === undefined)
       return undefined;
@@ -620,7 +619,7 @@ export const model = BlockModel.create()
   })
 
   .output('hasClusterData', (ctx) => {
-    const columns = getColumns(ctx);
+    const columns = getColumns(ctx, ctx.args.inputAnchor);
     if (columns === undefined)
       return false;
 

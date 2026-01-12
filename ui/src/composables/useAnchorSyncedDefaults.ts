@@ -74,28 +74,12 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
     [getAnchor, configAnchorKey],
     ([currentAnchor, configKey]: [PlRef | undefined, string | null]) => {
       const config = getConfig();
-      const anyItems = hasAnyItems?.() ?? false;
-      const existingForConfig = config ? hasExistingStateForConfig?.(config) : false;
       const currentAnchorKey = currentAnchor ? JSON.stringify(currentAnchor) : null;
       const initializedAnchorKey = getInitializedAnchorKey?.();
       const isAlreadyInitialized = currentAnchorKey && initializedAnchorKey === currentAnchorKey;
 
-      console.log('[useAnchorSyncedDefaults] Watcher triggered:', {
-        currentAnchor: currentAnchorKey?.slice(0, 50),
-        configKey: configKey?.slice(0, 50),
-        hasConfig: !!config,
-        hasConfigOptions: config?.options?.length ?? 0,
-        appliedForAnchor: appliedForAnchor.value ? JSON.stringify(appliedForAnchor.value).slice(0, 50) : null,
-        lastKnownAnchor: lastKnownAnchor.value ? JSON.stringify(lastKnownAnchor.value).slice(0, 50) : null,
-        hasAnyItems: anyItems,
-        hasExistingStateForConfig: existingForConfig,
-        isAlreadyInitialized,
-        hasDefaults: hasDefaults(),
-      });
-
       // No anchor = clear state and reset initialized tracking
       if (!currentAnchor) {
-        console.log('[useAnchorSyncedDefaults] No anchor - clearing state');
         clearState();
         appliedForAnchor.value = null;
         lastKnownAnchor.value = null;
@@ -105,14 +89,12 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
 
       // Already applied for this anchor (in this component instance)? Skip
       if (appliedForAnchor.value && plRefsEqual(appliedForAnchor.value, currentAnchor)) {
-        console.log('[useAnchorSyncedDefaults] Already applied for this anchor - skipping');
         return;
       }
 
       // Already initialized for this anchor (persisted in UI state)? Preserve state
       // This handles component remount - user's choices (including empty state) are preserved
       if (isAlreadyInitialized) {
-        console.log('[useAnchorSyncedDefaults] Already initialized for this anchor (persisted) - preserving');
         appliedForAnchor.value = currentAnchor;
         lastKnownAnchor.value = currentAnchor;
         return;
@@ -123,12 +105,10 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
       if (!config || !configKey) {
         // If there are existing items, don't clear - wait for config to confirm
         if (hasAnyItems?.()) {
-          console.log('[useAnchorSyncedDefaults] No config yet but has items - waiting');
           return;
         }
         // No existing items - only clear tracking if anchor actually changed
         const anchorActuallyChanged = !lastKnownAnchor.value || !plRefsEqual(lastKnownAnchor.value, currentAnchor);
-        console.log('[useAnchorSyncedDefaults] No config, no items - anchorActuallyChanged:', anchorActuallyChanged);
         if (anchorActuallyChanged) {
           appliedForAnchor.value = null;
         }
@@ -141,9 +121,7 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
       if (!mainOption?.value || !plRefsEqual(mainOption.value.anchorRef, currentAnchor)) {
         // Config is stale - only clear if anchor actually changed
         const anchorActuallyChanged = !lastKnownAnchor.value || !plRefsEqual(lastKnownAnchor.value, currentAnchor);
-        console.log('[useAnchorSyncedDefaults] Config stale - anchorActuallyChanged:', anchorActuallyChanged);
         if (anchorActuallyChanged) {
-          console.log('[useAnchorSyncedDefaults] Clearing state due to stale config and anchor change');
           clearState();
           appliedForAnchor.value = null;
           setInitializedAnchorKey?.(undefined);
@@ -157,7 +135,6 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
       // Check if existing state matches current config (e.g., after component remount)
       // This must be done AFTER we have valid config to compare against
       if (hasExistingStateForConfig?.(config)) {
-        console.log('[useAnchorSyncedDefaults] Has existing state matching config - preserving');
         appliedForAnchor.value = currentAnchor;
         setInitializedAnchorKey?.(currentAnchorKey!);
         return;
@@ -166,14 +143,12 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
       // No defaults available - just mark as applied without clearing state
       // (user might have manually configured items that we should preserve)
       if (!hasDefaults()) {
-        console.log('[useAnchorSyncedDefaults] No defaults - marking as applied and initialized');
         appliedForAnchor.value = currentAnchor;
         setInitializedAnchorKey?.(currentAnchorKey!);
         return;
       }
 
       // Config is fresh and has defaults - apply them and mark as initialized
-      console.log('[useAnchorSyncedDefaults] Applying defaults');
       appliedForAnchor.value = currentAnchor;
       setInitializedAnchorKey?.(currentAnchorKey!);
       applyDefaults();
