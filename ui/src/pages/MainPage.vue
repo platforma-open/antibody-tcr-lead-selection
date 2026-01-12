@@ -270,7 +270,7 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
       <PlMultiSequenceAlignment
         v-model="app.model.ui.alignmentModel"
         :sequence-column-predicate="isSequenceColumn"
-        :p-frame="app.model.outputs.pf?.ok ? app.model.outputs.pf.value : undefined"
+        :p-frame="app.model.outputs.pf"
         :selection="selection"
       />
     </PlSlideModal>

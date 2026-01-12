@@ -319,7 +319,7 @@ export const model = BlockModel.create()
     return { options, defaults: columns.defaultRankingOrder };
   })
 
-  .outputWithStatus('pf', (ctx) => {
+  .output('pf', (ctx) => {
     const columns = getColumns(ctx);
     if (!columns) return undefined;
 
@@ -384,8 +384,8 @@ export const model = BlockModel.create()
 
     // Verify sampledRows belong to current inputAnchor by checking axes
     // This is critical to prevent showing data from a different dataset
-    if (ctx.args.inputAnchor !== undefined) {
-      const anchorSpec = ctx.resultPool.getPColumnSpecByRef(ctx.args.inputAnchor);
+    if (ctx.activeArgs?.inputAnchor !== undefined) {
+      const anchorSpec = ctx.resultPool.getPColumnSpecByRef(ctx.activeArgs.inputAnchor);
       if (anchorSpec !== undefined) {
         const samplingCol = sampledRows.find(
           (col) => col.spec.name === 'pl7.app/vdj/sampling-column',

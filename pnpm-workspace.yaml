@@ -23,7 +23,7 @@ catalog:
   '@platforma-sdk/eslint-config': 1.2.0
   '@platforma-sdk/test': 1.51.3
   '@milaboratories/helpers': 1.13.0
-  '@milaboratories/graph-maker': 1.1.202
+  '@milaboratories/graph-maker': 1.1.203
   '@milaboratories/multi-sequence-alignment': 1.45.7
 
   # Common dependencies - can use ^ or ~
