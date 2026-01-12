@@ -278,7 +278,7 @@ export const model = BlockModel.create()
 
   // Combined filter config - options and defaults together for atomic updates
   .output('filterConfig', (ctx) => {
-    const columns = getColumns(ctx);
+    const columns = getColumns(ctx, ctx.args.inputAnchor);
     if (columns === undefined) return undefined;
 
     const options = deriveLabels(
@@ -301,7 +301,7 @@ export const model = BlockModel.create()
 
   // Combined ranking config - options and defaults together for atomic updates
   .output('rankingConfig', (ctx) => {
-    const columns = getColumns(ctx);
+    const columns = getColumns(ctx, ctx.args.inputAnchor);
     if (columns === undefined) return undefined;
 
     const options = deriveLabels(
@@ -320,7 +320,7 @@ export const model = BlockModel.create()
   })
 
   .output('pf', (ctx) => {
-    const columns = getColumns(ctx);
+    const columns = getColumns(ctx, ctx.args.inputAnchor);
     if (!columns) return undefined;
 
     return createPFrameForGraphs(ctx, columns.props.map((c) => c.column));
@@ -353,7 +353,7 @@ export const model = BlockModel.create()
   })
 
   .outputWithStatus('table', (ctx) => {
-    const columns = getColumns(ctx);
+    const columns = getColumns(ctx, ctx.activeArgs?.inputAnchor);
     if (columns === undefined)
       return undefined;
 
@@ -619,7 +619,7 @@ export const model = BlockModel.create()
   })
 
   .output('hasClusterData', (ctx) => {
-    const columns = getColumns(ctx);
+    const columns = getColumns(ctx, ctx.args.inputAnchor);
     if (columns === undefined)
       return false;
 

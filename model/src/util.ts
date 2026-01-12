@@ -125,8 +125,8 @@ export function getVisibleClusterAxes<T extends { id: unknown; spec: { axesSpec:
   return visibleClusterAxes;
 }
 
-export function getColumns(ctx: RenderCtx<BlockArgs, UiState>): Columns | undefined {
-  const anchor = ctx.activeArgs?.inputAnchor;
+export function getColumns(ctx: RenderCtx<BlockArgs, UiState>, inputAnchor: PlRef | undefined): Columns | undefined {
+  const anchor = inputAnchor;
   if (anchor === undefined)
     return undefined;
 
