@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.15.4
+
+### Patch Changes
+
+- 6a912d1: Show running state for tables and graphs
+
 ## 1.15.3
 
 ### Patch Changes

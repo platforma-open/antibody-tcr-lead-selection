@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.13.5
+
+### Patch Changes
+
+- 6a912d1: Show running state for tables and graphs
+- Updated dependencies [6a912d1]
+  - @platforma-open/milaboratories.top-antibodies.model@1.15.4
+
 ## 1.13.4
 
 ### Patch Changes
