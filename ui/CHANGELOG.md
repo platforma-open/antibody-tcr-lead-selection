@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.13.6
+
+### Patch Changes
+
+- 2812db7: regard 0 az value
+
 ## 1.13.5
 
 ### Patch Changes
