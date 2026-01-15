@@ -104,7 +104,7 @@ const createFilter = (type: string): PlTableFilter => {
 };
 
 const referenceValue = computed(() => {
-  return String(getReferenceValue(model.value.filter) || '');
+  return String(getReferenceValue(model.value.filter) ?? '');
 });
 
 const updateReferenceValue = (value: string | undefined) => {
