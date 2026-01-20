@@ -180,6 +180,8 @@ function getDefaultVisibleColumns(
 export * from './converters';
 
 export type BlockArgs = {
+  defaultBlockLabel: string;
+  customBlockLabel: string;
   inputAnchor?: PlRef;
   topClonotypes: number;
   rankingOrder: RankingOrder[];
@@ -191,7 +193,6 @@ export type BlockArgs = {
 };
 
 export type UiState = {
-  title?: string;
   tableState: PlDataTableStateV2;
   graphStateUMAP: GraphMakerState;
   cdr3StackedBarPlotState: GraphMakerState;
@@ -208,6 +209,8 @@ export type UiState = {
 export const model = BlockModel.create()
 
   .withArgs<BlockArgs>({
+    defaultBlockLabel: 'Select dataset',
+    customBlockLabel: '',
     topClonotypes: 100,
     rankingOrder: [],
     filters: [],
@@ -216,7 +219,6 @@ export const model = BlockModel.create()
   })
 
   .withUiState<UiState>({
-    title: 'Antibody/TCR Leads',
     tableState: createPlDataTableStateV2(),
     graphStateUMAP: {
       title: 'Clonotype Space UMAP',
@@ -319,7 +321,7 @@ export const model = BlockModel.create()
     return { options, defaults: columns.defaultRankingOrder };
   })
 
-  .output('pf', (ctx) => {
+  .outputWithStatus('pf', (ctx) => {
     const columns = getColumns(ctx, ctx.args.inputAnchor);
     if (!columns) return undefined;
 
@@ -675,14 +677,16 @@ export const model = BlockModel.create()
 
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)
 
-  .title((ctx) => ctx.uiState.title ?? 'Antibody/TCR Leads')
+  .title(() => 'Antibody/TCR Leads')
+
+  .subtitle((ctx) => ctx.args.customBlockLabel || ctx.args.defaultBlockLabel)
 
   .sections((_) => {
     return [
       { type: 'link', href: '/', label: 'Main' },
       { type: 'link', href: '/umap', label: 'Clonotype Space' },
       { type: 'link', href: '/spectratype', label: 'CDR3 V Spectratype' },
-      { type: 'link', href: '/usage', label: 'V/J gene usage' },
+      { type: 'link', href: '/usage', label: 'V/J Gene Usage' },
     ];
   })
 
