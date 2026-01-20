@@ -18,7 +18,7 @@ import {
   usePlDataTableSettingsV2,
 } from '@platforma-sdk/ui-vue';
 import { PlMultiSequenceAlignment } from '@milaboratories/multi-sequence-alignment';
-import { ref, watch, computed } from 'vue';
+import { ref, watch, computed, watchEffect } from 'vue';
 import { useApp } from '../app';
 import {
   isSequenceColumn,
@@ -31,14 +31,14 @@ const app = useApp();
 const settingsOpen = ref(app.model.args.inputAnchor === undefined);
 const multipleSequenceAlignmentOpen = ref(false);
 
-function setAnchorColumn(ref: PlRef | undefined) {
-  app.model.args.inputAnchor = ref;
-  const datasetName = ref
-    && app.model.outputs.inputOptions?.find((o) => plRefsEqual(o.ref, ref))
-      ?.label;
-  app.model.ui.title = ['Antibody/TCR Leads', datasetName]
-    .filter(Boolean).join(' - ');
-}
+watchEffect(() => {
+  const inputRef = app.model.args.inputAnchor;
+  if (inputRef) {
+    app.model.args.defaultBlockLabel = app.model.outputs.inputOptions?.find((o) => plRefsEqual(o.ref, inputRef))?.label ?? '';
+  } else {
+    app.model.args.defaultBlockLabel = 'Select dataset';
+  }
+});
 
 const tableSettings = usePlDataTableSettingsV2({
   model: () => app.model.outputs.table,
@@ -166,10 +166,9 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
 </script>
 
 <template>
-  <PlBlockPage>
-    <template #title>
-      {{ app.model.ui.title }}
-    </template>
+  <PlBlockPage
+    title="Antibody/TCR Leads"
+  >
     <template #append>
       <PlBtnGhost
         icon="dna"
@@ -196,13 +195,12 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
 
       <!-- First element: Select dataset -->
       <PlDropdownRef
+        v-model="app.model.args.inputAnchor"
         :options="app.model.outputs.inputOptions"
-        :model-value="app.model.args.inputAnchor"
         :style="{ width: '320px' }"
         label="Select dataset"
         clearable
         required
-        @update:model-value="setAnchorColumn"
       />
 
       <!-- Number of clonotypes to select -->
@@ -270,7 +268,7 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
       <PlMultiSequenceAlignment
         v-model="app.model.ui.alignmentModel"
         :sequence-column-predicate="isSequenceColumn"
-        :p-frame="app.model.outputs.pf"
+        :p-frame="app.model.outputs.pf?.ok ? app.model.outputs.pf.value : undefined"
         :selection="selection"
       />
     </PlSlideModal>
