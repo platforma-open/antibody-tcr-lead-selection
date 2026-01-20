@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.15.5
+
+### Patch Changes
+
+- 9cb3d0b: Update block label
+
 ## 1.15.4
 
 ### Patch Changes
