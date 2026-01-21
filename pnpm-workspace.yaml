@@ -35,6 +35,7 @@ catalog:
   '@changesets/cli': ^2.29.8
   '@types/node': ^24.9.1
   'vite': ^6.2.2
+  'shx': ^0.4.0
 
   # Block-specific dependencies
   '@milaboratories/software-pframes-conv': ^2.2.9
