@@ -159,8 +159,8 @@ function getDefaultVisibleColumns(
       continue;
     }
 
-    // KABAT columns (kabatSequence and kabatPositions) when KABAT numbering is enabled
-    if (kabatEnabled && col.spec.name.startsWith('pl7.app/vdj/kabat')) {
+    // KABAT sequence column only when KABAT numbering is enabled
+    if (kabatEnabled && col.spec.name.startsWith('pl7.app/vdj/kabatSequence')) {
       visible.add(col.id);
       continue;
     }
