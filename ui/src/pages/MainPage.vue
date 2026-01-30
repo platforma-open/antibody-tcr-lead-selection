@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { PlRef, PlSelectionModel } from '@platforma-sdk/model';
 import { createPlDataTableStateV2 } from '@platforma-sdk/model';
-import { plRefsEqual } from '@platforma-sdk/model';
 import {
   PlAgDataTableV2,
   PlAlert,
@@ -18,7 +17,8 @@ import {
   usePlDataTableSettingsV2,
 } from '@platforma-sdk/ui-vue';
 import { PlMultiSequenceAlignment } from '@milaboratories/multi-sequence-alignment';
-import { ref, watch, computed, watchEffect } from 'vue';
+import strings from '@milaboratories/strings';
+import { ref, watch, computed } from 'vue';
 import { useApp } from '../app';
 import {
   isSequenceColumn,
@@ -31,12 +31,10 @@ const app = useApp();
 const settingsOpen = ref(app.model.args.inputAnchor === undefined);
 const multipleSequenceAlignmentOpen = ref(false);
 
-watchEffect(() => {
-  const inputRef = app.model.args.inputAnchor;
-  if (inputRef) {
-    app.model.args.defaultBlockLabel = app.model.outputs.inputOptions?.find((o) => plRefsEqual(o.ref, inputRef))?.label ?? '';
-  } else {
-    app.model.args.defaultBlockLabel = 'Select dataset';
+// Watch for when the workflow starts running and close settings
+watch(() => app.model.outputs.isRunning, (isRunning) => {
+  if (isRunning) {
+    settingsOpen.value = false;
   }
 });
 
@@ -187,6 +185,8 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
       v-model="app.model.ui.tableState"
       v-model:selection="selection"
       :settings="tableSettings"
+      :not-ready-text="strings.callToActions.configureSettingsAndRun"
+      :no-rows-text="strings.states.noDataAvailable"
       show-export-button
       disable-filters-panel
     />

@@ -3,8 +3,19 @@
   "version": "1.15.5",
   "description": "Block model",
   "type": "module",
-  "main": "dist/index.js",
-  "types": "dist/index.d.ts",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs",
+      "default": "./dist/index.js",
+      "sources": "./src/index.ts"
+    },
+    "./dist/*": "./dist/*"
+  },
   "scripts": {
     "build": "ts-builder build --target block-model && block-tools build-model",
     "watch": "ts-builder build --target block-model --watch",
@@ -15,7 +26,8 @@
   },
   "dependencies": {
     "@platforma-sdk/model": "catalog:",
-    "@milaboratories/graph-maker": "catalog:"
+    "@milaboratories/graph-maker": "catalog:",
+    "@milaboratories/strings": "catalog:"
   },
   "devDependencies": {
     "@milaboratories/ts-builder": "catalog:",
