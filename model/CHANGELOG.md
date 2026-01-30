@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.15.6
+
+### Patch Changes
+
+- dda8ecc: Show only KABAT sequence column, improve block label generation, use SDK strings for status messages
+
 ## 1.15.5
 
 ### Patch Changes
