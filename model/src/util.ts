@@ -7,6 +7,7 @@ import {
   type PlRef,
   type PlTableFilter,
   type RenderCtx,
+  type RenderCtxLegacy,
   type SUniversalPColumnId,
   type TreeNodeAccessor,
 } from '@platforma-sdk/model';
@@ -125,7 +126,7 @@ export function getVisibleClusterAxes<T extends { id: unknown; spec: { axesSpec:
   return visibleClusterAxes;
 }
 
-export function getColumns(ctx: RenderCtx<BlockArgs, UiState>, inputAnchor: PlRef | undefined): Columns | undefined {
+export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<BlockArgs, UiState>, inputAnchor: PlRef | undefined): Columns | undefined {
   const anchor = inputAnchor;
   if (anchor === undefined)
     return undefined;

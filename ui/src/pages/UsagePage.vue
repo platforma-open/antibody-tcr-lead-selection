@@ -2,6 +2,7 @@
 import type { PredefinedGraphOption } from '@milaboratories/graph-maker';
 import { GraphMaker } from '@milaboratories/graph-maker';
 import '@milaboratories/graph-maker/styles';
+import strings from '@milaboratories/strings';
 import { computed } from 'vue';
 import { useApp } from '../app';
 
@@ -51,5 +52,6 @@ const defaultOptions = computed((): PredefinedGraphOption<'heatmap'>[] => {
     chart-type="heatmap"
     :p-frame="app.model.outputs.vjUsagePf"
     :default-options="defaultOptions"
+    :status-text="{ noPframe: { title: strings.callToActions.configureSettingsAndRun } }"
   />
 </template>

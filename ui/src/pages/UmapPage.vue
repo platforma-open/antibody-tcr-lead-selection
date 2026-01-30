@@ -2,6 +2,7 @@
 import '@milaboratories/graph-maker/styles';
 import { PlBlockPage, PlBtnGhost, PlSlideModal } from '@platforma-sdk/ui-vue';
 import { PlMultiSequenceAlignment } from '@milaboratories/multi-sequence-alignment';
+import strings from '@milaboratories/strings';
 
 import { useApp } from '../app';
 
@@ -75,6 +76,7 @@ const multipleSequenceAlignmentOpen = ref(false);
       :data-state-key="app.model.outputs.umapPf"
       :p-frame="app.model.outputs.umapPf"
       :default-options="defaultOptions"
+      :status-text="{ noPframe: { title: strings.callToActions.configureSettingsAndRun } }"
     >
       <template #titleLineSlot>
         <PlBtnGhost

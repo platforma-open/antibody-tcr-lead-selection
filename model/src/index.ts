@@ -19,6 +19,8 @@ import {
 import type { AnchoredColumnId, Filter, FilterUI, RankingOrder, RankingOrderUI } from './util';
 import { anchoredColumnId, getColumns, getVisibleClusterAxes, clusterAxisDomainsMatch } from './util';
 import type { PColumn, PColumnDataUniversal } from '@platforma-sdk/model';
+import { getDefaultBlockLabel } from './label';
+import strings from '@milaboratories/strings';
 
 /**
  * Checks if any cluster data is present by examining clusterId axes.
@@ -159,8 +161,8 @@ function getDefaultVisibleColumns(
       continue;
     }
 
-    // KABAT columns (kabatSequence and kabatPositions) when KABAT numbering is enabled
-    if (kabatEnabled && col.spec.name.startsWith('pl7.app/vdj/kabat')) {
+    // KABAT sequence column only when KABAT numbering is enabled
+    if (kabatEnabled && col.spec.name.startsWith('pl7.app/vdj/kabatSequence')) {
       visible.add(col.id);
       continue;
     }
@@ -209,7 +211,7 @@ export type UiState = {
 export const model = BlockModel.create()
 
   .withArgs<BlockArgs>({
-    defaultBlockLabel: 'Select dataset',
+    defaultBlockLabel: getDefaultBlockLabel({}),
     customBlockLabel: '',
     topClonotypes: 100,
     rankingOrder: [],
@@ -683,7 +685,7 @@ export const model = BlockModel.create()
 
   .sections((_) => {
     return [
-      { type: 'link', href: '/', label: 'Main' },
+      { type: 'link', href: '/', label: strings.titles.main },
       { type: 'link', href: '/umap', label: 'Clonotype Space' },
       { type: 'link', href: '/spectratype', label: 'CDR3 V Spectratype' },
       { type: 'link', href: '/usage', label: 'V/J Gene Usage' },
@@ -695,3 +697,4 @@ export const model = BlockModel.create()
 export type BlockOutputs = InferOutputsType<typeof model>;
 
 export type { AnchoredColumnId, Filter, FilterUI, RankingOrder, RankingOrderUI };
+export { getDefaultBlockLabel } from './label';

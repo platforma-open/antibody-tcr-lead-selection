@@ -3,6 +3,7 @@ import type { PredefinedGraphOption } from '@milaboratories/graph-maker';
 import { GraphMaker } from '@milaboratories/graph-maker';
 import '@milaboratories/graph-maker/styles';
 import { PlBlockPage } from '@platforma-sdk/ui-vue';
+import strings from '@milaboratories/strings';
 import { computed } from 'vue';
 import { useApp } from '../app';
 
@@ -52,6 +53,7 @@ const defaultOptions = computed((): PredefinedGraphOption<'discrete'>[] => {
       chartType="discrete"
       :p-frame="app.model.outputs.spectratypePf"
       :default-options="defaultOptions"
+      :status-text="{ noPframe: { title: strings.callToActions.configureSettingsAndRun } }"
     />
   </PlBlockPage>
 </template>
