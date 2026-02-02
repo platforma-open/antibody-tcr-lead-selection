@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 1.4.11
+
+### Patch Changes
+
+- 9acdab2: Update sdk
+
 ## 1.4.10
 
 ### Patch Changes
