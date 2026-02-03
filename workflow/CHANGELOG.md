@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.17.3
+
+### Patch Changes
+
+- 535be8f: Exporte selected Leads
+
 ## 1.17.2
 
 ### Patch Changes
