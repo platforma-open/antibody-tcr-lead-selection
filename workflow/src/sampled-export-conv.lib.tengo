@@ -1,0 +1,34 @@
+ll := import("@platforma-sdk/workflow-tengo:ll")
+
+getColumns := func(datasetSpec) {
+  columns := [{
+        column: "top",
+        id: "link",
+        allowNA: false,
+        spec: {
+          name: "pl7.app/vdj/lead-selection",
+          valueType: "Int",
+          domain: {},
+          annotations: {
+            "pl7.app/label": "Selected Leads",
+            "pl7.app/table/visibility": "hidden",
+            "pl7.app/isSubset": "true"
+          }
+        }
+      }]
+
+  return {
+    axes: [
+      {
+        column: "clonotypeKey",
+        spec: datasetSpec.axesSpec[1]
+      }],
+    columns: columns,
+    storageFormat: "Parquet",
+    partitionKeyLength: 0
+  }
+}
+
+export ll.toStrict({
+	getColumns: getColumns
+})

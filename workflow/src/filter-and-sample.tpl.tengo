@@ -6,9 +6,10 @@ pframes := import("@platforma-sdk/workflow-tengo:pframes")
 xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
 render := import("@platforma-sdk/workflow-tengo:render")
 sampledColsConv := import(":sampled-cols-conv")
+sampledExportConv := import(":sampled-export-conv")
 json := import("json")
 
-self.defineOutputs("sampledRows", "finalClonotypes")
+self.defineOutputs("sampledRows", "finalClonotypes", "sampledColumnsExport")
 
 self.body(func(inputs) {
 
@@ -86,6 +87,12 @@ self.body(func(inputs) {
 	} 
 
     outputs["finalClonotypes"] = finalClonotypes
+
+    // Export only the sampling column to be used as a filter downstream
+    sampledExportsParams := sampledExportConv.getColumns(datasetSpec)
+    sampledColumnsOnlyPf := xsv.importFile(finalClonotypes, "parquet", sampledExportsParams,
+                                        {cpu: 1, mem: "16GiB"})
+    outputs["sampledColumnsExport"] = sampledColumnsOnlyPf
 
     return outputs
 }) 
