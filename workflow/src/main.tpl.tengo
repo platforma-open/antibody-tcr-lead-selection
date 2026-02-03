@@ -110,6 +110,7 @@ wf.prepare(func(args){
 wf.body(func(args) {
 	// output containers 
 	outputs := {}
+    exports := {}
 
     if !is_undefined(args.inputAnchor) {
         // Input arguments
@@ -154,7 +155,10 @@ wf.body(func(args) {
 
             // Get the filtered and sampled clonotypes P-frame from the template result
             finalClonotypes := filterSampleResult.output("finalClonotypes", 24 * 60 * 60 * 1000)
-            
+
+            // Export only the sampling column for downstream (built inside sub-template to avoid hang)
+            exports["sampledColumnsPf"] = filterSampleResult.output("sampledColumnsExport", 24 * 60 * 60 * 1000)
+
             ////////// CDR3 Length Calculation //////////
             // Initialize and build CDR3 sequence table
             cdr3SeqTableBuilt := utils.initializeCdr3SeqTable(pframes, columns, datasetSpec, isSingleCell)
@@ -230,6 +234,6 @@ wf.body(func(args) {
 
 	return {
 		outputs: outputs,
-		exports: {}
+		exports: exports
 	}
 })
