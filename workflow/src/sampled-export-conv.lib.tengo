@@ -13,9 +13,6 @@ getColumns := func(datasetSpec, filterMap, rankingMap, disableClusterRanking, cl
     domain["pl7.app/vdj/diversity-column"] = string(json.encode(clusterColumn))
   }
 
-  // ll.panic("disabled: " + string(disableClusterRanking) + " clusterColumn: " + string(clusterColumn) + " topClonotypes: " + string(topClonotypes))
-
-
   columns := [{
         column: "top",
         id: "link",
