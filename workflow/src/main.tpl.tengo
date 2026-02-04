@@ -147,7 +147,8 @@ wf.body(func(args) {
                 datasetSpec: datasetSpec,
                 topClonotypes: args.topClonotypes,
                 disableClusterRanking: args.disableClusterRanking,
-                clusterColumn: clusterColumnHeader
+                clusterColumn: clusterColumnHeader,
+                rawClusterColumn: args.clusterColumn
             })
             
             // Get the filtered clonotypes from the template result
