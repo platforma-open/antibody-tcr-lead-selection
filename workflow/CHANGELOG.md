@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.17.4
+
+### Patch Changes
+
+- 605fdf0: Add domain to exported filter
+
 ## 1.17.3
 
 ### Patch Changes
