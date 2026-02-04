@@ -89,7 +89,8 @@ self.body(func(inputs) {
     outputs["finalClonotypes"] = finalClonotypes
 
     // Export only the sampling column to be used as a filter downstream
-    sampledExportsParams := sampledExportConv.getColumns(datasetSpec)
+    sampledExportsParams := sampledExportConv.getColumns(datasetSpec, filterMap,
+    rankingMap, inputs.disableClusterRanking, inputs.rawClusterColumn, topClonotypes)
     sampledColumnsOnlyPf := xsv.importFile(finalClonotypes, "parquet", sampledExportsParams,
                                         {cpu: 1, mem: "16GiB"})
     outputs["sampledColumnsExport"] = sampledColumnsOnlyPf
