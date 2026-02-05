@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 1.4.14
+
+### Patch Changes
+
+- 821ebc8: SDK Update
+
 ## 1.4.13
 
 ### Patch Changes
