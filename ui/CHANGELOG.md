@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.13.9
+
+### Patch Changes
+
+- a197d00: Update SDK
+- Updated dependencies [a197d00]
+  - @platforma-open/milaboratories.top-antibodies.model@1.15.7
+
 ## 1.13.8
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.test
 
+## 1.2.1
+
+### Patch Changes
+
+- a197d00: Update SDK
+
 ## 1.2.0
 
 ### Minor Changes
