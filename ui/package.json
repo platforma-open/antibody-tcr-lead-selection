@@ -6,7 +6,7 @@
     "dev": "ts-builder build --target browser --watch",
     "watch": "ts-builder build --target browser --watch",
     "build": "ts-builder build --target browser",
-    "type-check": "ts-builder types --target browser",
+    "type-check": "ts-builder type-check --target browser",
     "lint": "eslint .",
     "test": "vitest",
     "do-pack": "shx rm -f *.tgz && pnpm pack && shx mv *.tgz package.tgz"
