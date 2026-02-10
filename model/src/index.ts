@@ -323,7 +323,7 @@ export const model = BlockModel.create()
     return { options, defaults: columns.defaultRankingOrder };
   })
 
-  .outputWithStatus('pf', (ctx) => {
+  .retentiveOutputWithStatus('pf', (ctx) => {
     const columns = getColumns(ctx, ctx.args.inputAnchor);
     if (!columns) return undefined;
 
@@ -331,7 +331,7 @@ export const model = BlockModel.create()
   })
 
   // Use the cdr3LengthsCalculated cols
-  .outputWithStatus('spectratypePf', (ctx) => {
+  .retentiveOutputWithStatus('spectratypePf', (ctx) => {
     // const pCols = ctx.outputs?.resolve('cdr3VspectratypePf')?.getPColumns();
     const pCols = ctx.outputs?.resolve({
       field: 'cdr3VspectratypePf',
@@ -344,7 +344,7 @@ export const model = BlockModel.create()
   })
 
   // Use the cdr3LengthsCalculated cols
-  .outputWithStatus('vjUsagePf', (ctx) => {
+  .retentiveOutputWithStatus('vjUsagePf', (ctx) => {
     // const pCols = ctx.outputs?.resolve('vjUsagePf')?.getPColumns();
     const pCols = ctx.outputs?.resolve({
       field: 'vjUsagePf',
@@ -356,7 +356,7 @@ export const model = BlockModel.create()
     return createPFrameForGraphs(ctx, pCols);
   })
 
-  .outputWithStatus('table', (ctx) => {
+  .retentiveOutputWithStatus('table', (ctx) => {
     const columns = getColumns(ctx, ctx.activeArgs?.inputAnchor);
     if (columns === undefined)
       return undefined;
@@ -596,7 +596,7 @@ export const model = BlockModel.create()
   })
 
   // Use UMAP output from ctx from clonotype-space block
-  .outputWithStatus('umapPf', (ctx) => {
+  .retentiveOutputWithStatus('umapPf', (ctx) => {
     const anchor = ctx.args.inputAnchor;
     if (anchor === undefined)
       return undefined;
