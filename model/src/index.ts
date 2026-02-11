@@ -1,13 +1,15 @@
 import type { GraphMakerState } from '@milaboratories/graph-maker';
+import strings from '@milaboratories/strings';
 import type {
+  AxisSpec,
   CreatePlDataTableOps,
   InferOutputsType,
+  PColumn, PColumnDataUniversal,
   PColumnSpec,
   PlDataTableStateV2,
   PlMultiSequenceAlignmentModel,
-  PObjectId,
   PlRef,
-  AxisSpec,
+  PObjectId,
 } from '@platforma-sdk/model';
 import {
   BlockModel,
@@ -16,11 +18,9 @@ import {
   createPlDataTableV2,
   deriveLabels,
 } from '@platforma-sdk/model';
-import type { AnchoredColumnId, Filter, FilterUI, RankingOrder, RankingOrderUI } from './util';
-import { anchoredColumnId, getColumns, getVisibleClusterAxes, clusterAxisDomainsMatch } from './util';
-import type { PColumn, PColumnDataUniversal } from '@platforma-sdk/model';
 import { getDefaultBlockLabel } from './label';
-import strings from '@milaboratories/strings';
+import type { AnchoredColumnId, Filter, FilterUI, RankingOrder, RankingOrderUI } from './util';
+import { anchoredColumnId, clusterAxisDomainsMatch, getColumns, getVisibleClusterAxes } from './util';
 
 /**
  * Checks if any cluster data is present by examining clusterId axes.
@@ -118,6 +118,61 @@ function updateClusterColumnLabels(columns: PColumn<PColumnDataUniversal>[]): PC
           annotations: {
             ...col.spec.annotations,
             'pl7.app/label': derivedLabel,
+          },
+        },
+      };
+    }
+    return col;
+  });
+}
+
+/**
+ * Disambiguates column labels when multiple columns have the same label.
+ * Uses deriveLabels to generate unique labels based on trace information.
+ */
+function disambiguateLabels(columns: PColumn<PColumnDataUniversal>[]): PColumn<PColumnDataUniversal>[] {
+  const labelMap = new Map<string, PColumn<PColumnDataUniversal>[]>();
+
+  // Group columns by their current label
+  for (const col of columns) {
+    const label = col.spec.annotations?.['pl7.app/label'] || col.spec.name;
+    if (!labelMap.has(label)) {
+      labelMap.set(label, []);
+    }
+    labelMap.get(label)!.push(col);
+  }
+
+  const updates = new Map<string, string>(); // colId -> newLabel
+
+  for (const [label, cols] of labelMap.entries()) {
+    // If we have duplicated labels
+    if (cols.length > 1) {
+      const derived = deriveLabels(
+        cols,
+        (col) => col.spec,
+        { includeNativeLabel: true },
+      );
+
+      for (const { value, label: newLabel } of derived) {
+        // Only update if the new label is actually different from the old one
+        if (newLabel !== label) {
+          updates.set(value.id as string, newLabel);
+        }
+      }
+    }
+  }
+
+  if (updates.size === 0) return columns;
+
+  return columns.map((col) => {
+    if (updates.has(col.id as string)) {
+      return {
+        ...col,
+        spec: {
+          ...col.spec,
+          annotations: {
+            ...col.spec.annotations,
+            'pl7.app/label': updates.get(col.id as string)!,
           },
         },
       };
@@ -546,6 +601,9 @@ export const model = BlockModel.create()
       ? updateClusterColumnLabels(allColumnsWithVisibility)
       : allColumnsWithVisibility;
 
+    // Disambiguate labels for any columns that still have duplicate labels
+    const finalCols = disambiguateLabels(cols);
+
     // Find ranking-order column if present (added by sampling workflow)
     const rankingOrderCol = allColumns.find(
       (col) => col.spec.name === 'pl7.app/vdj/ranking-order',
@@ -572,7 +630,7 @@ export const model = BlockModel.create()
 
     return createPlDataTableV2(
       ctx,
-      cols,
+      finalCols,
       ctx.uiState.tableState,
       ops,
     );
@@ -696,5 +754,5 @@ export const model = BlockModel.create()
 
 export type BlockOutputs = InferOutputsType<typeof model>;
 
-export type { AnchoredColumnId, Filter, FilterUI, RankingOrder, RankingOrderUI };
 export { getDefaultBlockLabel } from './label';
+export type { AnchoredColumnId, Filter, FilterUI, RankingOrder, RankingOrderUI };
