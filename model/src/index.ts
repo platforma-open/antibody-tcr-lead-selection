@@ -127,6 +127,47 @@ function updateClusterColumnLabels(columns: PColumn<PColumnDataUniversal>[]): PC
 }
 
 /**
+ * Helper to disambiguate options by label grouping.
+ * Similar to disambiguateLabels but returns options for UI (value + label).
+ */
+function getDisambiguatedOptions<T>(
+  items: T[],
+  getSpec: (item: T) => PColumnSpec,
+): { value: T; label: string }[] {
+  const labelMap = new Map<string, T[]>();
+
+  // Group by current label
+  for (const item of items) {
+    const spec = getSpec(item);
+    const label = spec.annotations?.['pl7.app/label'] || spec.name;
+    if (!labelMap.has(label)) {
+      labelMap.set(label, []);
+    }
+    labelMap.get(label)!.push(item);
+  }
+
+  const results: { value: T; label: string }[] = [];
+
+  for (const [label, group] of labelMap.entries()) {
+    if (group.length > 1) {
+      const derived = deriveLabels(
+        group,
+        getSpec,
+        { includeNativeLabel: true },
+      );
+      results.push(...derived);
+    } else {
+      results.push({
+        value: group[0],
+        label,
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
  * Disambiguates column labels when multiple columns have the same label.
  * Uses deriveLabels to generate unique labels based on trace information.
  */
@@ -340,7 +381,7 @@ export const model = BlockModel.create()
     const columns = getColumns(ctx, ctx.args.inputAnchor);
     if (columns === undefined) return undefined;
 
-    const options = deriveLabels(
+    const options = getDisambiguatedOptions(
       columns.props.filter((c) => {
         if (c.column.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true') return false;
         if (c.column.spec.valueType !== 'String') return true;
@@ -348,7 +389,6 @@ export const model = BlockModel.create()
         return false;
       }),
       (c) => c.column.spec,
-      { includeNativeLabel: true },
     ).map((o) => ({
       ...o,
       value: anchoredColumnId(o.value),
@@ -363,13 +403,12 @@ export const model = BlockModel.create()
     const columns = getColumns(ctx, ctx.args.inputAnchor);
     if (columns === undefined) return undefined;
 
-    const options = deriveLabels(
+    const options = getDisambiguatedOptions(
       columns.props.filter((c) =>
         c.column.spec.valueType !== 'String'
         && c.column.spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true',
       ),
       (c) => c.column.spec,
-      { includeNativeLabel: true },
     ).map((o) => ({
       ...o,
       value: anchoredColumnId(o.value),
