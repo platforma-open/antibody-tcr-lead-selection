@@ -12,18 +12,18 @@ packages:
 
 catalog:
   # SDK packages - EXACT VERSIONS (no ^ or ~)
-  '@milaboratories/ts-builder': 1.2.7
+  '@milaboratories/ts-builder': 1.2.9
   '@milaboratories/ts-configs': 1.2.1
   '@platforma-sdk/workflow-tengo': 5.8.2
   '@platforma-sdk/model': 1.53.15
-  '@platforma-sdk/ui-vue': 1.54.0
+  '@platforma-sdk/ui-vue': 1.54.1
   '@platforma-sdk/tengo-builder': 2.4.17
-  '@platforma-sdk/package-builder': 3.11.3
+  '@platforma-sdk/package-builder': 3.11.4
   '@platforma-sdk/block-tools': 2.6.47
   '@platforma-sdk/eslint-config': 1.2.0
-  '@platforma-sdk/test': 1.53.15
-  '@milaboratories/helpers': 1.13.2
-  '@milaboratories/graph-maker': 1.1.223
+  '@platforma-sdk/test': 1.54.2
+  '@milaboratories/helpers': 1.13.3
+  '@milaboratories/graph-maker': 1.1.224
   '@milaboratories/multi-sequence-alignment': 1.46.5
   '@milaboratories/strings': 0.1.1
 
