@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.15.10
+
+### Patch Changes
+
+- 7db9d6c: Filter-out exports from main table
+
 ## 1.15.9
 
 ### Patch Changes
