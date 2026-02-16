@@ -12,7 +12,8 @@ getColumns := func(datasetSpec, addRanking) {
           annotations: {
             "pl7.app/label": "Selected Leads",
             "pl7.app/table/visibility": "hidden",
-            "pl7.app/isSubset": "true"
+            "pl7.app/isSubset": "true",
+            "pl7.app/toPlot": "true"
           }
         }
       }]

@@ -70,6 +70,7 @@ const multipleSequenceAlignmentOpen = ref(false);
       :data-state-key="app.model.outputs.umapPf"
       :p-frame="app.model.outputs.umapPf"
       :default-options="defaultOptions"
+      :meta-column-predicate="(spec) => !spec.annotations?.['pl7.app/trace']?.includes('antibody-tcr-lead-selection')"
       :status-text="{ noPframe: { title: strings.callToActions.configureSettingsAndRun } }"
     >
       <template #titleLineSlot>
