@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import '@milaboratories/graph-maker/styles';
-import { PlBlockPage, PlBtnGhost, PlSlideModal } from '@platforma-sdk/ui-vue';
 import { PlMultiSequenceAlignment } from '@milaboratories/multi-sequence-alignment';
 import strings from '@milaboratories/strings';
+import { PlBlockPage, PlBtnGhost, PlSlideModal } from '@platforma-sdk/ui-vue';
 
 import { useApp } from '../app';
 
@@ -47,7 +47,7 @@ const defaultOptions: PredefinedGraphOption<'scatterplot-umap'>[] = [
     inputName: 'highlight',
     selectedSource: {
       kind: 'PColumn',
-      name: 'pl7.app/vdj/sampling-column',
+      name: 'pl7.app/vdj/lead-selection',
       valueType: 'Int',
       axesSpec: [
         {

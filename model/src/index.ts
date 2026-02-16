@@ -392,7 +392,7 @@ export const model = BlockModel.create()
       const anchorSpec = ctx.resultPool.getPColumnSpecByRef(ctx.activeArgs.inputAnchor);
       if (anchorSpec !== undefined) {
         const samplingCol = sampledRows.find(
-          (col) => col.spec.name === 'pl7.app/vdj/sampling-column',
+          (col) => col.spec.name === 'pl7.app/vdj/lead-selection',
         );
         if (samplingCol !== undefined) {
           const clonotypeAxisMatches = samplingCol.spec.axesSpec.some(
@@ -552,7 +552,7 @@ export const model = BlockModel.create()
     );
 
     const ops: CreatePlDataTableOps = {
-      coreColumnPredicate: (col) => col.spec.name === 'pl7.app/vdj/sampling-column',
+      coreColumnPredicate: (col) => col.spec.name === 'pl7.app/vdj/lead-selection',
       coreJoinType: 'inner',
     };
 
