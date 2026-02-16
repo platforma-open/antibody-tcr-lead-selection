@@ -65,9 +65,9 @@ const getFilterTypeOptions = (columnId?: AnchoredColumnId) => {
   if (valueType === 'String') {
     // Multi-select discrete columns get "Is one of" / "Is not one of" options
     if (isMultiSelectColumn(selectedOption)) {
-      return filterTypeOptions.filter((opt) => opt.value === 'string_in' || opt.value === 'string_notIn');
+      return filterTypeOptions.filter((opt) => isDiscreteFilterType(opt.value));
     }
-    return filterTypeOptions.filter((opt) => opt.value.startsWith('string_') && !opt.value.startsWith('string_in') && opt.value !== 'string_notIn');
+    return filterTypeOptions.filter((opt) => opt.value.startsWith('string_') && !isDiscreteFilterType(opt.value));
   } else {
     // Double, Int, Long, etc. - return only number filters
     return filterTypeOptions.filter((opt) => opt.value.startsWith('number_'));
