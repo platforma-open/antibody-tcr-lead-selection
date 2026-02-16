@@ -9,55 +9,49 @@ import { useApp } from '../app';
 import type { PredefinedGraphOption } from '@milaboratories/graph-maker';
 import { GraphMaker } from '@milaboratories/graph-maker';
 import type { PlSelectionModel } from '@platforma-sdk/model';
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { isSequenceColumn } from '../util';
 
 const app = useApp();
 
-const defaultOptions: PredefinedGraphOption<'scatterplot-umap'>[] = [
-  {
-    inputName: 'x',
-    selectedSource: {
-      kind: 'PColumn',
-      name: 'pl7.app/vdj/umap1',
-      valueType: 'Double',
-      axesSpec: [
-        {
-          name: 'pl7.app/clonotypeKey',
-          type: 'String',
-        },
-      ],
+const defaultOptions = computed((): PredefinedGraphOption<'scatterplot-umap'>[] | null => {
+  if (!app.model.outputs.umapPcols?.ok)
+    return null;
+
+  const umapPcols = app.model.outputs.umapPcols.value;
+
+  const getColSpec = (name: string) => {
+    const col = umapPcols.find((p) => p.spec.name === name);
+    return col?.spec;
+  };
+
+  const umap1Col = getColSpec('pl7.app/vdj/umap1');
+  const umap2Col = getColSpec('pl7.app/vdj/umap2');
+  const leadSelectionCol = getColSpec('pl7.app/vdj/lead-selection');
+
+  if (!umap1Col || !umap2Col)
+    return null;
+
+  const defaults: PredefinedGraphOption<'scatterplot-umap'>[] = [
+    {
+      inputName: 'x',
+      selectedSource: umap1Col,
     },
-  },
-  {
-    inputName: 'y',
-    selectedSource: {
-      kind: 'PColumn',
-      name: 'pl7.app/vdj/umap2',
-      valueType: 'Double',
-      axesSpec: [
-        {
-          name: 'pl7.app/clonotypeKey',
-          type: 'String',
-        },
-      ],
+    {
+      inputName: 'y',
+      selectedSource: umap2Col,
     },
-  },
-  {
-    inputName: 'highlight',
-    selectedSource: {
-      kind: 'PColumn',
-      name: 'pl7.app/vdj/lead-selection',
-      valueType: 'Int',
-      axesSpec: [
-        {
-          name: 'pl7.app/clonotypeKey',
-          type: 'String',
-        },
-      ],
-    },
-  },
-];
+  ];
+
+  if (leadSelectionCol) {
+    defaults.push({
+      inputName: 'highlight',
+      selectedSource: leadSelectionCol,
+    });
+  }
+
+  return defaults;
+});
 
 const selection = ref<PlSelectionModel>({
   axesSpec: [],

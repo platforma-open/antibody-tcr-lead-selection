@@ -5,6 +5,7 @@ import type {
   CreatePlDataTableOps,
   InferOutputsType,
   PColumn, PColumnDataUniversal,
+  PColumnIdAndSpec,
   PColumnSpec,
   PlDataTableStateV2,
   PlMultiSequenceAlignmentModel,
@@ -717,6 +718,38 @@ export const model = BlockModel.create()
     const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
 
     return createPFrameForGraphs(ctx, [...umap, ...(sampledRows ?? [])]);
+  })
+
+  .outputWithStatus('umapPcols', (ctx) => {
+    const anchor = ctx.args.inputAnchor;
+    if (anchor === undefined)
+      return undefined;
+
+    const umap = ctx.resultPool.getAnchoredPColumns(
+      { main: anchor },
+      [
+        {
+          axes: [{ anchor: 'main', idx: 1 }],
+          namePattern: '^pl7\\.app/vdj/umap[12]$',
+        },
+      ],
+    );
+
+    if (umap === undefined || umap.length === 0)
+      return undefined;
+
+    // @TODO: if umap size is > 2 !
+
+    // Get sampled rows from workflow prerun output (if ranking was applied)
+    const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
+
+    return [...umap, ...(sampledRows ?? [])].map(
+      (c) =>
+        ({
+          columnId: c.id,
+          spec: c.spec,
+        } satisfies PColumnIdAndSpec),
+    );
   })
 
   .output('hasClusterData', (ctx) => {
