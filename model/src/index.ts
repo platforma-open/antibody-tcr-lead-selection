@@ -642,7 +642,7 @@ export const model = BlockModel.create()
       : allColumnsWithVisibility;
 
     // Disambiguate labels for any columns that still have duplicate labels
-    const finalCols = disambiguateLabels(cols);
+    let finalCols = disambiguateLabels(cols);
 
     // Find ranking-order column if present (added by sampling workflow)
     const rankingOrderCol = allColumns.find(
@@ -667,6 +667,9 @@ export const model = BlockModel.create()
         },
       ];
     }
+
+    // Filter out lead-selection exports by trace
+    finalCols = finalCols.filter((col) => !col.spec.annotations?.['pl7.app/trace']?.includes('antibody-tcr-lead-selection'));
 
     return createPlDataTableV2(
       ctx,
