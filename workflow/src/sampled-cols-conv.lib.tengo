@@ -6,11 +6,11 @@ getColumns := func(datasetSpec, addRanking) {
         id: "link",
         allowNA: false,
         spec: {
-          name: "pl7.app/vdj/sampling-column",
+          name: "pl7.app/vdj/lead-selection",
           valueType: "Int",
           domain: {},
           annotations: {
-            "pl7.app/label": "Sampling column",
+            "pl7.app/label": "Selected Leads",
             "pl7.app/table/visibility": "hidden",
             "pl7.app/isSubset": "true"
           }

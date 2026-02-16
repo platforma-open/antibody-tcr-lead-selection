@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import type { AnchoredColumnId, FilterUI } from '@platforma-open/milaboratories.top-antibodies.model';
+import type { AnchoredColumnId, DiscreteFilter, FilterUI } from '@platforma-open/milaboratories.top-antibodies.model';
 import type { PlTableFilter } from '@platforma-sdk/model';
-import { PlDropdown, PlTextField } from '@platforma-sdk/ui-vue';
+import { PlDropdown, PlDropdownMulti, PlTextField } from '@platforma-sdk/ui-vue';
 import { computed, watch } from 'vue';
 
 // Define specific filter types to avoid 'as any'
@@ -18,6 +18,8 @@ type StringFilterType =
   | 'string_notEquals'
   | 'string_contains'
   | 'string_doesNotContain';
+
+type DiscreteFilterType = 'string_in' | 'string_notIn';
 
 const model = defineModel<FilterUI>({
   default: {
@@ -40,6 +42,8 @@ const filterTypeOptions = [
   { value: 'string_notEquals', label: 'Not equals' },
   { value: 'string_contains', label: 'Contains' },
   { value: 'string_doesNotContain', label: 'Does not contain' },
+  { value: 'string_in', label: 'Is one of' },
+  { value: 'string_notIn', label: 'Is not one of' },
 ];
 
 const getFilterTypeOptions = (columnId?: AnchoredColumnId) => {
@@ -59,7 +63,11 @@ const getFilterTypeOptions = (columnId?: AnchoredColumnId) => {
 
   // If String, return only string filters; otherwise return only number filters
   if (valueType === 'String') {
-    return filterTypeOptions.filter((opt) => opt.value.startsWith('string_'));
+    // Multi-select discrete columns get "Is one of" / "Is not one of" options
+    if (isMultiSelectColumn(selectedOption)) {
+      return filterTypeOptions.filter((opt) => isDiscreteFilterType(opt.value));
+    }
+    return filterTypeOptions.filter((opt) => opt.value.startsWith('string_') && !isDiscreteFilterType(opt.value));
   } else {
     // Double, Int, Long, etc. - return only number filters
     return filterTypeOptions.filter((opt) => opt.value.startsWith('number_'));
@@ -71,31 +79,49 @@ const isNumberFilter = (type?: string): type is NumberFilterType => {
 };
 
 const isStringFilter = (type?: string): type is StringFilterType => {
-  return type?.startsWith('string_') ?? false;
+  return (type?.startsWith('string_') && type !== 'string_in' && type !== 'string_notIn') ?? false;
 };
 
-const hasReference = (filter: PlTableFilter): filter is PlTableFilter & { reference: string | number } => {
+const isDiscreteFilterType = (type?: string): type is DiscreteFilterType => {
+  return type === 'string_in' || type === 'string_notIn';
+};
+
+/** Check if a column option supports multi-select discrete filtering */
+const isMultiSelectColumn = (option?: { column?: { spec: { annotations?: Record<string, string> } } }) => {
+  if (!option?.column?.spec?.annotations) return false;
+  const ann = option.column.spec.annotations;
+  return ann['pl7.app/isDiscreteFilter'] === 'true'
+    && !!ann['pl7.app/score/defaultCutoff']
+    && !!ann['pl7.app/discreteValues'];
+};
+
+type AnyFilter = PlTableFilter | DiscreteFilter;
+
+const hasReference = (filter: AnyFilter): filter is AnyFilter & { reference: string | number } => {
   return 'reference' in filter;
 };
 
-const getReferenceValue = (filter?: PlTableFilter): string | number | undefined => {
+const getReferenceValue = (filter?: AnyFilter): string | number | undefined => {
   if (!filter || !hasReference(filter)) return undefined;
   return filter.reference;
 };
 
-const setReferenceValue = (filter: PlTableFilter, value: string | number) => {
+const setReferenceValue = (filter: AnyFilter, value: string | number) => {
   if (hasReference(filter)) {
     if (isNumberFilter(filter.type)) {
       filter.reference = Number(value);
     } else if (isStringFilter(filter.type)) {
       filter.reference = String(value);
     }
+    // For discrete filters, reference is set via setDiscreteReferenceValues
   }
 };
 
-const createFilter = (type: string): PlTableFilter => {
+const createFilter = (type: string): AnyFilter => {
   if (isNumberFilter(type)) {
     return { type, reference: 0 };
+  } else if (isDiscreteFilterType(type)) {
+    return { type, reference: '[]' };
   } else if (isStringFilter(type)) {
     return { type, reference: '' };
   } else {
@@ -122,8 +148,38 @@ const showStringInput = computed(() => {
 });
 
 const showDiscreteDropdown = computed(() => {
-  return model.value.filter && isStringFilter(model.value.filter.type) && getDiscreteValues();
+  return model.value.filter && isStringFilter(model.value.filter.type) && getDiscreteValues() && !isCurrentColumnMultiSelect.value;
 });
+
+const isCurrentColumnMultiSelect = computed(() => {
+  if (!model.value.value) return false;
+  const selectedOption = props.options?.find((opt) =>
+    opt.value.column === model.value.value?.column,
+  );
+  return isMultiSelectColumn(selectedOption);
+});
+
+const showMultiDiscreteDropdown = computed(() => {
+  return model.value.filter && isDiscreteFilterType(model.value.filter.type) && isCurrentColumnMultiSelect.value;
+});
+
+/** Parse the JSON-encoded array from a discrete filter reference */
+const discreteReferenceValues = computed<string[]>(() => {
+  const filter = model.value.filter;
+  if (!filter || !isDiscreteFilterType(filter.type)) return [];
+  try {
+    const parsed = JSON.parse((filter as DiscreteFilter).reference);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+});
+
+const updateDiscreteReferenceValues = (values: string[]) => {
+  if (model.value.filter && isDiscreteFilterType(model.value.filter.type)) {
+    (model.value.filter as DiscreteFilter).reference = JSON.stringify(values);
+  }
+};
 
 const getDiscreteValues = () => {
   if (!model.value.value) return null;
@@ -159,8 +215,11 @@ const filterType = computed({
         if (isNumberFilter(value) && typeof currentReference === 'number') {
           // Number to number filter - preserve value
           newFilter.reference = currentReference;
-        } else if (isStringFilter(value) && typeof currentReference === 'string') {
-          // String to string filter - preserve value
+        } else if (isStringFilter(value) && typeof currentReference === 'string' && !isDiscreteFilterType(model.value.filter!.type)) {
+          // String to string filter - preserve value (but not from discrete)
+          newFilter.reference = currentReference;
+        } else if (isDiscreteFilterType(value) && isDiscreteFilterType(model.value.filter!.type)) {
+          // Discrete to discrete - preserve the JSON array reference
           newFilter.reference = currentReference;
         } else if (isNumberFilter(value) && typeof currentReference === 'string') {
           // String to number - try to convert if it's a valid number
@@ -198,7 +257,21 @@ watch(() => model.value.value?.column, (newColumn, oldColumn) => {
   // If column not found in options, don't reset - options may be stale during anchor transition
   if (newValueType === undefined) return;
 
+  // Check if the new column is multi-select discrete
+  const selectedOption = props.options?.find((opt) =>
+    opt.value.column === model.value.value?.column,
+  );
+  const newIsMultiSelect = isMultiSelectColumn(selectedOption);
+
   const currentFilterType = model.value.filter?.type;
+  if (newIsMultiSelect) {
+    // Switch to string_in if not already a discrete filter type
+    if (!isDiscreteFilterType(currentFilterType)) {
+      model.value.filter = createFilter('string_in');
+    }
+    return;
+  }
+
   // Determine if current filter type is compatible with new column type
   const isCompatible = (newValueType === 'String' && isStringFilter(currentFilterType))
     || (newValueType !== 'String' && isNumberFilter(currentFilterType));
@@ -243,6 +316,15 @@ watch(() => model.value.value?.column, (newColumn, oldColumn) => {
     label="Value"
     required
     @update:model-value="updateReferenceValue"
+  />
+
+  <PlDropdownMulti
+    v-if="showMultiDiscreteDropdown"
+    :model-value="discreteReferenceValues"
+    :options="getDiscreteValues()"
+    label="Values"
+    required
+    @update:model-value="updateDiscreteReferenceValues"
   />
 
   <PlTextField

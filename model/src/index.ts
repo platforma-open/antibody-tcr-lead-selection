@@ -5,6 +5,7 @@ import type {
   CreatePlDataTableOps,
   InferOutputsType,
   PColumn, PColumnDataUniversal,
+  PColumnIdAndSpec,
   PColumnSpec,
   PlDataTableStateV2,
   PlMultiSequenceAlignmentModel,
@@ -19,7 +20,7 @@ import {
   deriveLabels,
 } from '@platforma-sdk/model';
 import { getDefaultBlockLabel } from './label';
-import type { AnchoredColumnId, Filter, FilterUI, RankingOrder, RankingOrderUI } from './util';
+import type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter } from './util';
 import { anchoredColumnId, clusterAxisDomainsMatch, getColumns, getVisibleClusterAxes } from './util';
 
 /**
@@ -486,7 +487,7 @@ export const model = BlockModel.create()
       const anchorSpec = ctx.resultPool.getPColumnSpecByRef(ctx.activeArgs.inputAnchor);
       if (anchorSpec !== undefined) {
         const samplingCol = sampledRows.find(
-          (col) => col.spec.name === 'pl7.app/vdj/sampling-column',
+          (col) => col.spec.name === 'pl7.app/vdj/lead-selection',
         );
         if (samplingCol !== undefined) {
           const clonotypeAxisMatches = samplingCol.spec.axesSpec.some(
@@ -649,7 +650,7 @@ export const model = BlockModel.create()
     );
 
     const ops: CreatePlDataTableOps = {
-      coreColumnPredicate: (col) => col.spec.name === 'pl7.app/vdj/sampling-column',
+      coreColumnPredicate: (col) => col.spec.name === 'pl7.app/vdj/lead-selection',
       coreJoinType: 'inner',
     };
 
@@ -717,6 +718,38 @@ export const model = BlockModel.create()
     const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
 
     return createPFrameForGraphs(ctx, [...umap, ...(sampledRows ?? [])]);
+  })
+
+  .outputWithStatus('umapPcols', (ctx) => {
+    const anchor = ctx.args.inputAnchor;
+    if (anchor === undefined)
+      return undefined;
+
+    const umap = ctx.resultPool.getAnchoredPColumns(
+      { main: anchor },
+      [
+        {
+          axes: [{ anchor: 'main', idx: 1 }],
+          namePattern: '^pl7\\.app/vdj/umap[12]$',
+        },
+      ],
+    );
+
+    if (umap === undefined || umap.length === 0)
+      return undefined;
+
+    // @TODO: if umap size is > 2 !
+
+    // Get sampled rows from workflow prerun output (if ranking was applied)
+    const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
+
+    return [...umap, ...(sampledRows ?? [])].map(
+      (c) =>
+        ({
+          columnId: c.id,
+          spec: c.spec,
+        } satisfies PColumnIdAndSpec),
+    );
   })
 
   .output('hasClusterData', (ctx) => {
@@ -794,4 +827,4 @@ export const model = BlockModel.create()
 export type BlockOutputs = InferOutputsType<typeof model>;
 
 export { getDefaultBlockLabel } from './label';
-export type { AnchoredColumnId, Filter, FilterUI, RankingOrder, RankingOrderUI };
+export type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter };

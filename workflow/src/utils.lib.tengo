@@ -1,6 +1,7 @@
 // Utility functions for antibody-tcr-lead-selection workflow
 
 slices := import("@platforma-sdk/workflow-tengo:slices")
+json := import("json")
 
 /**
  * Checks if two clusterId axes have matching domains.
@@ -545,6 +546,89 @@ initializeAssemSeqTable := func(pframes, columns, datasetSpec, isSingleCell) {
     }
 }
 
+// Maps filter type to short operator symbol for trace labels.
+filterOperatorMap := {
+    "number_greaterThan": ">",
+    "number_greaterThanOrEqualTo": ">=",
+    "number_lessThan": "<",
+    "number_lessThanOrEqualTo": "<=",
+    "number_equals": "=",
+    "number_notEquals": "!=",
+    "string_equals": "=",
+    "string_notEquals": "!=",
+    "string_contains": "contains",
+    "string_doesNotContain": "not contains",
+    "string_in": "in",
+    "string_notIn": "not in"
+}
+
+/**
+ * Formats a single filter as a short description for trace labels.
+ * e.g. "Min quality FR1 > 0", "Productive = true", "Chain in Heavy, Light"
+ *
+ * @param columnLabel - Human-readable column name
+ * @param filter - Filter object with type and reference fields
+ * @return Formatted filter description string
+ */
+formatFilterDescription := func(columnLabel, filter) {
+    if is_undefined(filter) || is_undefined(filter.type) {
+        return columnLabel
+    }
+
+    // Return filter.type if short operator is not found
+    op := filterOperatorMap[filter.type]
+    if is_undefined(op) {
+        op = filter.type
+    }
+
+    ref := filter.reference
+    // In multiple select filters, parse JSON array and join values
+    if filter.type == "string_in" || filter.type == "string_notIn" {
+        values := json.decode(string(ref))
+        valStr := "["
+        for i, v in values {
+            if i > 0 {
+                valStr = valStr + ", "
+            }
+            valStr = valStr + string(v)
+        }
+        ref = valStr + "]"
+    }
+
+    return columnLabel + " " + op + " " + string(ref)
+}
+
+/**
+ * Builds a comma-separated filter description string for use in trace labels.
+ * e.g. "Min quality FR1 > 0, Productive = true, Chain in Heavy, Light"
+ *
+ * @param filters - Array of filter objects from block args
+ * @param columns - PBundle to look up column specs for labels
+ * @return Filter description string, or empty string if no valid filters
+ */
+buildFilterTraceLabel := func(filters, columns) {
+    result := ""
+    count := 0
+    for filter in filters {
+        if !is_undefined(filter.value) {
+            colSpec := columns.getSpec(filter.value.column)
+            if !is_undefined(colSpec) {
+                colLabel := colSpec.annotations["pl7.app/label"]
+                if is_undefined(colLabel) {
+                    colLabel = colSpec.name
+                }
+                desc := formatFilterDescription(colLabel, filter.filter)
+                if count > 0 {
+                    result = result + ", "
+                }
+                result = result + desc
+                count = count + 1
+            }
+        }
+    }
+    return result
+}
+
 export {
     clusterAxisDomainsMatch: clusterAxisDomainsMatch,
     findMatchingLinkerIndex: findMatchingLinkerIndex,
@@ -555,5 +639,7 @@ export {
     makeHeaderName: makeHeaderName,
     initializeCdr3SeqTable: initializeCdr3SeqTable,
     detectBulkChain: detectBulkChain,
-    initializeAssemSeqTable: initializeAssemSeqTable
+    initializeAssemSeqTable: initializeAssemSeqTable,
+    formatFilterDescription: formatFilterDescription,
+    buildFilterTraceLabel: buildFilterTraceLabel
 }

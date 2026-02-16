@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AnchoredColumnId, FilterUI } from '@platforma-open/milaboratories.top-antibodies.model';
+import type { AnchoredColumnId, DiscreteFilter, FilterUI } from '@platforma-open/milaboratories.top-antibodies.model';
 import type { PlTableFilter } from '@platforma-sdk/model';
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from '@platforma-sdk/ui-vue';
 import { ref } from 'vue';
@@ -40,7 +40,7 @@ const addFilter = () => {
 };
 
 const resetToDefaults = () => {
-  app.model.ui.filters = app.model.outputs.filterConfig?.defaults?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter }) => ({
+  app.model.ui.filters = app.model.outputs.filterConfig?.defaults?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter | DiscreteFilter }) => ({
     id: generateUniqueId(),
     value: defaultFilter.column,
     filter: { ...defaultFilter.default },
