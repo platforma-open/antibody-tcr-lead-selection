@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies.ui",
-  "version": "1.13.11",
+  "version": "1.13.12",
   "type": "module",
   "scripts": {
     "dev": "ts-builder build --target browser --watch",

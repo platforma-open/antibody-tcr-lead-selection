@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 1.17.6
+
+### Patch Changes
+
+- 65cbdd5: Minor fix to prevent leads spec multiple match
+
 ## 1.17.5
 
 ### Patch Changes
