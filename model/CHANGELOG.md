@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.15.9
+
+### Patch Changes
+
+- ff606b5: Implement multi-selection filters
+
 ## 1.15.8
 
 ### Patch Changes

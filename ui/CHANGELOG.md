@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.13.11
+
+### Patch Changes
+
+- ff606b5: Implement multi-selection filters
+- Updated dependencies [ff606b5]
+  - @platforma-open/milaboratories.top-antibodies.model@1.15.9
+
 ## 1.13.10
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies",
-  "version": "1.4.16",
+  "version": "1.4.17",
   "scripts": {
     "build": "shx rm -rf block-pack/* && block-tools pack",
     "do-pack": "shx rm -f *.tgz && pnpm pack && shx mv *.tgz package.tgz",

@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 1.9.3
+
+### Patch Changes
+
+- ff606b5: Implement multi-selection filters
+
 ## 1.9.2
 
 ### Patch Changes
