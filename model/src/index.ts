@@ -127,6 +127,102 @@ function updateClusterColumnLabels(columns: PColumn<PColumnDataUniversal>[]): PC
 }
 
 /**
+ * Helper to disambiguate options by label grouping.
+ * Similar to disambiguateLabels but returns options for UI (value + label).
+ */
+function getDisambiguatedOptions<T>(
+  items: T[],
+  getSpec: (item: T) => PColumnSpec,
+): { value: T; label: string }[] {
+  const labelMap = new Map<string, T[]>();
+
+  // Group by current label
+  for (const item of items) {
+    const spec = getSpec(item);
+    const label = spec.annotations?.['pl7.app/label'] || spec.name;
+    if (!labelMap.has(label)) {
+      labelMap.set(label, []);
+    }
+    labelMap.get(label)!.push(item);
+  }
+
+  const results: { value: T; label: string }[] = [];
+
+  for (const [label, group] of labelMap.entries()) {
+    if (group.length > 1) {
+      const derived = deriveLabels(
+        group,
+        getSpec,
+        { includeNativeLabel: true },
+      );
+      results.push(...derived);
+    } else {
+      results.push({
+        value: group[0],
+        label,
+      });
+    }
+  }
+
+  return results;
+}
+
+/**
+ * Disambiguates column labels when multiple columns have the same label.
+ * Uses deriveLabels to generate unique labels based on trace information.
+ */
+function disambiguateLabels(columns: PColumn<PColumnDataUniversal>[]): PColumn<PColumnDataUniversal>[] {
+  const labelMap = new Map<string, PColumn<PColumnDataUniversal>[]>();
+
+  // Group columns by their current label
+  for (const col of columns) {
+    const label = col.spec.annotations?.['pl7.app/label'] || col.spec.name;
+    if (!labelMap.has(label)) {
+      labelMap.set(label, []);
+    }
+    labelMap.get(label)!.push(col);
+  }
+
+  const updates = new Map<string, string>(); // colId -> newLabel
+
+  for (const [label, cols] of labelMap.entries()) {
+    // If we have duplicated labels
+    if (cols.length > 1) {
+      const derived = deriveLabels(
+        cols,
+        (col) => col.spec,
+        { includeNativeLabel: true },
+      );
+
+      for (const { value, label: newLabel } of derived) {
+        // Only update if the new label is actually different from the old one
+        if (newLabel !== label) {
+          updates.set(value.id as string, newLabel);
+        }
+      }
+    }
+  }
+
+  if (updates.size === 0) return columns;
+
+  return columns.map((col) => {
+    if (updates.has(col.id as string)) {
+      return {
+        ...col,
+        spec: {
+          ...col.spec,
+          annotations: {
+            ...col.spec.annotations,
+            'pl7.app/label': updates.get(col.id as string)!,
+          },
+        },
+      };
+    }
+    return col;
+  });
+}
+
+/**
  * Check if a column is a full protein sequence (main assembling feature, aminoacid)
  */
 function isFullProteinSequence(spec: PColumnSpec): boolean {
@@ -285,7 +381,7 @@ export const model = BlockModel.create()
     const columns = getColumns(ctx, ctx.args.inputAnchor);
     if (columns === undefined) return undefined;
 
-    const options = deriveLabels(
+    const options = getDisambiguatedOptions(
       columns.props.filter((c) => {
         if (c.column.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true') return false;
         if (c.column.spec.valueType !== 'String') return true;
@@ -293,7 +389,6 @@ export const model = BlockModel.create()
         return false;
       }),
       (c) => c.column.spec,
-      { includeNativeLabel: true },
     ).map((o) => ({
       ...o,
       value: anchoredColumnId(o.value),
@@ -308,13 +403,12 @@ export const model = BlockModel.create()
     const columns = getColumns(ctx, ctx.args.inputAnchor);
     if (columns === undefined) return undefined;
 
-    const options = deriveLabels(
+    const options = getDisambiguatedOptions(
       columns.props.filter((c) =>
         c.column.spec.valueType !== 'String'
         && c.column.spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true',
       ),
       (c) => c.column.spec,
-      { includeNativeLabel: true },
     ).map((o) => ({
       ...o,
       value: anchoredColumnId(o.value),
@@ -546,6 +640,9 @@ export const model = BlockModel.create()
       ? updateClusterColumnLabels(allColumnsWithVisibility)
       : allColumnsWithVisibility;
 
+    // Disambiguate labels for any columns that still have duplicate labels
+    const finalCols = disambiguateLabels(cols);
+
     // Find ranking-order column if present (added by sampling workflow)
     const rankingOrderCol = allColumns.find(
       (col) => col.spec.name === 'pl7.app/vdj/ranking-order',
@@ -572,7 +669,7 @@ export const model = BlockModel.create()
 
     return createPlDataTableV2(
       ctx,
-      cols,
+      finalCols,
       ctx.uiState.tableState,
       ops,
     );

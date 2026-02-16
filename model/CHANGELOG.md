@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.15.8
+
+### Patch Changes
+
+- 748d512: Ensure block labels are visible when there are columns with identical label
+
 ## 1.15.7
 
 ### Patch Changes
