@@ -4,6 +4,7 @@ exec := import("@platforma-sdk/workflow-tengo:exec")
 assets := import("@platforma-sdk/workflow-tengo:assets")
 pframes := import("@platforma-sdk/workflow-tengo:pframes")
 xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
+pSpec := import("@platforma-sdk/workflow-tengo:pframes.spec")
 render := import("@platforma-sdk/workflow-tengo:render")
 sampledColsConv := import(":sampled-cols-conv")
 sampledExportConv := import(":sampled-export-conv")
@@ -93,7 +94,21 @@ self.body(func(inputs) {
         rankingMap, inputs.disableClusterRanking, inputs.rawClusterColumn, topClonotypes)
     sampledColumnsOnlyPf := xsv.importFile(finalClonotypes, "parquet", sampledExportsParams,
                                         {cpu: 1, mem: "16GiB"})
-    outputs["sampledColumnsExport"] = sampledColumnsOnlyPf
+
+    // Create trace with filter descriptions and inject into exported column
+    traceLabel := inputs.filterTraceLabel
+    if is_undefined(traceLabel) || traceLabel == "" {
+        traceLabel = "Selected Leads"
+    }
+    trace := pSpec.makeTrace(datasetSpec,
+        {
+            type: "milaboratories.antibody-tcr-lead-selection",
+            importance: 30,
+            label: traceLabel
+        })
+    exportPf := pframes.pFrameBuilder()
+    exportPf.add("link", trace.inject(sampledColumnsOnlyPf["link.spec"]), sampledColumnsOnlyPf["link.data"])
+    outputs["sampledColumnsExport"] = exportPf.build()
 
     return outputs
 }) 

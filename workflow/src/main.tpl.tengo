@@ -6,6 +6,7 @@ xsv := import("@platforma-sdk/workflow-tengo:pframes.xsv")
 pframes := import("@platforma-sdk/workflow-tengo:pframes")
 slices := import("@platforma-sdk/workflow-tengo:slices")
 render := import("@platforma-sdk/workflow-tengo:render")
+pSpec := import("@platforma-sdk/workflow-tengo:pframes.spec")
 ll := import("@platforma-sdk/workflow-tengo:ll")
 kabatConv := import(":pf-kabat-conv")
 
@@ -132,9 +133,12 @@ wf.body(func(args) {
         addedCols := tableInit.addedCols
 
         // Continue only if we have at least a column
-        // This condition prevents temporal intermittent error while filters are 
+        // This condition prevents temporal intermittent error while filters are
         // being processed and possibly in other situations too
         if addedCols {
+
+            // Build trace label from filter descriptions
+            filterTraceLabel := utils.buildFilterTraceLabel(args.filters, columns)
 
             // Use ender.create to call the filter-clonotypes template
             filterSampleResult := render.create(filterAndSampleTpl, {
@@ -148,9 +152,10 @@ wf.body(func(args) {
                 topClonotypes: args.topClonotypes,
                 disableClusterRanking: args.disableClusterRanking,
                 clusterColumn: clusterColumnHeader,
-                rawClusterColumn: args.clusterColumn
+                rawClusterColumn: args.clusterColumn,
+                filterTraceLabel: filterTraceLabel
             })
-            
+
             // Get the filtered clonotypes from the template result
             outputs["sampledRows"] = filterSampleResult.output("sampledRows", 24 * 60 * 60 * 1000)
 
