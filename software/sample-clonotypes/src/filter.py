@@ -52,13 +52,20 @@ def apply_filter(df, column_name, filter_type, reference_value):
         return df.filter(pl.col(column_name).str.contains(str(reference_value)))
     elif filter_type == "string_doesNotContain":
         return df.filter(~pl.col(column_name).str.contains(str(reference_value)))
+    elif filter_type == "string_in":
+        values = json.loads(reference_value) if isinstance(reference_value, str) else reference_value
+        return df.filter(pl.col(column_name).is_in([str(v) for v in values]))
+    elif filter_type == "string_notIn":
+        values = json.loads(reference_value) if isinstance(reference_value, str) else reference_value
+        return df.filter(~pl.col(column_name).is_in([str(v) for v in values]))
     else:
         raise ValueError(f"Unknown filter type '{filter_type}' for column \
                          '{column_name}'. Supported types: number_greaterThan, \
                             number_greaterThanOrEqualTo, number_lessThan, \
                             number_lessThanOrEqualTo, number_equals, \
                             number_notEquals, string_equals, string_notEquals, \
-                            string_contains, string_doesNotContain")
+                            string_contains, string_doesNotContain, \
+                            string_in, string_notIn")
 
 
 def apply_filters(df, filter_map):

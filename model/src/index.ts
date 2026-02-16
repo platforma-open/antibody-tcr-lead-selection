@@ -1,13 +1,15 @@
 import type { GraphMakerState } from '@milaboratories/graph-maker';
+import strings from '@milaboratories/strings';
 import type {
+  AxisSpec,
   CreatePlDataTableOps,
   InferOutputsType,
+  PColumn, PColumnDataUniversal,
   PColumnSpec,
   PlDataTableStateV2,
   PlMultiSequenceAlignmentModel,
-  PObjectId,
   PlRef,
-  AxisSpec,
+  PObjectId,
 } from '@platforma-sdk/model';
 import {
   BlockModel,
@@ -16,11 +18,9 @@ import {
   createPlDataTableV2,
   deriveLabels,
 } from '@platforma-sdk/model';
-import type { AnchoredColumnId, Filter, FilterUI, RankingOrder, RankingOrderUI } from './util';
-import { anchoredColumnId, getColumns, getVisibleClusterAxes, clusterAxisDomainsMatch } from './util';
-import type { PColumn, PColumnDataUniversal } from '@platforma-sdk/model';
 import { getDefaultBlockLabel } from './label';
-import strings from '@milaboratories/strings';
+import type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter } from './util';
+import { anchoredColumnId, clusterAxisDomainsMatch, getColumns, getVisibleClusterAxes } from './util';
 
 /**
  * Checks if any cluster data is present by examining clusterId axes.
@@ -696,5 +696,5 @@ export const model = BlockModel.create()
 
 export type BlockOutputs = InferOutputsType<typeof model>;
 
-export type { AnchoredColumnId, Filter, FilterUI, RankingOrder, RankingOrderUI };
 export { getDefaultBlockLabel } from './label';
+export type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter };

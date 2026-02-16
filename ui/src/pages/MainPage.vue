@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { PlMultiSequenceAlignment } from '@milaboratories/multi-sequence-alignment';
+import strings from '@milaboratories/strings';
 import type { PlRef, PlSelectionModel } from '@platforma-sdk/model';
 import { createPlDataTableStateV2 } from '@platforma-sdk/model';
 import {
@@ -16,9 +18,7 @@ import {
   PlTooltip,
   usePlDataTableSettingsV2,
 } from '@platforma-sdk/ui-vue';
-import { PlMultiSequenceAlignment } from '@milaboratories/multi-sequence-alignment';
-import strings from '@milaboratories/strings';
-import { ref, watch, computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useApp } from '../app';
 import {
   isSequenceColumn,

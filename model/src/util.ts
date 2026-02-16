@@ -42,9 +42,25 @@ export type RankingOrderUI = RankingOrder & {
   isExpanded?: boolean;
 };
 
+/** Filter for matching any of a set of discrete string values */
+export type StringInFilter = {
+  type: 'string_in';
+  /** JSON-encoded string array, e.g. '["Yes","No"]' */
+  reference: string;
+};
+
+/** Filter for excluding a set of discrete string values */
+export type StringNotInFilter = {
+  type: 'string_notIn';
+  /** JSON-encoded string array, e.g. '["Yes","No"]' */
+  reference: string;
+};
+
+export type DiscreteFilter = StringInFilter | StringNotInFilter;
+
 export type Filter = {
   value?: AnchoredColumnId;
-  filter?: PlTableFilter;
+  filter?: PlTableFilter | DiscreteFilter;
 };
 
 export type FilterUI = Filter & {
@@ -54,7 +70,7 @@ export type FilterUI = Filter & {
 
 export type PlTableFiltersDefault = {
   column: AnchoredColumnId;
-  default: PlTableFilter;
+  default: PlTableFilter | DiscreteFilter;
 };
 
 export type Columns = {
@@ -225,13 +241,26 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
           console.error('defaultFilters: invalid string filter', valueString);
           continue;
         }
-        defaultFilters.push({
-          column: anchoredColumnId(score),
-          default: {
-            type: 'string_equals',
-            reference: value[0], // @TODO: support multiple values
-          },
-        });
+        const isDiscreteFilter = spec.annotations?.['pl7.app/isDiscreteFilter'] === 'true';
+        const hasDiscreteValues = !!spec.annotations?.['pl7.app/discreteValues'];
+        if (isDiscreteFilter && hasDiscreteValues && value.length > 0) {
+          // Multi-select: use string_in with all default cutoff values
+          defaultFilters.push({
+            column: anchoredColumnId(score),
+            default: {
+              type: 'string_in',
+              reference: JSON.stringify(value),
+            },
+          });
+        } else {
+          defaultFilters.push({
+            column: anchoredColumnId(score),
+            default: {
+              type: 'string_equals',
+              reference: value[0],
+            },
+          });
+        }
       } catch (e) {
         console.error('defaultFilters: invalid string filter', valueString, e);
         continue;
