@@ -13,6 +13,7 @@ import type {
   PObjectId,
 } from '@platforma-sdk/model';
 import {
+  Annotation,
   BlockModel,
   createPFrameForGraphs,
   createPlDataTableStateV2,
@@ -553,14 +554,14 @@ export const model = BlockModel.create()
       const isFilterOrRankColumn = filterColumnIds.has(colIdStr) || rankingColumnIds.has(colIdStr);
 
       // Check if this is a linker column (should be completely hidden from column controls)
-      const isLinkerColumn = col.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true';
+      const isLinkerColumn = col.spec.annotations?.[Annotation.IsLinkerColumn] === 'true';
 
       // Determine order priority
       const annotations = col.spec.annotations || {};
-      let orderPriority = annotations['pl7.app/table/orderPriority'];
+      let orderPriority = annotations[Annotation.Table.OrderPriority];
 
       // Check if this is a Clone Label column (label column for clonotype axis)
-      const isCloneLabelColumn = col.spec.name === 'pl7.app/label'
+      const isCloneLabelColumn = col.spec.name === Annotation.Label
         && col.spec.axesSpec.length === 1
         && (col.spec.axesSpec[0].name === 'pl7.app/vdj/clonotypeKey'
           || col.spec.axesSpec[0].name === 'pl7.app/vdj/scClonotypeKey');
@@ -577,14 +578,17 @@ export const model = BlockModel.create()
       }
 
       // Determine visibility:
-      // - Linker columns: hidden (don't show in column controls at all)
+      // - Linker columns or columns already marked hidden: hidden (don't show in column controls at all)
       // - Other columns: default (visible) or optional (hidden by default but can be shown)
-      const visibility = isLinkerColumn ? 'hidden' : (isVisible ? 'default' : 'optional');
+      const originalVisibility = col.spec.annotations?.[Annotation.Table.Visibility];
+      const visibility = isLinkerColumn || originalVisibility === 'hidden'
+        ? 'hidden'
+        : (isVisible ? 'default' : 'optional');
 
       const newAnnotations = {
         ...col.spec.annotations,
-        'pl7.app/table/visibility': visibility,
-        ...(orderPriority && { 'pl7.app/table/orderPriority': orderPriority }),
+        [Annotation.Table.Visibility]: visibility,
+        ...(orderPriority && { [Annotation.Table.OrderPriority]: orderPriority }),
       };
 
       // Update axes annotations
@@ -600,7 +604,7 @@ export const model = BlockModel.create()
             ...axis,
             annotations: {
               ...axis.annotations,
-              'pl7.app/table/orderPriority': '1000000',
+              [Annotation.Table.OrderPriority]: '1000000',
             },
           };
         }
@@ -616,7 +620,7 @@ export const model = BlockModel.create()
               ...axis,
               annotations: {
                 ...axis.annotations,
-                'pl7.app/table/visibility': 'optional',
+                [Annotation.Table.Visibility]: 'optional',
               },
             };
           }
@@ -669,7 +673,7 @@ export const model = BlockModel.create()
     }
 
     // Filter out lead-selection exports by trace
-    finalCols = finalCols.filter((col) => !col.spec.annotations?.['pl7.app/trace']?.includes('antibody-tcr-lead-selection'));
+    finalCols = finalCols.filter((col) => !col.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection'));
 
     return createPlDataTableV2(
       ctx,
