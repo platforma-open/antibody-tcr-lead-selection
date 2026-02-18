@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 1.13.15
+
+### Patch Changes
+
+- f1d0c04: Fix of the error with white screen
+
 ## 1.13.14
 
 ### Patch Changes

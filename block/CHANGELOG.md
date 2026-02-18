@@ -1,5 +1,12 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 1.4.21
+
+### Patch Changes
+
+- Updated dependencies [f1d0c04]
+  - @platforma-open/milaboratories.top-antibodies.ui@1.13.15
+
 ## 1.4.20
 
 ### Patch Changes
