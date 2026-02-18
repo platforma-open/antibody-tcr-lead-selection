@@ -21,7 +21,7 @@ const defaultOptions = computed((): PredefinedGraphOption<'scatterplot-umap'>[] 
   const umapPcols = app.model.outputs.umapPcols.value;
 
   const getColSpec = (name: string) => {
-    const col = umapPcols.find((p) => p.spec.name === name);
+    const col = umapPcols?.find((p) => p.spec.name === name);
     return col?.spec;
   };
 
