@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 1.15.11
+
+### Patch Changes
+
+- c112c60: Fix hidden columns (e.g. Selected Leads) incorrectly appearing in table column controls by preserving original visibility annotations from workflow
+
 ## 1.15.10
 
 ### Patch Changes
