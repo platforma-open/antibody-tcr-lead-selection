@@ -62,12 +62,9 @@ self.body(func(inputs) {
 			arg("--n").arg(string(topClonotypes)).
 			arg("--ranking-map").arg(string(json.encode(rankingMap)))
 
-		// Add optional parameters if provided in block args
-		if inputs.disableClusterRanking {
-			builder = builder.arg("--disable-cluster-ranking")
-		}
-		if inputs.clusterColumn != undefined && inputs.clusterColumn != "" {
-			builder = builder.arg("--cluster-column").arg(inputs.clusterColumn)
+		// Add diversification column if provided
+		if inputs.diversificationColumn != undefined && inputs.diversificationColumn != "" {
+			builder = builder.arg("--diversification-column").arg(inputs.diversificationColumn)
 		}
 
 		sampleClones := builder.
@@ -91,7 +88,7 @@ self.body(func(inputs) {
 
     // Export only the sampling column to be used as a filter downstream
     sampledExportsParams := sampledExportConv.getColumns(datasetSpec, filterMap,
-        rankingMap, inputs.disableClusterRanking, inputs.rawClusterColumn, topClonotypes)
+        rankingMap, inputs.diversificationColumn, topClonotypes)
     sampledColumnsOnlyPf := xsv.importFile(finalClonotypes, "parquet", sampledExportsParams,
                                         {cpu: 1, mem: "16GiB"})
 

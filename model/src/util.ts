@@ -303,7 +303,7 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
       .map((s) => ({
         id: `default-rank-${s.column.id}`,
         value: anchoredColumnId(s),
-        rankingOrder: 'decreasing',
+        rankingOrder: (s.column.spec.annotations?.['pl7.app/score/rankingOrder'] as 'increasing' | 'decreasing') ?? 'decreasing',
         isExpanded: false,
       })),
   };

@@ -72,53 +72,31 @@ const clusterColumnOptionsWithNone = computed(() => {
 // Selected cluster column value for the dropdown
 const selectedClusterColumnValue = computed<string | undefined>({
   get: () => {
-    if (app.model.args.disableClusterRanking) {
-      return NO_DIVERSIFICATION_VALUE;
-    }
-    if (app.model.args.clusterColumn) {
-      return JSON.stringify(app.model.args.clusterColumn);
-    }
-    return undefined;
+    if (!app.model.args.diversificationColumn) return NO_DIVERSIFICATION_VALUE;
+    return JSON.stringify(app.model.args.diversificationColumn);
   },
   set: (v: string | undefined) => {
-    if (v === NO_DIVERSIFICATION_VALUE || v === undefined) {
-      app.model.args.disableClusterRanking = true;
-      app.model.args.clusterColumn = undefined;
-    } else {
-      app.model.args.disableClusterRanking = undefined; // Clear flag when cluster column is selected
-      app.model.args.clusterColumn = JSON.parse(v) as PlRef;
-    }
+    app.model.args.diversificationColumn
+        = (v === NO_DIVERSIFICATION_VALUE || v === undefined) ? undefined : JSON.parse(v) as PlRef;
   },
 });
 
-// Clear clusterColumn when inputAnchor changes (old value is invalid for new dataset)
+// Clear diversificationColumn when inputAnchor changes (old value is invalid for new dataset)
 watch(
   () => app.model.args.inputAnchor,
   (newAnchor, oldAnchor) => {
-    // Only clear if anchor actually changed (not on initial load)
     if (oldAnchor && newAnchor && JSON.stringify(oldAnchor) !== JSON.stringify(newAnchor)) {
-      app.model.args.clusterColumn = undefined;
-      // Don't reset disableClusterRanking - preserve user's diversification preference
+      app.model.args.diversificationColumn = undefined;
     }
   },
 );
 
-// Auto-set default clusterColumn when options become available
+// Auto-set default diversificationColumn when options become available
 watch(
   () => app.model.outputs.clusterColumnOptions,
   (options) => {
-    // Only set default if:
-    // - options are available
-    // - clusterColumn is not set
-    // - disableClusterRanking is not explicitly true
-    if (
-      options
-      && options.length > 0
-      && !app.model.args.clusterColumn
-      && app.model.args.disableClusterRanking !== true
-    ) {
-      app.model.args.clusterColumn = options[0].ref;
-      app.model.args.disableClusterRanking = undefined; // Clear flag (not disabled)
+    if (options && options.length > 0 && !app.model.args.diversificationColumn) {
+      app.model.args.diversificationColumn = options[0].ref;
     }
   },
   { immediate: true },

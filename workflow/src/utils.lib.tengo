@@ -169,18 +169,18 @@ buildSortedLinkers := func(columns, datasetSpec) {
 /**
  * Resolves cluster column reference to header name by matching against sortedLinkers.
  * 
- * @param args - Arguments containing clusterColumn
+ * @param args - Arguments containing diversificationColumn
  * @param columns - PBundle containing all columns
  * @param sortedLinkers - List of linker columns in proper order
  * @return Cluster column header string or undefined
  */
 resolveClusterColumnHeader := func(args, columns, sortedLinkers) {
-    if is_undefined(args.clusterColumn) {
+    if is_undefined(args.diversificationColumn) {
         return undefined
     }
-    
-    // Get the spec for the selected cluster column
-    selectedLinkerSpec := columns.getSpec(args.clusterColumn)
+
+    // Get the spec for the selected diversification column
+    selectedLinkerSpec := columns.getSpec(args.diversificationColumn)
     if is_undefined(selectedLinkerSpec) {
         return undefined
     }
@@ -220,7 +220,7 @@ resolveClusterColumnHeader := func(args, columns, sortedLinkers) {
  * 
  * @param pframes - PFrames import
  * @param columns - PBundle containing all columns
- * @param args - Arguments containing filters, rankingOrder, clusterColumn
+ * @param args - Arguments containing filters, rankingOrder, diversificationColumn
  * @param datasetSpec - Dataset specification with axes
  * @return Map with keys: cloneTable, filterMap, rankingMap, sortedLinkers, clusterColumnHeader, addedCols
  */
@@ -401,7 +401,7 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec) {
         cloneTable.cpu(1)
         builtTable = cloneTable.build()
         
-        // Resolve clusterColumn ref to header name
+        // Resolve diversificationColumn ref to header name
         clusterColumnHeader = resolveClusterColumnHeader(args, columns, sortedLinkers)
     }
     
