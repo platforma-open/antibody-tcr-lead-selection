@@ -1,16 +1,16 @@
 ll := import("@platforma-sdk/workflow-tengo:ll")
 json := import("json")
 
-getColumns := func(datasetSpec, filterMap, rankingMap, disableClusterRanking, clusterColumn, topClonotypes) {
+getColumns := func(datasetSpec, filterMap, rankingMap, diversificationColumn, topClonotypes) {
 
   // Define domain
   domain := {
     "pl7.app/vdj/filter-map": string(json.encode(filterMap)),
-    "pl7.app/vdj/ranking-map": string(json.encode(rankingMap)),            
+    "pl7.app/vdj/ranking-map": string(json.encode(rankingMap)),
     "pl7.app/vdj/top-clonotypes": string(topClonotypes)
   }
-  if !disableClusterRanking && clusterColumn != undefined && clusterColumn != "" {
-    domain["pl7.app/vdj/diversity-column"] = string(json.encode(clusterColumn))
+  if diversificationColumn != undefined && diversificationColumn != "" {
+    domain["pl7.app/vdj/diversity-column"] = string(json.encode(diversificationColumn))
   }
 
   columns := [{

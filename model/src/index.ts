@@ -287,9 +287,8 @@ export type BlockArgs = {
   rankingOrder: RankingOrder[];
   filters: Filter[];
   kabatNumbering?: boolean;
-  disableClusterRanking?: boolean;
-  /** Selected linker column for cluster-based diversification (grouping by cluster) */
-  clusterColumn?: PlRef;
+  /** Selected linker column for diversified ranking (grouping by cluster). undefined = no diversification */
+  diversificationColumn?: PlRef;
 };
 
 export type UiState = {
@@ -314,8 +313,7 @@ export const model = BlockModel.create()
     topClonotypes: 100,
     rankingOrder: [],
     filters: [],
-    disableClusterRanking: false,
-    clusterColumn: undefined,
+    diversificationColumn: undefined,
   })
 
   .withUiState<UiState>({
