@@ -49,7 +49,7 @@ const defaultOptions = computed((): PredefinedGraphOption<'discrete'>[] => {
 <template>
   <PlBlockPage>
     <GraphMaker
-      v-model="app.model.ui.cdr3StackedBarPlotState"
+      v-model="app.model.data.cdr3StackedBarPlotState"
       chartType="discrete"
       :p-frame="app.model.outputs.spectratypePf"
       :default-options="defaultOptions"
