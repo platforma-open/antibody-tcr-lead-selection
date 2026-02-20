@@ -32,6 +32,19 @@ wf.prepare(func(args){
         for col in args.rankingOrder {
             // For cases where the user is selecting the table to filter
             if col.value != undefined {
+                // In Vivo Score is computed from source columns, not a real PColumn
+                if col.value.column == "pl7.app/vdj/inVivoScore" {
+                    // Primary abundance is the input anchor itself — already added above.
+                    // Fetch the remaining source columns by name.
+                    for key, name in utils.inVivoScoreSourceColumns {
+                        bundleBuilder.addMulti({
+                            axes: [{ anchor: "main", idx: 1 }],
+                            name: name
+                        }, "inVivo_" + key)
+                    }
+                    validRanks = true
+                    continue
+                }
                 bundleBuilder.addAnchor(col.value.anchorName, col.value.anchorRef)
                 bundleBuilder.addSingle(col.value.column)
                 validRanks = true

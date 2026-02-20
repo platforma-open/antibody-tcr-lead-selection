@@ -3,6 +3,13 @@
 slices := import("@platforma-sdk/workflow-tengo:slices")
 json := import("json")
 
+// PColumn names used as source columns for In Vivo Score computation.
+// Primary abundance is resolved separately via specific annotations.
+inVivoScoreSourceColumns := {
+    "fractionCDR": "pl7.app/vdj/sequence/fractionCDRMutations",
+    "nMutations": "pl7.app/vdj/sequence/nMutations"
+}
+
 /**
  * Checks if two clusterId axes have matching domains.
  * Used to determine if two columns belong to the same clustering run.
@@ -272,6 +279,20 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec) {
     
     if len(args.rankingOrder) > 0 {
         for i, col in args.rankingOrder {
+            // In Vivo Score: add source columns to the clone table for later computation
+            if col.value != undefined && col.value.column == "pl7.app/vdj/inVivoScore" {
+                // Primary abundance is the input anchor itself
+                cloneTable.add(columns.getColumn(args.inputAnchor), {header: "inVivo_primaryAbundance"})
+                addedCols = true
+                for key, _ in inVivoScoreSourceColumns {
+                    for srcCol in columns.getColumns("inVivo_" + key) {
+                        cloneTable.add(srcCol, {header: "inVivo_" + key})
+                        addedCols = true
+                    }
+                }
+                rankingMap["inVivoScore"] = col.rankingOrder
+                continue
+            }
             // we check for value presence and for actual pcolumn (cases where upstream block is deleted)
             if col.value != undefined && columns.getColumn(col.value.column).spec != undefined {
                 // Process the ranking column to determine header and cluster axis
@@ -641,5 +662,6 @@ export {
     detectBulkChain: detectBulkChain,
     initializeAssemSeqTable: initializeAssemSeqTable,
     formatFilterDescription: formatFilterDescription,
-    buildFilterTraceLabel: buildFilterTraceLabel
+    buildFilterTraceLabel: buildFilterTraceLabel,
+    inVivoScoreSourceColumns: inVivoScoreSourceColumns
 }
