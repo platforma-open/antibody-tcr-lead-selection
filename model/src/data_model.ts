@@ -1,5 +1,5 @@
 import { createPlDataTableStateV2, DataModelBuilder } from '@platforma-sdk/model';
-import type { BlockData, BlockDataV20260220, LegacyBlockArgs, LegacyUiState } from '.';
+import type { BlockData, BlockDataV20260220, BlockDataV20260220Filters, LegacyBlockArgs, LegacyUiState } from '.';
 import { getDefaultBlockLabel } from './label';
 
 export const blockDataModel = new DataModelBuilder()
@@ -36,7 +36,7 @@ export const blockDataModel = new DataModelBuilder()
     filtersInitializedForAnchor: uiState?.filtersInitializedForAnchor,
     rankingsInitializedForAnchor: uiState?.rankingsInitializedForAnchor,
   }))
-  .migrate<BlockData>('V20260220Filters', (prev) => ({
+  .migrate<BlockDataV20260220Filters>('V20260220Filters', (prev) => ({
     defaultBlockLabel: prev.defaultBlockLabel,
     customBlockLabel: prev.customBlockLabel,
     inputAnchor: prev.inputAnchor,
@@ -56,6 +56,13 @@ export const blockDataModel = new DataModelBuilder()
     filtersInitializedForAnchor: undefined,
     rankingsInitializedForAnchor: prev.rankingsInitializedForAnchor,
   }))
+  .migrate<BlockData>('V20260220DiversificationColumn', (prev) => {
+    const { disableClusterRanking, clusterColumn, ...rest } = prev;
+    return {
+      ...rest,
+      diversificationColumn: disableClusterRanking ? undefined : clusterColumn,
+    };
+  })
   .init(() => ({
     defaultBlockLabel: getDefaultBlockLabel({}),
     customBlockLabel: '',
@@ -63,7 +70,7 @@ export const blockDataModel = new DataModelBuilder()
     rankingOrder: [],
     filterModel: { type: 'and' as const, filters: [], id: 0 },
     filterColumnAnchors: {},
-    disableClusterRanking: false,
+    diversificationColumn: undefined,
     tableState: createPlDataTableStateV2(),
     graphStateUMAP: {
       title: 'Clonotype Space UMAP',

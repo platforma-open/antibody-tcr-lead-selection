@@ -236,7 +236,7 @@ export function getColumns(ctx: { resultPool: ResultPool }, inputAnchor: PlRef |
               value,
             },
           });
-        } else {
+        } else if (value.length > 0) {
           defaultFilters.push({
             column: columnId,
             default: {
@@ -287,7 +287,7 @@ export function getColumns(ctx: { resultPool: ResultPool }, inputAnchor: PlRef |
       .map((s) => ({
         id: `default-rank-${s.column.id}`,
         value: anchoredColumnId(s),
-        rankingOrder: 'decreasing',
+        rankingOrder: (s.column.spec.annotations?.['pl7.app/score/rankingOrder'] as 'increasing' | 'decreasing') ?? 'decreasing',
         isExpanded: false,
       })),
   };

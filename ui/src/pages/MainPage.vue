@@ -74,47 +74,35 @@ const clusterColumnOptionsWithNone = computed(() => {
 // Selected cluster column value for the dropdown
 const selectedClusterColumnValue = computed<string | undefined>({
   get: () => {
-    if (app.model.data.disableClusterRanking) {
-      return NO_DIVERSIFICATION_VALUE;
-    }
-    if (app.model.data.clusterColumn) {
-      return JSON.stringify(app.model.data.clusterColumn);
-    }
-    return undefined;
+    if (!app.model.data.diversificationColumn) return NO_DIVERSIFICATION_VALUE;
+    return JSON.stringify(app.model.data.diversificationColumn);
   },
   set: (v: string | undefined) => {
-    if (v === NO_DIVERSIFICATION_VALUE || v === undefined) {
-      app.model.data.disableClusterRanking = true;
-      app.model.data.clusterColumn = undefined;
-    } else {
-      app.model.data.disableClusterRanking = undefined;
-      app.model.data.clusterColumn = JSON.parse(v) as PlRef;
-    }
+    app.model.data.diversificationColumn
+      = (v === NO_DIVERSIFICATION_VALUE || v === undefined) ? undefined : JSON.parse(v) as PlRef;
   },
 });
 
-// Clear clusterColumn when inputAnchor changes
+// Clear diversificationColumn when inputAnchor changes
 watch(
   () => app.model.data.inputAnchor,
   (newAnchor, oldAnchor) => {
     if (oldAnchor && newAnchor && JSON.stringify(oldAnchor) !== JSON.stringify(newAnchor)) {
-      app.model.data.clusterColumn = undefined;
+      app.model.data.diversificationColumn = undefined;
     }
   },
 );
 
-// Auto-set default clusterColumn when options become available
+// Auto-set default diversificationColumn when options become available
 watch(
   () => app.model.outputs.clusterColumnOptions,
   (options) => {
     if (
       options
       && options.length > 0
-      && !app.model.data.clusterColumn
-      && app.model.data.disableClusterRanking !== true
+      && !app.model.data.diversificationColumn
     ) {
-      app.model.data.clusterColumn = options[0].ref;
-      app.model.data.disableClusterRanking = undefined;
+      app.model.data.diversificationColumn = options[0].ref;
     }
   },
   { immediate: true },

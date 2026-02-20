@@ -79,7 +79,36 @@ export type BlockDataV20260220 = {
 };
 
 // ---------------------------------------------------------------------------
-// V3 unified data type (tree-based filters)
+// V3 unified data type (tree-based filters, pre-diversification)
+// ---------------------------------------------------------------------------
+
+export type BlockDataV20260220Filters = {
+  defaultBlockLabel: string;
+  customBlockLabel: string;
+  inputAnchor?: PlRef;
+  topClonotypes: number;
+  kabatNumbering?: boolean;
+  disableClusterRanking?: boolean;
+  clusterColumn?: PlRef;
+
+  rankingOrder: RankingOrderUI[];
+
+  /** Tree-based filter model from PlAdvancedFilter */
+  filterModel: PlAdvancedFilter;
+  /** Lookup: SUniversalPColumnId → { anchorRef, anchorName } — maintained by UI */
+  filterColumnAnchors: Record<string, { anchorRef: PlRef; anchorName: string }>;
+
+  tableState: PlDataTableStateV2;
+  graphStateUMAP: GraphMakerState;
+  cdr3StackedBarPlotState: GraphMakerState;
+  vjUsagePlotState: GraphMakerState;
+  alignmentModel: PlMultiSequenceAlignmentModel;
+  filtersInitializedForAnchor?: string;
+  rankingsInitializedForAnchor?: string;
+};
+
+// ---------------------------------------------------------------------------
+// V3 final data type (diversificationColumn replaces disableClusterRanking + clusterColumn)
 // ---------------------------------------------------------------------------
 
 export type BlockData = {
@@ -88,8 +117,7 @@ export type BlockData = {
   inputAnchor?: PlRef;
   topClonotypes: number;
   kabatNumbering?: boolean;
-  disableClusterRanking?: boolean;
-  clusterColumn?: PlRef;
+  diversificationColumn?: PlRef;
 
   rankingOrder: RankingOrderUI[];
 
@@ -119,8 +147,7 @@ export type BlockArgs = {
   rankingOrder: RankingOrder[];
   filters: Filter[];
   kabatNumbering?: boolean;
-  disableClusterRanking?: boolean;
-  clusterColumn?: PlRef;
+  diversificationColumn?: PlRef;
 };
 
 // ---------------------------------------------------------------------------
@@ -355,8 +382,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
       rankingOrder,
       filters: convertFilterTree(data.filterModel, data.filterColumnAnchors),
       kabatNumbering: data.kabatNumbering,
-      disableClusterRanking: data.disableClusterRanking,
-      clusterColumn: data.clusterColumn,
+      diversificationColumn: data.diversificationColumn,
     };
   })
 

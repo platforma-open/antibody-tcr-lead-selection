@@ -57,9 +57,9 @@ wf.prepare(func(args){
         partialAxesMatch: true
     }, "linkers")
     
-    // Add clusterColumn as a named anchor for matching in body phase
-    if !is_undefined(args.clusterColumn) {
-        bundleBuilder.addAnchor("selectedCluster", args.clusterColumn)
+    // Add diversificationColumn as a named anchor for matching in body phase
+    if !is_undefined(args.diversificationColumn) {
+        bundleBuilder.addAnchor("selectedCluster", args.diversificationColumn)
     }
 
     // Add cluster size columns from clustering blocks
@@ -150,9 +150,7 @@ wf.body(func(args) {
                 rankingMap: rankingMap,
                 datasetSpec: datasetSpec,
                 topClonotypes: args.topClonotypes,
-                disableClusterRanking: args.disableClusterRanking,
-                clusterColumn: clusterColumnHeader,
-                rawClusterColumn: args.clusterColumn,
+                diversificationColumn: clusterColumnHeader,
                 filterTraceLabel: filterTraceLabel
             })
 
