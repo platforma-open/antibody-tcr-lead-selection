@@ -2,16 +2,14 @@ import {
   isLabelColumn,
   type AxisSpec,
   type DataInfo,
+  type FilterSpecLeaf,
   type PColumn,
   type PColumnValues,
   type PlRef,
-  type PlTableFilter,
-  type RenderCtx,
-  type RenderCtxLegacy,
+  type ResultPool,
   type SUniversalPColumnId,
   type TreeNodeAccessor,
 } from '@platforma-sdk/model';
-import type { BlockArgs, UiState } from '.';
 
 // @todo: move this type to SDK
 export type Column = PColumn<DataInfo<TreeNodeAccessor> | TreeNodeAccessor | PColumnValues>;
@@ -42,25 +40,9 @@ export type RankingOrderUI = RankingOrder & {
   isExpanded?: boolean;
 };
 
-/** Filter for matching any of a set of discrete string values */
-export type StringInFilter = {
-  type: 'string_in';
-  /** JSON-encoded string array, e.g. '["Yes","No"]' */
-  reference: string;
-};
-
-/** Filter for excluding a set of discrete string values */
-export type StringNotInFilter = {
-  type: 'string_notIn';
-  /** JSON-encoded string array, e.g. '["Yes","No"]' */
-  reference: string;
-};
-
-export type DiscreteFilter = StringInFilter | StringNotInFilter;
-
 export type Filter = {
   value?: AnchoredColumnId;
-  filter?: PlTableFilter | DiscreteFilter;
+  filter?: FilterSpecLeaf;
 };
 
 export type FilterUI = Filter & {
@@ -70,7 +52,7 @@ export type FilterUI = Filter & {
 
 export type PlTableFiltersDefault = {
   column: AnchoredColumnId;
-  default: PlTableFilter | DiscreteFilter;
+  default: FilterSpecLeaf;
 };
 
 export type Columns = {
@@ -142,7 +124,7 @@ export function getVisibleClusterAxes<T extends { id: unknown; spec: { axesSpec:
   return visibleClusterAxes;
 }
 
-export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<BlockArgs, UiState>, inputAnchor: PlRef | undefined): Columns | undefined {
+export function getColumns(ctx: { resultPool: ResultPool }, inputAnchor: PlRef | undefined): Columns | undefined {
   const anchor = inputAnchor;
   if (anchor === undefined)
     return undefined;
@@ -232,6 +214,7 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
     const valueString = score.column.spec.annotations?.['pl7.app/score/defaultCutoff'];
     if (valueString === undefined) continue;
 
+    const columnId = anchoredColumnId(score);
     const spec = score.column.spec;
     if (spec.valueType === 'String') {
       try {
@@ -244,20 +227,22 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
         const isDiscreteFilter = spec.annotations?.['pl7.app/isDiscreteFilter'] === 'true';
         const hasDiscreteValues = !!spec.annotations?.['pl7.app/discreteValues'];
         if (isDiscreteFilter && hasDiscreteValues && value.length > 0) {
-          // Multi-select: use string_in with all default cutoff values
+          // Multi-select: use inSet with all default cutoff values
           defaultFilters.push({
-            column: anchoredColumnId(score),
+            column: columnId,
             default: {
-              type: 'string_in',
-              reference: JSON.stringify(value),
+              type: 'inSet',
+              column: columnId.column,
+              value,
             },
           });
-        } else {
+        } else if (value.length > 0) {
           defaultFilters.push({
-            column: anchoredColumnId(score),
+            column: columnId,
             default: {
-              type: 'string_equals',
-              reference: value[0],
+              type: 'patternEquals',
+              column: columnId.column,
+              value: value[0],
             },
           });
         }
@@ -281,11 +266,10 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
         }
 
         defaultFilters.push({
-          column: anchoredColumnId(score),
-          default: {
-            type: direction === 'increasing' ? 'number_greaterThanOrEqualTo' : 'number_lessThanOrEqualTo',
-            reference: numericValue,
-          },
+          column: columnId,
+          default: direction === 'increasing'
+            ? { type: 'greaterThanOrEqual', column: columnId.column, x: numericValue }
+            : { type: 'lessThanOrEqual', column: columnId.column, x: numericValue },
         });
       } catch (e) {
         console.error('defaultFilters: invalid numeric value', valueString, e);
@@ -303,7 +287,7 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
       .map((s) => ({
         id: `default-rank-${s.column.id}`,
         value: anchoredColumnId(s),
-        rankingOrder: 'decreasing',
+        rankingOrder: (s.column.spec.annotations?.['pl7.app/score/rankingOrder'] as 'increasing' | 'decreasing') ?? 'decreasing',
         isExpanded: false,
       })),
   };

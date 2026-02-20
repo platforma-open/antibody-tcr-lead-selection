@@ -18,8 +18,6 @@
     "@platforma-sdk/ui-vue": "catalog:",
     "@milaboratories/multi-sequence-alignment": "catalog:",
     "@milaboratories/strings": "catalog:",
-    "@types/lodash.debounce": "catalog:",
-    "lodash.debounce": "catalog:",
     "sass-embedded": "catalog:",
     "vue": "catalog:"
   },
