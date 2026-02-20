@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { AnchoredColumnId, DiscreteFilter, FilterUI } from '@platforma-open/milaboratories.top-antibodies.model';
-import type { PlTableFilter } from '@platforma-sdk/model';
+import type { AnchoredColumnId, DiscreteFilter, FilterUI, PlTableFilter } from '@platforma-open/milaboratories.top-antibodies.model';
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from '@platforma-sdk/ui-vue';
 import { ref } from 'vue';
 import { useApp } from '../../app';
@@ -25,13 +24,11 @@ const getColumnLabel = (columnId: AnchoredColumnId | undefined) => {
 };
 
 const addFilter = () => {
-  const ui = app.model.ui;
-
-  if (!Array.isArray(ui.filters)) {
-    ui.filters = [];
+  if (!Array.isArray(app.model.data.filters)) {
+    app.model.data.filters = [];
   }
 
-  ui.filters.push({
+  app.model.data.filters.push({
     id: generateUniqueId(),
     value: undefined,
     filter: { type: 'number_greaterThan', reference: 0 },
@@ -40,7 +37,7 @@ const addFilter = () => {
 };
 
 const resetToDefaults = () => {
-  app.model.ui.filters = app.model.outputs.filterConfig?.defaults?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter | DiscreteFilter }) => ({
+  app.model.data.filters = app.model.outputs.filterConfig?.defaults?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter | DiscreteFilter }) => ({
     id: generateUniqueId(),
     value: defaultFilter.column,
     filter: { ...defaultFilter.default },
@@ -50,10 +47,10 @@ const resetToDefaults = () => {
 
 // Use shared anchor sync logic
 useAnchorSyncedDefaults({
-  getAnchor: () => app.model.args.inputAnchor,
+  getAnchor: () => app.model.data.inputAnchor,
   getConfig: () => app.model.outputs.filterConfig,
   clearState: () => {
-    app.model.ui.filters = [];
+    app.model.data.filters = [];
   },
   applyDefaults: () => {
     resetToDefaults();
@@ -62,7 +59,7 @@ useAnchorSyncedDefaults({
   // Preserve existing user selections on component remount (e.g., when Settings panel reopens)
   // Returns true if existing state uses columns from the current config
   hasExistingStateForConfig: (config) => {
-    const items = app.model.ui.filters ?? [];
+    const items = app.model.data.filters ?? [];
     if (items.length === 0) {
       return false;
     }
@@ -77,16 +74,16 @@ useAnchorSyncedDefaults({
   },
   // Check if there are any items at all (used to avoid clearing on remount before config loads)
   hasAnyItems: () => {
-    const count = app.model.ui.filters?.length ?? 0;
+    const count = app.model.data.filters?.length ?? 0;
     return count > 0;
   },
   // Persisted tracking of which anchor's defaults have been applied
   getInitializedAnchorKey: () => {
-    const key = app.model.ui.filtersInitializedForAnchor;
+    const key = app.model.data.filtersInitializedForAnchor;
     return key;
   },
   setInitializedAnchorKey: (key) => {
-    app.model.ui.filtersInitializedForAnchor = key;
+    app.model.data.filtersInitializedForAnchor = key;
   },
 });
 </script>
@@ -102,7 +99,7 @@ useAnchorSyncedDefaults({
     </PlRow>
 
     <PlElementList
-      v-model:items="app.model.ui.filters"
+      v-model:items="app.model.data.filters"
       :get-item-key="(item: FilterUI) => item.id ?? 0"
       :is-expanded="(item: FilterUI) => item.isExpanded === true"
       :on-expand="(item: FilterUI) => item.isExpanded = !item.isExpanded"
@@ -112,7 +109,7 @@ useAnchorSyncedDefaults({
       </template>
       <template #item-content="{ index }">
         <FilterCard
-          v-model="app.model.ui.filters[index]"
+          v-model="app.model.data.filters[index]"
           :options="app.model.outputs.filterConfig?.options"
         />
       </template>

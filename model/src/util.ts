@@ -1,85 +1,15 @@
 import {
   isLabelColumn,
-  type AxisSpec,
-  type DataInfo,
-  type PColumn,
-  type PColumnValues,
-  type PlRef,
-  type PlTableFilter,
+  type AxisSpec, type PlRef,
   type RenderCtx,
   type RenderCtxLegacy,
   type SUniversalPColumnId,
-  type TreeNodeAccessor,
 } from '@platforma-sdk/model';
-import type { BlockArgs, UiState } from '.';
-
-// @todo: move this type to SDK
-export type Column = PColumn<DataInfo<TreeNodeAccessor> | TreeNodeAccessor | PColumnValues>;
-
-export type AnchoredColumn = {
-  anchorRef: PlRef;
-  anchorName: string;
-  column: Column;
-};
-
-export type AnchoredColumnId = {
-  anchorRef: PlRef;
-  anchorName: string;
-  column: SUniversalPColumnId;
-};
+import type { AnchoredColumn, AnchoredColumnId, BlockArgs, BlockData, Columns, PlTableFiltersDefault } from './types';
 
 export function anchoredColumnId(anchoredColumn: AnchoredColumn): AnchoredColumnId {
   return { ...anchoredColumn, column: anchoredColumn.column.id as SUniversalPColumnId };
 }
-
-export type RankingOrder = {
-  value?: AnchoredColumnId;
-  rankingOrder: 'increasing' | 'decreasing';
-};
-
-export type RankingOrderUI = RankingOrder & {
-  id?: string;
-  isExpanded?: boolean;
-};
-
-/** Filter for matching any of a set of discrete string values */
-export type StringInFilter = {
-  type: 'string_in';
-  /** JSON-encoded string array, e.g. '["Yes","No"]' */
-  reference: string;
-};
-
-/** Filter for excluding a set of discrete string values */
-export type StringNotInFilter = {
-  type: 'string_notIn';
-  /** JSON-encoded string array, e.g. '["Yes","No"]' */
-  reference: string;
-};
-
-export type DiscreteFilter = StringInFilter | StringNotInFilter;
-
-export type Filter = {
-  value?: AnchoredColumnId;
-  filter?: PlTableFilter | DiscreteFilter;
-};
-
-export type FilterUI = Filter & {
-  id?: string;
-  isExpanded?: boolean;
-};
-
-export type PlTableFiltersDefault = {
-  column: AnchoredColumnId;
-  default: PlTableFilter | DiscreteFilter;
-};
-
-export type Columns = {
-  // all props: clones + linked
-  props: AnchoredColumn[];
-  scores: AnchoredColumn[];
-  defaultFilters: PlTableFiltersDefault[];
-  defaultRankingOrder: RankingOrder[];
-};
 
 /**
  * Checks if two cluster axes match by comparing their domains.
@@ -142,7 +72,7 @@ export function getVisibleClusterAxes<T extends { id: unknown; spec: { axesSpec:
   return visibleClusterAxes;
 }
 
-export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<BlockArgs, UiState>, inputAnchor: PlRef | undefined): Columns | undefined {
+export function getColumns(ctx: RenderCtx<BlockArgs, BlockData> | RenderCtxLegacy<BlockArgs, BlockData>, inputAnchor: PlRef | undefined): Columns | undefined {
   const anchor = inputAnchor;
   if (anchor === undefined)
     return undefined;
@@ -307,4 +237,10 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
         isExpanded: false,
       })),
   };
+}
+
+export function getDefaultBlockLabel(data: {
+  datasetLabel?: string;
+}) {
+  return data.datasetLabel || 'Select dataset';
 }

@@ -1,4 +1,4 @@
-import type { Filter, FilterUI, RankingOrder, RankingOrderUI } from './util';
+import type { Filter, FilterUI, RankingOrder, RankingOrderUI } from './types';
 
 export function convertRankingOrderUI(rankingOrder: RankingOrderUI[]): RankingOrder[] {
   return rankingOrder.map((item) => ({
