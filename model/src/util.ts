@@ -32,6 +32,17 @@ export function anchoredColumnId(anchoredColumn: AnchoredColumn): AnchoredColumn
   return { ...anchoredColumn, column: anchoredColumn.column.id as SUniversalPColumnId };
 }
 
+// Sentinel column ID for the computed In Vivo Score ranking
+export const IN_VIVO_SCORE_COLUMN_ID = 'pl7.app/vdj/inVivoScore' as SUniversalPColumnId;
+
+// SHM mutation columns that are replaced by In Vivo Score in ranking.
+export const IN_VIVO_MUTATION_COLUMNS = new Set([
+  'pl7.app/vdj/sequence/fractionCDRMutations',
+  'pl7.app/vdj/sequence/nMutations',
+  'pl7.app/vdj/sequence/nAAMutationsCDR',
+  'pl7.app/vdj/sequence/nAAMutationsFWR',
+]);
+
 export type RankingOrder = {
   value?: AnchoredColumnId;
   rankingOrder: 'increasing' | 'decreasing';
@@ -79,6 +90,8 @@ export type Columns = {
   scores: AnchoredColumn[];
   defaultFilters: PlTableFiltersDefault[];
   defaultRankingOrder: RankingOrder[];
+  /** True when SHM mutation columns are present and In Vivo Score should replace them in ranking */
+  hasInVivoScore: boolean;
 };
 
 /**
@@ -294,17 +307,38 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
     }
   }
 
+  // Detect In Vivo Score availability: all SHM mutation columns present
+  const hasInVivoScore = [...IN_VIVO_MUTATION_COLUMNS].every(
+    (name) => scores.some((s) => s.column.spec.name === name),
+  );
+
+  // Build default ranking, excluding mutation columns when In Vivo Score replaces them
+  const defaultRankingOrder: RankingOrder[] = scores
+    .filter((s) => s.column.spec.valueType !== 'String')
+    .filter((s) => !hasInVivoScore || !IN_VIVO_MUTATION_COLUMNS.has(s.column.spec.name))
+    .map((s) => ({
+      id: `default-rank-${s.column.id}`,
+      value: anchoredColumnId(s),
+      rankingOrder: (s.column.spec.annotations?.['pl7.app/score/rankingOrder'] as 'increasing' | 'decreasing') ?? 'decreasing',
+      isExpanded: false,
+    }));
+
+  if (hasInVivoScore) {
+    defaultRankingOrder.unshift({
+      value: {
+        anchorRef: anchor,
+        anchorName: 'main',
+        column: IN_VIVO_SCORE_COLUMN_ID,
+      },
+      rankingOrder: 'decreasing',
+    });
+  }
+
   return {
     props: [...links, ...cloneProps, ...linkProps],
     scores: scores,
     defaultFilters: defaultFilters,
-    defaultRankingOrder: scores
-      .filter((s) => s.column.spec.valueType !== 'String')
-      .map((s) => ({
-        id: `default-rank-${s.column.id}`,
-        value: anchoredColumnId(s),
-        rankingOrder: (s.column.spec.annotations?.['pl7.app/score/rankingOrder'] as 'increasing' | 'decreasing') ?? 'decreasing',
-        isExpanded: false,
-      })),
+    defaultRankingOrder,
+    hasInVivoScore,
   };
 }
