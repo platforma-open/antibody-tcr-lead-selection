@@ -115,6 +115,30 @@ def apply_filters(df, filter_map):
     return filtered_df
 
 
+def aggregate_across_samples(df):
+    """Collapse sample dimension by summing abundance across samples.
+
+    Only applies when the sampleId column is present (In Vivo Score case).
+    All columns except sampleId and inVivo_primaryAbundance have identical values
+    per clonotype, so grouping by them naturally deduplicates the rows.
+    """
+    if "sampleId" not in df.columns:
+        return df
+
+    # Abundance may be loaded as String with "" for missing values
+    if df["inVivo_primaryAbundance"].dtype == pl.Utf8:
+        df = df.with_columns(
+            pl.col("inVivo_primaryAbundance").replace("", None).cast(pl.Int64)
+        )
+
+    group_cols = [col for col in df.columns 
+                     if col not in ("sampleId", "inVivo_primaryAbundance")]
+    rows_before = df.height
+    df = df.group_by(group_cols).agg(pl.col("inVivo_primaryAbundance").sum())
+    print(f"Aggregated across samples: {rows_before} -> {df.height} rows (summed inVivo_primaryAbundance)")
+    return df
+
+
 def main():
     start_time = time.time()
     print(f"Starting clonotype filtering at {time.strftime('%H:%M:%S')}")
@@ -184,6 +208,9 @@ def main():
                     print(f"Casting column {column} to Float64 based on consensus.")
                 # Most tommon case is that zero values are represented as ""
                 df = df.with_columns(pl.col(column).replace("", float("NaN")).cast(dtype))
+
+    # Collapse sample dimension if present (In Vivo Score case)
+    df = aggregate_across_samples(df)
 
     # Apply filters
     filtering_start = time.time()

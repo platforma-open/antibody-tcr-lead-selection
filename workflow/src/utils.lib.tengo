@@ -281,7 +281,8 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec) {
         for i, col in args.rankingOrder {
             // In Vivo Score: add source columns to the clone table for later computation
             if col.value != undefined && col.value.column == "pl7.app/vdj/inVivoScore" {
-                // Primary abundance is the input anchor itself
+                // Primary abundance is the input anchor itself; it introduces the sampleId axis
+                cloneTable.setAxisHeader(datasetSpec.axesSpec[0], "sampleId")
                 cloneTable.add(columns.getColumn(args.inputAnchor), {header: "inVivo_primaryAbundance"})
                 addedCols = true
                 for key, _ in inVivoScoreSourceColumns {
