@@ -1,6 +1,6 @@
 ll := import("@platforma-sdk/workflow-tengo:ll")
 
-getColumns := func(datasetSpec, addRanking) {
+getColumns := func(datasetSpec, addRanking, addInVivoScore) {
   columns := [{
         column: "top",
         id: "link",
@@ -32,7 +32,21 @@ getColumns := func(datasetSpec, addRanking) {
         }
       }]
   }
-
+  if addInVivoScore {
+    columns = columns + [{
+        column: "inVivoScore",
+        spec: {
+          name: "pl7.app/vdj/inVivoScore",
+          valueType: "Float",
+          domain: {},
+          annotations: {
+            "pl7.app/label": "In Vivo Score",
+            "pl7.app/table/visibility": "optional",
+            "pl7.app/format": ".2f"
+          }
+        }
+      }]
+  }
 
   return {
     axes: [
