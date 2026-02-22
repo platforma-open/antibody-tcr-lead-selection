@@ -134,7 +134,7 @@ def aggregate_across_samples(df):
     group_cols = [col for col in df.columns 
                      if col not in ("sampleId", "inVivo_primaryAbundance")]
     rows_before = df.height
-    df = df.group_by(group_cols).agg(pl.col("inVivo_primaryAbundance").sum())
+    df = df.group_by(group_cols).agg(pl.col("inVivo_primaryAbundance").sum()).sort("clonotypeKey")
     print(f"Aggregated across samples: {rows_before} -> {df.height} rows (summed inVivo_primaryAbundance)")
     return df
 

@@ -259,6 +259,8 @@ def main():
     output_columns['clonotypeKey'] = result['clonotypeKey']
     output_columns['top'] = [1] * result.height
     output_columns['ranked_order'] = result['ranked_order']
+    if 'inVivoScore' in result.columns:
+        output_columns['inVivoScore'] = result['inVivoScore']
 
     simplified_df = pl.DataFrame(output_columns)
 
