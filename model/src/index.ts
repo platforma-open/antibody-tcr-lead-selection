@@ -21,7 +21,7 @@ import {
   deriveLabels,
 } from '@platforma-sdk/model';
 import { getDefaultBlockLabel } from './label';
-import type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter } from './util';
+import type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter, WorkflowPreset } from './util';
 import { anchoredColumnId, clusterAxisDomainsMatch, getColumns, getVisibleClusterAxes, IN_VIVO_MUTATION_COLUMNS, IN_VIVO_SCORE_COLUMN_ID } from './util';
 
 /**
@@ -295,6 +295,8 @@ export type BlockArgs = {
   kabatNumbering?: boolean;
   /** Selected linker column for diversified ranking (grouping by cluster). undefined = no diversification */
   diversificationColumn?: PlRef;
+  /** Selected workflow preset (in-vivo or in-vitro) */
+  preset?: WorkflowPreset;
 };
 
 export type UiState = {
@@ -320,6 +322,7 @@ export const model = BlockModel.create()
     rankingOrder: [],
     filters: [],
     diversificationColumn: undefined,
+    preset: undefined,
   })
 
   .withUiState<UiState>({
@@ -401,8 +404,13 @@ export const model = BlockModel.create()
       column: o.value.column,
     }));
 
-    return { options, defaults: columns.defaultFilters };
-  })
+    return {
+      options,
+      defaults: columns.defaultFilters,
+      inVivoDefaults: columns.inVivoDefaults.filters,
+      inVitroDefaults: columns.inVitroDefaults.filters,
+    };
+  }, { retentive: true })
 
   // Combined ranking config - options and defaults together for atomic updates
   .output('rankingConfig', (ctx) => {
@@ -434,8 +442,24 @@ export const model = BlockModel.create()
       });
     }
 
-    return { options, defaults: columns.defaultRankingOrder };
-  })
+    return {
+      options,
+      defaults: columns.defaultRankingOrder,
+      inVivoDefaults: columns.inVivoDefaults.rankingOrder,
+      inVitroDefaults: columns.inVitroDefaults.rankingOrder,
+    };
+  }, { retentive: true })
+
+  .output('presetConfig', (ctx) => {
+    const columns = getColumns(ctx, ctx.args.inputAnchor);
+    if (columns === undefined) return undefined;
+
+    return {
+      detectedPreset: columns.detectedPreset,
+      hasInVivoScore: columns.hasInVivoScore,
+      hasEnrichmentScores: columns.hasEnrichmentScores,
+    };
+  }, { retentive: true })
 
   .outputWithStatus('pf', (ctx) => {
     const columns = getColumns(ctx, ctx.args.inputAnchor);
@@ -852,4 +876,4 @@ export const model = BlockModel.create()
 export type BlockOutputs = InferOutputsType<typeof model>;
 
 export { getDefaultBlockLabel } from './label';
-export type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter };
+export type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter, WorkflowPreset };

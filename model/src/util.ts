@@ -84,6 +84,13 @@ export type PlTableFiltersDefault = {
   default: PlTableFilter | DiscreteFilter;
 };
 
+export type WorkflowPreset = 'in-vivo' | 'in-vitro';
+
+export type PresetDefaults = {
+  rankingOrder: RankingOrder[];
+  filters: PlTableFiltersDefault[];
+};
+
 export type Columns = {
   // all props: clones + linked
   props: AnchoredColumn[];
@@ -92,6 +99,14 @@ export type Columns = {
   defaultRankingOrder: RankingOrder[];
   /** True when SHM mutation columns are present and In Vivo Score should replace them in ranking */
   hasInVivoScore: boolean;
+  /** True when enrichment score columns are present */
+  hasEnrichmentScores: boolean;
+  /** Auto-detected preset based on available columns */
+  detectedPreset: WorkflowPreset | undefined;
+  /** Default ranking and filter settings for in-vivo workflow */
+  inVivoDefaults: PresetDefaults;
+  /** Default ranking and filter settings for in-vitro workflow */
+  inVitroDefaults: PresetDefaults;
 };
 
 /**
@@ -312,6 +327,18 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
     (name) => scores.some((s) => s.column.spec.name === name),
   );
 
+  // Detect enrichment score columns (pl7.app/vdj/enrichment, pl7.app/vdj/enrichmentQuality, etc.)
+  const ENRICHMENT_COLUMN_PREFIX = 'pl7.app/vdj/enrichment';
+  const isEnrichmentColumn = (name: string) => name.startsWith(ENRICHMENT_COLUMN_PREFIX);
+  const hasEnrichmentScores = scores.some((s) => isEnrichmentColumn(s.column.spec.name));
+
+  // Auto-detect preset based on available columns
+  const detectedPreset: WorkflowPreset | undefined = hasInVivoScore
+    ? 'in-vivo'
+    : hasEnrichmentScores
+      ? 'in-vitro'
+      : undefined;
+
   // Build default ranking, excluding mutation columns when In Vivo Score replaces them
   const defaultRankingOrder: RankingOrder[] = scores
     .filter((s) => s.column.spec.valueType !== 'String')
@@ -334,11 +361,75 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
     });
   }
 
+  // In Vitro defaults: annotation-driven defaults, excluding mutation columns
+  const inVitroRankingOrder: RankingOrder[] = scores
+    .filter((s) => s.column.spec.valueType !== 'String')
+    .filter((s) => !IN_VIVO_MUTATION_COLUMNS.has(s.column.spec.name))
+    .map((s) => ({
+      value: anchoredColumnId(s),
+      rankingOrder: (s.column.spec.annotations?.['pl7.app/score/rankingOrder'] as 'increasing' | 'decreasing') ?? 'decreasing',
+    }));
+
+  const inVitroDefaults: PresetDefaults = {
+    rankingOrder: inVitroRankingOrder,
+    filters: defaultFilters,
+  };
+
+  // In Vivo defaults: In Vivo Score ranking + extra mutation filters
+  const inVivoFilters: PlTableFiltersDefault[] = [...defaultFilters];
+
+  // Add fractionCDRMutations > 0.5 filter if column exists
+  const fractionCDRMutationsCol = scores.find(
+    (s) => s.column.spec.name === 'pl7.app/vdj/sequence/fractionCDRMutations',
+  );
+  if (fractionCDRMutationsCol) {
+    inVivoFilters.push({
+      column: anchoredColumnId(fractionCDRMutationsCol),
+      default: {
+        type: 'number_greaterThan',
+        reference: 0.5,
+      },
+    });
+  }
+
+  // Add nMutations >= 3 filter if column exists
+  const nMutationsCol = scores.find(
+    (s) => s.column.spec.name === 'pl7.app/vdj/sequence/nMutations',
+  );
+  if (nMutationsCol) {
+    inVivoFilters.push({
+      column: anchoredColumnId(nMutationsCol),
+      default: {
+        type: 'number_greaterThanOrEqualTo',
+        reference: 3,
+      },
+    });
+  }
+
+  // Collect enrichment column IDs to exclude from in-vivo defaults
+  const enrichmentColumnIds = new Set(
+    scores
+      .filter((s) => isEnrichmentColumn(s.column.spec.name))
+      .map((s) => anchoredColumnId(s).column),
+  );
+
+  const inVivoDefaults: PresetDefaults = {
+    rankingOrder: defaultRankingOrder.filter((r) => {
+      const col = r.value?.column;
+      return col === IN_VIVO_SCORE_COLUMN_ID || (col !== undefined && !enrichmentColumnIds.has(col));
+    }),
+    filters: inVivoFilters.filter((f) => !enrichmentColumnIds.has(f.column.column)),
+  };
+
   return {
     props: [...links, ...cloneProps, ...linkProps],
     scores: scores,
     defaultFilters: defaultFilters,
     defaultRankingOrder,
     hasInVivoScore,
+    hasEnrichmentScores,
+    detectedPreset,
+    inVivoDefaults,
+    inVitroDefaults,
   };
 }

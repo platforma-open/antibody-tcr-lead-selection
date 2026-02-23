@@ -19,6 +19,8 @@ export interface UseAnchorSyncedDefaultsOptions {
   applyDefaults: () => void;
   /** Whether the config has defaults available */
   hasDefaults: () => boolean;
+  /** Getter for the current preset (used to invalidate defaults when preset changes) */
+  getPreset?: () => string | undefined;
   /**
    * Whether the UI state already has user selections that match the CURRENT config options.
    * Should return true only if existing state uses columns from the current config.
@@ -53,10 +55,12 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
     getAnchor, getConfig, clearState, applyDefaults, hasDefaults,
     hasExistingStateForConfig, hasAnyItems,
     getInitializedAnchorKey, setInitializedAnchorKey,
+    getPreset,
   } = options;
 
-  // Track which anchor's defaults we've applied
+  // Track which anchor+preset combo we've applied defaults for
   const appliedForAnchor = ref<PlRef | null>(null);
+  const appliedForPreset = ref<string | null>(null);
 
   // Extract the config's anchor key for efficient watching (avoids deep: true)
   const configAnchorKey = computed(() => {
@@ -66,15 +70,20 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
     return mainOption?.value?.anchorRef ? JSON.stringify(mainOption.value.anchorRef) : null;
   });
 
+  // Computed preset value for watching
+  const currentPreset = computed(() => getPreset?.() ?? 'none');
+
   // Track the last known anchor to detect actual anchor changes
   const lastKnownAnchor = ref<PlRef | null>(null);
 
-  // Watch inputAnchor and the config's anchor key
+  // Watch inputAnchor, config's anchor key, and preset
   watch(
-    [getAnchor, configAnchorKey],
-    ([currentAnchor, configKey]: [PlRef | undefined, string | null]) => {
+    [getAnchor, configAnchorKey, currentPreset],
+    ([currentAnchor, configKey, preset]: [PlRef | undefined, string | null, string]) => {
       const config = getConfig();
-      const currentAnchorKey = currentAnchor ? JSON.stringify(currentAnchor) : null;
+      // Include preset in anchor key so changing preset invalidates "already initialized"
+      const presetSuffix = getPreset ? `::${getPreset() ?? 'none'}` : '';
+      const currentAnchorKey = currentAnchor ? JSON.stringify(currentAnchor) + presetSuffix : null;
       const initializedAnchorKey = getInitializedAnchorKey?.();
       const isAlreadyInitialized = currentAnchorKey && initializedAnchorKey === currentAnchorKey;
 
@@ -82,20 +91,23 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
       if (!currentAnchor) {
         clearState();
         appliedForAnchor.value = null;
+        appliedForPreset.value = null;
         lastKnownAnchor.value = null;
         setInitializedAnchorKey?.(undefined);
         return;
       }
 
-      // Already applied for this anchor (in this component instance)? Skip
-      if (appliedForAnchor.value && plRefsEqual(appliedForAnchor.value, currentAnchor)) {
+      // Already applied for this anchor+preset combo (in this component instance)? Skip
+      if (appliedForAnchor.value && plRefsEqual(appliedForAnchor.value, currentAnchor)
+        && appliedForPreset.value === preset) {
         return;
       }
 
-      // Already initialized for this anchor (persisted in UI state)? Preserve state
+      // Already initialized for this anchor+preset (persisted in UI state)? Preserve state
       // This handles component remount - user's choices (including empty state) are preserved
       if (isAlreadyInitialized) {
         appliedForAnchor.value = currentAnchor;
+        appliedForPreset.value = preset;
         lastKnownAnchor.value = currentAnchor;
         return;
       }
@@ -111,6 +123,7 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
         const anchorActuallyChanged = !lastKnownAnchor.value || !plRefsEqual(lastKnownAnchor.value, currentAnchor);
         if (anchorActuallyChanged) {
           appliedForAnchor.value = null;
+          appliedForPreset.value = null;
         }
         // Don't update lastKnownAnchor - wait for valid config
         return;
@@ -124,6 +137,7 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
         if (anchorActuallyChanged) {
           clearState();
           appliedForAnchor.value = null;
+          appliedForPreset.value = null;
           setInitializedAnchorKey?.(undefined);
         }
         return;
@@ -134,22 +148,29 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
 
       // Check if existing state matches current config (e.g., after component remount)
       // This must be done AFTER we have valid config to compare against
-      if (hasExistingStateForConfig?.(config)) {
+      // Skip this check when preset changed — user explicitly wants new defaults
+      const presetChanged = appliedForAnchor.value && plRefsEqual(appliedForAnchor.value, currentAnchor)
+        && appliedForPreset.value !== preset;
+      if (!presetChanged && hasExistingStateForConfig?.(config)) {
         appliedForAnchor.value = currentAnchor;
+        appliedForPreset.value = preset;
         setInitializedAnchorKey?.(currentAnchorKey!);
         return;
       }
 
-      // No defaults available - just mark as applied without clearing state
-      // (user might have manually configured items that we should preserve)
-      if (!hasDefaults()) {
+      // No defaults available:
+      // - If preset changed, still apply (clears previous preset's items)
+      // - Otherwise, preserve user's manual configuration
+      if (!hasDefaults() && !presetChanged) {
         appliedForAnchor.value = currentAnchor;
+        appliedForPreset.value = preset;
         setInitializedAnchorKey?.(currentAnchorKey!);
         return;
       }
 
-      // Config is fresh and has defaults - apply them and mark as initialized
+      // Apply defaults (or clear state if defaults are empty)
       appliedForAnchor.value = currentAnchor;
+      appliedForPreset.value = preset;
       setInitializedAnchorKey?.(currentAnchorKey!);
       applyDefaults();
     },

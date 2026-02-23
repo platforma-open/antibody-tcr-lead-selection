@@ -102,6 +102,20 @@ watch(
   { immediate: true },
 );
 
+// Preset options for workflow type
+const presetOptions = [
+  { label: 'In Vivo', value: 'in-vivo' },
+  { label: 'In Vitro', value: 'in-vitro' },
+];
+
+// Reset preset when inputAnchor changes
+watch(
+  () => app.model.args.inputAnchor,
+  () => {
+    app.model.args.preset = undefined;
+  },
+);
+
 // Detect if selected dataset is Immunoglobulins (IG) vs TCR
 const isIGDataset = computed<boolean | undefined>(() => {
   const spec = app.model.outputs.inputAnchorSpec;
@@ -193,6 +207,23 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
           Total number of clonotypes that will be selected.
         </template>
       </PlNumberField>
+
+      <!-- Workflow preset selector -->
+      <PlDropdown
+          v-model="app.model.args.preset"
+          :options="presetOptions"
+          :style="{ width: '320px' }"
+          label="Workflow preset"
+          placeholder="Select preset..."
+      >
+        <template #tooltip>
+          Select the workflow type to apply default ranking and filter settings.
+          <br /><br />
+          <b>In Vivo</b> — ranks by composite In Vivo Score (a weighted combination of SHM mutation metrics and fraction of CDR mutations) and filters by mutation thresholds.
+          <br /><br />
+          <b>In Vitro</b> — ranks by enrichment scores from panning/selection rounds.
+        </template>
+      </PlDropdown>
 
       <!-- Clonotype filtering section -->
       <FilterList />
