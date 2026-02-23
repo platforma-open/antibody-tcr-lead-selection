@@ -295,8 +295,6 @@ export type BlockArgs = {
   kabatNumbering?: boolean;
   /** Selected linker column for diversified ranking (grouping by cluster). undefined = no diversification */
   diversificationColumn?: PlRef;
-  /** Selected workflow preset (in-vivo or in-vitro) */
-  preset?: WorkflowPreset;
 };
 
 export type UiState = {
@@ -311,6 +309,8 @@ export type UiState = {
   filtersInitializedForAnchor?: string;
   /** Tracks which anchor's ranking defaults have been applied (prevents re-applying on panel reopen) */
   rankingsInitializedForAnchor?: string;
+  /** Selected workflow preset (in-vivo or in-vitro) */
+  preset?: WorkflowPreset;
 };
 
 export const model = BlockModel.create()
@@ -322,7 +322,6 @@ export const model = BlockModel.create()
     rankingOrder: [],
     filters: [],
     diversificationColumn: undefined,
-    preset: undefined,
   })
 
   .withUiState<UiState>({

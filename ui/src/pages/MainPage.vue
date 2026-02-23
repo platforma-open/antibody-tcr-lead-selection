@@ -103,16 +103,26 @@ watch(
 );
 
 // Preset options for workflow type
+const NO_PRESET_VALUE = '__no_preset__';
+
 const presetOptions = [
+  { label: 'None', value: NO_PRESET_VALUE },
   { label: 'In Vivo', value: 'in-vivo' },
   { label: 'In Vitro', value: 'in-vitro' },
 ];
+
+const selectedPresetValue = computed<string>({
+  get: () => app.model.ui.preset ?? NO_PRESET_VALUE,
+  set: (v: string) => {
+    app.model.ui.preset = v === NO_PRESET_VALUE ? undefined : v as 'in-vivo' | 'in-vitro';
+  },
+});
 
 // Reset preset when inputAnchor changes
 watch(
   () => app.model.args.inputAnchor,
   () => {
-    app.model.args.preset = undefined;
+    app.model.ui.preset = undefined;
   },
 );
 
@@ -210,18 +220,17 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
 
       <!-- Workflow preset selector -->
       <PlDropdown
-          v-model="app.model.args.preset"
-          :options="presetOptions"
-          :style="{ width: '320px' }"
-          label="Workflow preset"
-          placeholder="Select preset..."
+        v-model="selectedPresetValue"
+        :options="presetOptions"
+        :style="{ width: '320px' }"
+        label="Workflow preset"
       >
         <template #tooltip>
-          Select the workflow type to apply default ranking and filter settings.
+          Pre-configured ranking for common discovery workflows.
           <br /><br />
-          <b>In Vivo</b> — ranks by composite In Vivo Score (a weighted combination of SHM mutation metrics and fraction of CDR mutations) and filters by mutation thresholds.
+          <b>In Vivo (immunization/infection):</b> Ranks by In Vivo Score, calculated from clonal expansion, CDR mutations and germinal center selection metrics. Identifies immune-refined candidates.
           <br /><br />
-          <b>In Vitro</b> — ranks by enrichment scores from panning/selection rounds.
+          <b>In Vitro (display/panning):</b> — Ranks by enrichment across selection rounds. Identifies clones selected for target binding.
         </template>
       </PlDropdown>
 

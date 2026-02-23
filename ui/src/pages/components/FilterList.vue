@@ -42,7 +42,7 @@ const addFilter = () => {
 const getPresetDefaults = () => {
   const config = app.model.outputs.filterConfig;
   if (!config) return undefined;
-  const preset = app.model.args.preset;
+  const preset = app.model.ui.preset;
   if (preset === 'in-vivo') return config.inVivoDefaults;
   if (preset === 'in-vitro') return config.inVitroDefaults;
   return undefined;
@@ -69,7 +69,7 @@ useAnchorSyncedDefaults({
     resetToDefaults();
   },
   hasDefaults: () => (getPresetDefaults()?.length ?? 0) > 0,
-  getPreset: () => app.model.args.preset,
+  getPreset: () => app.model.ui.preset,
   // Preserve existing user selections on component remount (e.g., when Settings panel reopens)
   // Returns true if existing state uses columns from the current config
   hasExistingStateForConfig: (config) => {
