@@ -33,7 +33,8 @@ getColumns := func(datasetSpec, addRanking, addInVivoScore) {
       }]
   }
   if addInVivoScore {
-    columns = columns + [{
+    columns = columns + [
+      {
         column: "inVivoScore",
         spec: {
           name: "pl7.app/vdj/inVivoScore",
@@ -45,7 +46,20 @@ getColumns := func(datasetSpec, addRanking, addInVivoScore) {
             "pl7.app/format": ".2f"
           }
         }
-      }]
+      },
+      {
+        column: "inVivo_primaryAbundance",
+        spec: {
+          name: "pl7.app/vdj/inVivoScore/source/primaryAbundance",
+          valueType: "Float",
+          domain: {},
+          annotations: {
+            "pl7.app/label": "In Vivo: Primary Abundance",
+            "pl7.app/table/visibility": "optional"
+          }
+        }
+      }
+    ]
   }
 
   return {

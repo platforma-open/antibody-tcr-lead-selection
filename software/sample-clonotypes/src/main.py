@@ -256,6 +256,12 @@ def main():
     output_columns = {}
     if diversification_column and diversification_column in df.columns:
         output_columns[diversification_column] = result[diversification_column]
+
+    # Include In Vivo Score source columns if present
+    for col in IN_VIVO_SCORE_SOURCES.keys():
+        if col in result.columns:
+            output_columns[col] = result[col]
+
     output_columns['clonotypeKey'] = result['clonotypeKey']
     output_columns['top'] = [1] * result.height
     output_columns['ranked_order'] = result['ranked_order']
