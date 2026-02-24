@@ -21,8 +21,8 @@ import {
   deriveLabels,
 } from '@platforma-sdk/model';
 import { getDefaultBlockLabel } from './label';
-import type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter } from './util';
-import { anchoredColumnId, clusterAxisDomainsMatch, getColumns, getVisibleClusterAxes } from './util';
+import type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter, WorkflowPreset } from './util';
+import { anchoredColumnId, clusterAxisDomainsMatch, getColumns, getVisibleClusterAxes, IN_VIVO_MUTATION_COLUMNS, IN_VIVO_SCORE_COLUMN_ID } from './util';
 
 /**
  * Checks if any cluster data is present by examining clusterId axes.
@@ -259,6 +259,12 @@ function getDefaultVisibleColumns(
       continue;
     }
 
+    // In Vivo Score column
+    if (col.spec.name === 'pl7.app/vdj/inVivoScore') {
+      visible.add(col.id);
+      continue;
+    }
+
     // KABAT sequence column only when KABAT numbering is enabled
     if (kabatEnabled && col.spec.name.startsWith('pl7.app/vdj/kabatSequence')) {
       visible.add(col.id);
@@ -287,9 +293,8 @@ export type BlockArgs = {
   rankingOrder: RankingOrder[];
   filters: Filter[];
   kabatNumbering?: boolean;
-  disableClusterRanking?: boolean;
-  /** Selected linker column for cluster-based diversification (grouping by cluster) */
-  clusterColumn?: PlRef;
+  /** Selected linker column for diversified ranking (grouping by cluster). undefined = no diversification */
+  diversificationColumn?: PlRef;
 };
 
 export type UiState = {
@@ -304,6 +309,8 @@ export type UiState = {
   filtersInitializedForAnchor?: string;
   /** Tracks which anchor's ranking defaults have been applied (prevents re-applying on panel reopen) */
   rankingsInitializedForAnchor?: string;
+  /** Selected workflow preset (in-vivo or in-vitro) */
+  preset?: WorkflowPreset;
 };
 
 export const model = BlockModel.create()
@@ -314,8 +321,7 @@ export const model = BlockModel.create()
     topClonotypes: 100,
     rankingOrder: [],
     filters: [],
-    disableClusterRanking: false,
-    clusterColumn: undefined,
+    diversificationColumn: undefined,
   })
 
   .withUiState<UiState>({
@@ -397,8 +403,13 @@ export const model = BlockModel.create()
       column: o.value.column,
     }));
 
-    return { options, defaults: columns.defaultFilters };
-  })
+    return {
+      options,
+      defaults: columns.defaultFilters,
+      inVivoDefaults: columns.inVivoDefaults.filters,
+      inVitroDefaults: columns.inVitroDefaults.filters,
+    };
+  }, { retentive: true })
 
   // Combined ranking config - options and defaults together for atomic updates
   .output('rankingConfig', (ctx) => {
@@ -408,7 +419,9 @@ export const model = BlockModel.create()
     const options = getDisambiguatedOptions(
       columns.props.filter((c) =>
         c.column.spec.valueType !== 'String'
-        && c.column.spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true',
+        && c.column.spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true'
+        // Hide mutation columns from ranking when In Vivo Score replaces them
+        && !(columns.hasInVivoScore && IN_VIVO_MUTATION_COLUMNS.has(c.column.spec.name)),
       ),
       (c) => c.column.spec,
     ).map((o) => ({
@@ -416,8 +429,36 @@ export const model = BlockModel.create()
       value: anchoredColumnId(o.value),
     }));
 
-    return { options, defaults: columns.defaultRankingOrder };
-  })
+    // Add synthetic In Vivo Score option when mutation columns are present
+    if (columns.hasInVivoScore) {
+      options.unshift({
+        label: 'In Vivo Score',
+        value: {
+          anchorRef: ctx.args.inputAnchor!,
+          anchorName: 'main',
+          column: IN_VIVO_SCORE_COLUMN_ID,
+        },
+      });
+    }
+
+    return {
+      options,
+      defaults: columns.defaultRankingOrder,
+      inVivoDefaults: columns.inVivoDefaults.rankingOrder,
+      inVitroDefaults: columns.inVitroDefaults.rankingOrder,
+    };
+  }, { retentive: true })
+
+  .output('presetConfig', (ctx) => {
+    const columns = getColumns(ctx, ctx.args.inputAnchor);
+    if (columns === undefined) return undefined;
+
+    return {
+      detectedPreset: columns.detectedPreset,
+      hasInVivoScore: columns.hasInVivoScore,
+      hasEnrichmentScores: columns.hasEnrichmentScores,
+    };
+  }, { retentive: true })
 
   .outputWithStatus('pf', (ctx) => {
     const columns = getColumns(ctx, ctx.args.inputAnchor);
@@ -834,4 +875,4 @@ export const model = BlockModel.create()
 export type BlockOutputs = InferOutputsType<typeof model>;
 
 export { getDefaultBlockLabel } from './label';
-export type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter };
+export type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter, WorkflowPreset };

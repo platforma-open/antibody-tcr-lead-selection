@@ -38,8 +38,18 @@ const addRankColumn = () => {
   });
 };
 
+const getPresetDefaults = () => {
+  const config = app.model.outputs.rankingConfig;
+  if (!config) return undefined;
+  const preset = app.model.ui.preset;
+  if (preset === 'in-vivo') return config.inVivoDefaults;
+  if (preset === 'in-vitro') return config.inVitroDefaults;
+  return undefined;
+};
+
 const resetToDefaults = () => {
-  app.model.ui.rankingOrder = app.model.outputs.rankingConfig?.defaults?.map((defaultRank) => ({
+  const defaults = getPresetDefaults();
+  app.model.ui.rankingOrder = defaults?.map((defaultRank: { value?: AnchoredColumnId; rankingOrder: 'increasing' | 'decreasing' }) => ({
     id: generateUniqueId(),
     value: defaultRank.value,
     rankingOrder: defaultRank.rankingOrder,
@@ -57,7 +67,8 @@ useAnchorSyncedDefaults({
   applyDefaults: () => {
     resetToDefaults();
   },
-  hasDefaults: () => (app.model.outputs.rankingConfig?.defaults?.length ?? 0) > 0,
+  hasDefaults: () => (getPresetDefaults()?.length ?? 0) > 0,
+  getPreset: () => app.model.ui.preset,
   // Preserve existing user selections on component remount (e.g., when Settings panel reopens)
   // Returns true if existing state uses columns from the current config
   hasExistingStateForConfig: (config) => {

@@ -3,6 +3,13 @@
 slices := import("@platforma-sdk/workflow-tengo:slices")
 json := import("json")
 
+// PColumn names used as source columns for In Vivo Score computation.
+// Primary abundance is resolved separately via specific annotations.
+inVivoScoreSourceColumns := {
+    "fractionCDR": "pl7.app/vdj/sequence/fractionCDRMutations",
+    "nMutations": "pl7.app/vdj/sequence/nMutations"
+}
+
 /**
  * Checks if two clusterId axes have matching domains.
  * Used to determine if two columns belong to the same clustering run.
@@ -169,18 +176,18 @@ buildSortedLinkers := func(columns, datasetSpec) {
 /**
  * Resolves cluster column reference to header name by matching against sortedLinkers.
  * 
- * @param args - Arguments containing clusterColumn
+ * @param args - Arguments containing diversificationColumn
  * @param columns - PBundle containing all columns
  * @param sortedLinkers - List of linker columns in proper order
  * @return Cluster column header string or undefined
  */
 resolveClusterColumnHeader := func(args, columns, sortedLinkers) {
-    if is_undefined(args.clusterColumn) {
+    if is_undefined(args.diversificationColumn) {
         return undefined
     }
-    
-    // Get the spec for the selected cluster column
-    selectedLinkerSpec := columns.getSpec(args.clusterColumn)
+
+    // Get the spec for the selected diversification column
+    selectedLinkerSpec := columns.getSpec(args.diversificationColumn)
     if is_undefined(selectedLinkerSpec) {
         return undefined
     }
@@ -220,7 +227,7 @@ resolveClusterColumnHeader := func(args, columns, sortedLinkers) {
  * 
  * @param pframes - PFrames import
  * @param columns - PBundle containing all columns
- * @param args - Arguments containing filters, rankingOrder, clusterColumn
+ * @param args - Arguments containing filters, rankingOrder, diversificationColumn
  * @param datasetSpec - Dataset specification with axes
  * @return Map with keys: cloneTable, filterMap, rankingMap, sortedLinkers, clusterColumnHeader, addedCols
  */
@@ -272,6 +279,21 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec) {
     
     if len(args.rankingOrder) > 0 {
         for i, col in args.rankingOrder {
+            // In Vivo Score: add source columns to the clone table for later computation
+            if col.value != undefined && col.value.column == "pl7.app/vdj/inVivoScore" {
+                // Primary abundance is the input anchor itself; it introduces the sampleId axis
+                cloneTable.setAxisHeader(datasetSpec.axesSpec[0], "sampleId")
+                cloneTable.add(columns.getColumn(args.inputAnchor), {header: "inVivo_primaryAbundance"})
+                addedCols = true
+                for key, _ in inVivoScoreSourceColumns {
+                    for srcCol in columns.getColumns("inVivo_" + key) {
+                        cloneTable.add(srcCol, {header: "inVivo_" + key})
+                        addedCols = true
+                    }
+                }
+                rankingMap["inVivoScore"] = col.rankingOrder
+                continue
+            }
             // we check for value presence and for actual pcolumn (cases where upstream block is deleted)
             if col.value != undefined && columns.getColumn(col.value.column).spec != undefined {
                 // Process the ranking column to determine header and cluster axis
@@ -401,7 +423,7 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec) {
         cloneTable.cpu(1)
         builtTable = cloneTable.build()
         
-        // Resolve clusterColumn ref to header name
+        // Resolve diversificationColumn ref to header name
         clusterColumnHeader = resolveClusterColumnHeader(args, columns, sortedLinkers)
     }
     
@@ -641,5 +663,6 @@ export {
     detectBulkChain: detectBulkChain,
     initializeAssemSeqTable: initializeAssemSeqTable,
     formatFilterDescription: formatFilterDescription,
-    buildFilterTraceLabel: buildFilterTraceLabel
+    buildFilterTraceLabel: buildFilterTraceLabel,
+    inVivoScoreSourceColumns: inVivoScoreSourceColumns
 }

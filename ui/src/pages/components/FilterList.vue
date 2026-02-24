@@ -39,8 +39,18 @@ const addFilter = () => {
   });
 };
 
+const getPresetDefaults = () => {
+  const config = app.model.outputs.filterConfig;
+  if (!config) return undefined;
+  const preset = app.model.ui.preset;
+  if (preset === 'in-vivo') return config.inVivoDefaults;
+  if (preset === 'in-vitro') return config.inVitroDefaults;
+  return undefined;
+};
+
 const resetToDefaults = () => {
-  app.model.ui.filters = app.model.outputs.filterConfig?.defaults?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter | DiscreteFilter }) => ({
+  const defaults = getPresetDefaults();
+  app.model.ui.filters = defaults?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter | DiscreteFilter }) => ({
     id: generateUniqueId(),
     value: defaultFilter.column,
     filter: { ...defaultFilter.default },
@@ -58,7 +68,8 @@ useAnchorSyncedDefaults({
   applyDefaults: () => {
     resetToDefaults();
   },
-  hasDefaults: () => (app.model.outputs.filterConfig?.defaults?.length ?? 0) > 0,
+  hasDefaults: () => (getPresetDefaults()?.length ?? 0) > 0,
+  getPreset: () => app.model.ui.preset,
   // Preserve existing user selections on component remount (e.g., when Settings panel reopens)
   // Returns true if existing state uses columns from the current config
   hasExistingStateForConfig: (config) => {

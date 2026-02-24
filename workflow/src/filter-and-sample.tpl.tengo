@@ -40,8 +40,16 @@ self.body(func(inputs) {
     // Save filtered parquet file
     filteredClonotypes := filterResult.getFile("filteredClonotypes.parquet")
 
-    // Store outputs 
-    sampledColsParams := sampledColsConv.getColumns(datasetSpec, false) // No ranking column
+    // Check if In Vivo Score is in the ranking map
+    hasInVivoScore := false
+    for key, _ in rankingMap {
+        if key == "inVivoScore" {
+            hasInVivoScore = true
+        }
+    }
+
+    // Store outputs
+    sampledColsParams := sampledColsConv.getColumns(datasetSpec, false, false) // No ranking column
     filteredClonotypesPf := xsv.importFile(filteredClonotypes, "parquet", sampledColsParams,
                                         {cpu: 1, mem: "16GiB"})
 
@@ -62,12 +70,9 @@ self.body(func(inputs) {
 			arg("--n").arg(string(topClonotypes)).
 			arg("--ranking-map").arg(string(json.encode(rankingMap)))
 
-		// Add optional parameters if provided in block args
-		if inputs.disableClusterRanking {
-			builder = builder.arg("--disable-cluster-ranking")
-		}
-		if inputs.clusterColumn != undefined && inputs.clusterColumn != "" {
-			builder = builder.arg("--cluster-column").arg(inputs.clusterColumn)
+		// Add diversification column if provided
+		if inputs.diversificationColumn != undefined && inputs.diversificationColumn != "" {
+			builder = builder.arg("--diversification-column").arg(inputs.diversificationColumn)
 		}
 
 		sampleClones := builder.
@@ -80,8 +85,8 @@ self.body(func(inputs) {
 		// Save top clonotypes parquet file
 		finalClonotypes = sampleClones.getFile("sampledClonotypes_top.parquet")
 		
-		// Store outputs 
-        sampledColsParams := sampledColsConv.getColumns(datasetSpec, true) // Add ranking column
+		// Store outputs
+        sampledColsParams := sampledColsConv.getColumns(datasetSpec, true, hasInVivoScore) // Add ranking column
 		sampledColumnsPf := xsv.importFile(finalClonotypes, "parquet", sampledColsParams,
 											{cpu: 1, mem: "16GiB"})
 		outputs["sampledRows"] = pframes.exportFrame(sampledColumnsPf)
@@ -91,7 +96,7 @@ self.body(func(inputs) {
 
     // Export only the sampling column to be used as a filter downstream
     sampledExportsParams := sampledExportConv.getColumns(datasetSpec, filterMap,
-        rankingMap, inputs.disableClusterRanking, inputs.rawClusterColumn, topClonotypes)
+        rankingMap, inputs.diversificationColumn, topClonotypes)
     sampledColumnsOnlyPf := xsv.importFile(finalClonotypes, "parquet", sampledExportsParams,
                                         {cpu: 1, mem: "16GiB"})
 

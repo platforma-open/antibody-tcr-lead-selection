@@ -72,56 +72,58 @@ const clusterColumnOptionsWithNone = computed(() => {
 // Selected cluster column value for the dropdown
 const selectedClusterColumnValue = computed<string | undefined>({
   get: () => {
-    if (app.model.args.disableClusterRanking) {
-      return NO_DIVERSIFICATION_VALUE;
-    }
-    if (app.model.args.clusterColumn) {
-      return JSON.stringify(app.model.args.clusterColumn);
-    }
-    return undefined;
+    if (!app.model.args.diversificationColumn) return NO_DIVERSIFICATION_VALUE;
+    return JSON.stringify(app.model.args.diversificationColumn);
   },
   set: (v: string | undefined) => {
-    if (v === NO_DIVERSIFICATION_VALUE || v === undefined) {
-      app.model.args.disableClusterRanking = true;
-      app.model.args.clusterColumn = undefined;
-    } else {
-      app.model.args.disableClusterRanking = undefined; // Clear flag when cluster column is selected
-      app.model.args.clusterColumn = JSON.parse(v) as PlRef;
-    }
+    app.model.args.diversificationColumn
+        = (v === NO_DIVERSIFICATION_VALUE || v === undefined) ? undefined : JSON.parse(v) as PlRef;
   },
 });
 
-// Clear clusterColumn when inputAnchor changes (old value is invalid for new dataset)
+// Clear diversificationColumn when inputAnchor changes (old value is invalid for new dataset)
 watch(
   () => app.model.args.inputAnchor,
   (newAnchor, oldAnchor) => {
-    // Only clear if anchor actually changed (not on initial load)
     if (oldAnchor && newAnchor && JSON.stringify(oldAnchor) !== JSON.stringify(newAnchor)) {
-      app.model.args.clusterColumn = undefined;
-      // Don't reset disableClusterRanking - preserve user's diversification preference
+      app.model.args.diversificationColumn = undefined;
     }
   },
 );
 
-// Auto-set default clusterColumn when options become available
+// Auto-set default diversificationColumn when options become available
 watch(
   () => app.model.outputs.clusterColumnOptions,
   (options) => {
-    // Only set default if:
-    // - options are available
-    // - clusterColumn is not set
-    // - disableClusterRanking is not explicitly true
-    if (
-      options
-      && options.length > 0
-      && !app.model.args.clusterColumn
-      && app.model.args.disableClusterRanking !== true
-    ) {
-      app.model.args.clusterColumn = options[0].ref;
-      app.model.args.disableClusterRanking = undefined; // Clear flag (not disabled)
+    if (options && options.length > 0 && !app.model.args.diversificationColumn) {
+      app.model.args.diversificationColumn = options[0].ref;
     }
   },
   { immediate: true },
+);
+
+// Preset options for workflow type
+const NO_PRESET_VALUE = '__no_preset__';
+
+const presetOptions = [
+  { label: 'None', value: NO_PRESET_VALUE },
+  { label: 'In Vivo', value: 'in-vivo' },
+  { label: 'In Vitro', value: 'in-vitro' },
+];
+
+const selectedPresetValue = computed<string>({
+  get: () => app.model.ui.preset ?? NO_PRESET_VALUE,
+  set: (v: string) => {
+    app.model.ui.preset = v === NO_PRESET_VALUE ? undefined : v as 'in-vivo' | 'in-vitro';
+  },
+});
+
+// Reset preset when inputAnchor changes
+watch(
+  () => app.model.args.inputAnchor,
+  () => {
+    app.model.ui.preset = undefined;
+  },
 );
 
 // Detect if selected dataset is Immunoglobulins (IG) vs TCR
@@ -215,6 +217,22 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
           Total number of clonotypes that will be selected.
         </template>
       </PlNumberField>
+
+      <!-- Workflow preset selector -->
+      <PlDropdown
+        v-model="selectedPresetValue"
+        :options="presetOptions"
+        :style="{ width: '320px' }"
+        label="Workflow preset"
+      >
+        <template #tooltip>
+          Pre-configured ranking for common discovery workflows.
+          <br /><br />
+          <b>In Vivo (immunization/infection):</b> Ranks by In Vivo Score, calculated from clonal expansion, CDR mutations and germinal center selection metrics. Identifies immune-refined candidates.
+          <br /><br />
+          <b>In Vitro (display/panning):</b> — Ranks by enrichment across selection rounds. Identifies clones selected for target binding.
+        </template>
+      </PlDropdown>
 
       <!-- Clonotype filtering section -->
       <FilterList />

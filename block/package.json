@@ -28,7 +28,7 @@
       "url": "https://github.com/platforma-open/antibody-tcr-lead-selection",
       "docs": "https://docs.platforma.bio/guides/antibody-discovery/lead-selection/",
       "support": "mailto:support@milaboratories.com",
-      "description": "Ranks and selects top antibody or TCR lead candidates based on configurable scoring metrics and filters to prioritize the most promising candidates for downstream characterization.",
+      "description": "Ranks and selects top antibody or TCR lead candidates using configurable scoring, filtering, and diversified ranking with built-in In Vivo and In Vitro workflow presets.",
       "longDescription": "file:../docs/description.md",
       "changelog": "file:../CHANGELOG.md",
       "tags": [
