@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies.sample-clonotypes",
-  "version": "1.9.3",
+  "version": "2.0.0",
   "scripts": {
     "build": "pl-pkg build",
     "prepublishOnly": "pl-pkg prepublish",

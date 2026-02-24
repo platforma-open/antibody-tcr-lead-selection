@@ -1,5 +1,16 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 2.0.0
+
+### Major Changes
+
+- 590699a: Introduce diverisified ranking, in-vivo score estimation and workflow presets
+
+### Patch Changes
+
+- Updated dependencies [590699a]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@2.0.0
+
 ## 1.17.6
 
 ### Patch Changes
