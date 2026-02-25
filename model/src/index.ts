@@ -474,8 +474,10 @@ export const model = BlockModel.create()
     const blockColumns = columns.props.map((c) => c.column);
     const suitableSpec = (spec: PColumnSpec) =>
       !isHiddenFromUIColumn(spec) && !isHiddenFromGraphColumn(spec);
-    const allColumns = getRelatedColumns(ctx, { columns: blockColumns, predicate: suitableSpec });
-    const msaColumns = allColumns.filter((col) => !isLinkerColumn(col.spec));
+    const allColumns
+        = getRelatedColumns(ctx, { columns: blockColumns, predicate: suitableSpec }) ?? [];
+    const msaColumns
+        = allColumns.filter((col) => !isLinkerColumn(col.spec));
     return ctx.createPFrame(msaColumns);
   })
 
