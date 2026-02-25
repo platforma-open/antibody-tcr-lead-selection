@@ -64,7 +64,7 @@ const multipleSequenceAlignmentOpen = ref(false);
 <template>
   <PlBlockPage>
     <GraphMaker
-      v-model="app.model.ui.graphStateUMAP"
+      v-model="app.model.data.graphStateUMAP"
       v-model:selection="selection"
       chartType="scatterplot-umap"
       :data-state-key="app.model.outputs.umapPf"
@@ -89,7 +89,7 @@ const multipleSequenceAlignmentOpen = ref(false);
     >
       <template #title>Multiple Sequence Alignment</template>
       <PlMultiSequenceAlignment
-        v-model="app.model.ui.alignmentModel"
+        v-model="app.model.data.alignmentModel"
         :sequence-column-predicate="isSequenceColumn"
         :p-frame="app.model.outputs.pf?.ok ? app.model.outputs.pf.value : undefined"
         :selection="selection"

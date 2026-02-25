@@ -28,7 +28,7 @@ import RankList from './components/RankList.vue';
 
 const app = useApp();
 
-const settingsOpen = ref(app.model.args.inputAnchor === undefined);
+const settingsOpen = ref(app.model.data.inputAnchor === undefined);
 const multipleSequenceAlignmentOpen = ref(false);
 
 // Watch for when the workflow starts running and close settings
@@ -49,8 +49,8 @@ const selection = ref<PlSelectionModel>({
 
 // Temporary typed bridge until model types are regenerated
 const kabatNumbering = computed<boolean>({
-  get: () => (app.model.args.kabatNumbering ?? false),
-  set: (v: boolean) => (app.model.args.kabatNumbering = v),
+  get: () => (app.model.data.kabatNumbering ?? false),
+  set: (v: boolean) => (app.model.data.kabatNumbering = v),
 });
 
 // Special value for "No diversification" option
@@ -72,21 +72,21 @@ const clusterColumnOptionsWithNone = computed(() => {
 // Selected cluster column value for the dropdown
 const selectedClusterColumnValue = computed<string | undefined>({
   get: () => {
-    if (!app.model.args.diversificationColumn) return NO_DIVERSIFICATION_VALUE;
-    return JSON.stringify(app.model.args.diversificationColumn);
+    if (!app.model.data.diversificationColumn) return NO_DIVERSIFICATION_VALUE;
+    return JSON.stringify(app.model.data.diversificationColumn);
   },
   set: (v: string | undefined) => {
-    app.model.args.diversificationColumn
+    app.model.data.diversificationColumn
         = (v === NO_DIVERSIFICATION_VALUE || v === undefined) ? undefined : JSON.parse(v) as PlRef;
   },
 });
 
 // Clear diversificationColumn when inputAnchor changes (old value is invalid for new dataset)
 watch(
-  () => app.model.args.inputAnchor,
+  () => app.model.data.inputAnchor,
   (newAnchor, oldAnchor) => {
     if (oldAnchor && newAnchor && JSON.stringify(oldAnchor) !== JSON.stringify(newAnchor)) {
-      app.model.args.diversificationColumn = undefined;
+      app.model.data.diversificationColumn = undefined;
     }
   },
 );
@@ -95,8 +95,8 @@ watch(
 watch(
   () => app.model.outputs.clusterColumnOptions,
   (options) => {
-    if (options && options.length > 0 && !app.model.args.diversificationColumn) {
-      app.model.args.diversificationColumn = options[0].ref;
+    if (options && options.length > 0 && !app.model.data.diversificationColumn) {
+      app.model.data.diversificationColumn = options[0].ref;
     }
   },
   { immediate: true },
@@ -112,17 +112,17 @@ const presetOptions = [
 ];
 
 const selectedPresetValue = computed<string>({
-  get: () => app.model.ui.preset ?? NO_PRESET_VALUE,
+  get: () => app.model.data.preset ?? NO_PRESET_VALUE,
   set: (v: string) => {
-    app.model.ui.preset = v === NO_PRESET_VALUE ? undefined : v as 'in-vivo' | 'in-vitro';
+    app.model.data.preset = v === NO_PRESET_VALUE ? undefined : v as 'in-vivo' | 'in-vitro';
   },
 });
 
 // Reset preset when inputAnchor changes
 watch(
-  () => app.model.args.inputAnchor,
+  () => app.model.data.inputAnchor,
   () => {
-    app.model.ui.preset = undefined;
+    app.model.data.preset = undefined;
   },
 );
 
@@ -154,14 +154,14 @@ const validateTopClonotypes = (value: number | undefined): string | undefined =>
 };
 
 // Disable and reset Kabat until sampling number is set
-const isSamplingConfigured = computed<boolean>(() => app.model.args.topClonotypes !== undefined);
-watch(() => app.model.args.topClonotypes, (newVal) => {
+const isSamplingConfigured = computed<boolean>(() => app.model.data.topClonotypes !== undefined);
+watch(() => app.model.data.topClonotypes, (newVal) => {
   if (newVal === undefined) kabatNumbering.value = false;
 });
 
 // Reset table state when dataset or Kabat toggle changes to re-apply defaults (like optional visibility)
-watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
-  app.model.ui.tableState = createPlDataTableStateV2();
+watch(() => [app.model.data.inputAnchor, app.model.data.kabatNumbering], () => {
+  app.model.data.tableState = createPlDataTableStateV2();
 });
 </script>
 
@@ -184,7 +184,7 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
       </PlBtnGhost>
     </template>
     <PlAgDataTableV2
-      v-model="app.model.ui.tableState"
+      v-model="app.model.data.tableState"
       v-model:selection="selection"
       :settings="tableSettings"
       :not-ready-text="strings.callToActions.configureSettingsAndRun"
@@ -197,7 +197,7 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
 
       <!-- First element: Select dataset -->
       <PlDropdownRef
-        v-model="app.model.args.inputAnchor"
+        v-model="app.model.data.inputAnchor"
         :options="app.model.outputs.inputOptions"
         :style="{ width: '320px' }"
         label="Select dataset"
@@ -207,11 +207,11 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
 
       <!-- Number of clonotypes to select -->
       <PlNumberField
-        v-model="app.model.args.topClonotypes"
+        v-model="app.model.data.topClonotypes"
         :style="{ width: '320px' }"
         label="Number of clonotypes to select"
         :step="1"
-        :error-message="validateTopClonotypes(app.model.args.topClonotypes)"
+        :error-message="validateTopClonotypes(app.model.data.topClonotypes)"
       >
         <template #tooltip>
           Total number of clonotypes that will be selected.
@@ -271,7 +271,7 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
       </template>
 
       <PlAlert
-        v-if="app.model.args.rankingOrder.some((order) => order.value === undefined)" type="warn"
+        v-if="app.model.data.rankingOrder.some((order) => order.value === undefined)" type="warn"
         :style="{ width: '320px' }"
       >
         {{ "Warning: Please remove or assign values to empty ranking columns" }}
@@ -284,7 +284,7 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
     >
       <template #title>Multiple Sequence Alignment</template>
       <PlMultiSequenceAlignment
-        v-model="app.model.ui.alignmentModel"
+        v-model="app.model.data.alignmentModel"
         :sequence-column-predicate="isSequenceColumn"
         :p-frame="app.model.outputs.pf?.ok ? app.model.outputs.pf.value : undefined"
         :selection="selection"
