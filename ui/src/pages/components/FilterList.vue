@@ -24,7 +24,7 @@ const getColumnLabel = (columnId: AnchoredColumnId | undefined) => {
 };
 
 const addFilter = () => {
-  const ui = app.model.ui;
+  const ui = app.model.data;
 
   if (!Array.isArray(ui.filters)) {
     ui.filters = [];
@@ -41,7 +41,7 @@ const addFilter = () => {
 const getPresetDefaults = () => {
   const config = app.model.outputs.filterConfig;
   if (!config) return undefined;
-  const preset = app.model.ui.preset;
+  const preset = app.model.data.preset;
   if (preset === 'in-vivo') return config.inVivoDefaults;
   if (preset === 'in-vitro') return config.inVitroDefaults;
   return undefined;
@@ -49,7 +49,7 @@ const getPresetDefaults = () => {
 
 const resetToDefaults = () => {
   const defaults = getPresetDefaults();
-  app.model.ui.filters = defaults?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter | DiscreteFilter }) => ({
+  app.model.data.filters = defaults?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter | DiscreteFilter }) => ({
     id: generateUniqueId(),
     value: defaultFilter.column,
     filter: { ...defaultFilter.default },
@@ -59,20 +59,20 @@ const resetToDefaults = () => {
 
 // Use shared anchor sync logic
 useAnchorSyncedDefaults({
-  getAnchor: () => app.model.args.inputAnchor,
+  getAnchor: () => app.model.data.inputAnchor,
   getConfig: () => app.model.outputs.filterConfig,
   clearState: () => {
-    app.model.ui.filters = [];
+    app.model.data.filters = [];
   },
   applyDefaults: () => {
     resetToDefaults();
   },
   hasDefaults: () => (getPresetDefaults()?.length ?? 0) > 0,
-  getPreset: () => app.model.ui.preset,
+  getPreset: () => app.model.data.preset,
   // Preserve existing user selections on component remount (e.g., when Settings panel reopens)
   // Returns true if existing state uses columns from the current config
   hasExistingStateForConfig: (config) => {
-    const items = app.model.ui.filters ?? [];
+    const items = app.model.data.filters ?? [];
     if (items.length === 0) {
       return false;
     }
@@ -87,16 +87,16 @@ useAnchorSyncedDefaults({
   },
   // Check if there are any items at all (used to avoid clearing on remount before config loads)
   hasAnyItems: () => {
-    const count = app.model.ui.filters?.length ?? 0;
+    const count = app.model.data.filters?.length ?? 0;
     return count > 0;
   },
   // Persisted tracking of which anchor's defaults have been applied
   getInitializedAnchorKey: () => {
-    const key = app.model.ui.filtersInitializedForAnchor;
+    const key = app.model.data.filtersInitializedForAnchor;
     return key;
   },
   setInitializedAnchorKey: (key) => {
-    app.model.ui.filtersInitializedForAnchor = key;
+    app.model.data.filtersInitializedForAnchor = key;
   },
 });
 </script>
@@ -112,7 +112,7 @@ useAnchorSyncedDefaults({
     </PlRow>
 
     <PlElementList
-      v-model:items="app.model.ui.filters"
+      v-model:items="app.model.data.filters"
       :get-item-key="(item: FilterUI) => item.id ?? 0"
       :is-expanded="(item: FilterUI) => item.isExpanded === true"
       :on-expand="(item: FilterUI) => item.isExpanded = !item.isExpanded"
@@ -122,7 +122,7 @@ useAnchorSyncedDefaults({
       </template>
       <template #item-content="{ index }">
         <FilterCard
-          v-model="app.model.ui.filters[index]"
+          v-model="app.model.data.filters[index]"
           :options="app.model.outputs.filterConfig?.options"
         />
       </template>

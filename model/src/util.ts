@@ -1,31 +1,12 @@
 import {
   isLabelColumn,
   type AxisSpec,
-  type DataInfo,
-  type PColumn,
-  type PColumnValues,
   type PlRef,
   type RenderCtx,
   type RenderCtxLegacy,
   type SUniversalPColumnId,
-  type TreeNodeAccessor,
 } from '@platforma-sdk/model';
-import type { BlockArgs, UiState } from '.';
-
-// @todo: move this type to SDK
-export type Column = PColumn<DataInfo<TreeNodeAccessor> | TreeNodeAccessor | PColumnValues>;
-
-export type AnchoredColumn = {
-  anchorRef: PlRef;
-  anchorName: string;
-  column: Column;
-};
-
-export type AnchoredColumnId = {
-  anchorRef: PlRef;
-  anchorName: string;
-  column: SUniversalPColumnId;
-};
+import type { AnchoredColumn, AnchoredColumnId, BlockArgs, BlockData, Columns, PlTableFiltersDefault, RankingOrder } from './types';
 
 export function anchoredColumnId(anchoredColumn: AnchoredColumn): AnchoredColumnId {
   return { ...anchoredColumn, column: anchoredColumn.column.id as SUniversalPColumnId };
@@ -41,89 +22,6 @@ export const IN_VIVO_MUTATION_COLUMNS = new Set([
   'pl7.app/vdj/sequence/nAAMutationsCDR',
   'pl7.app/vdj/sequence/nAAMutationsFWR',
 ]);
-
-export type RankingOrder = {
-  value?: AnchoredColumnId;
-  rankingOrder: 'increasing' | 'decreasing';
-};
-
-export type RankingOrderUI = RankingOrder & {
-  id?: string;
-  isExpanded?: boolean;
-};
-
-/** Filter for matching any of a set of discrete string values */
-export type StringInFilter = {
-  type: 'string_in';
-  /** JSON-encoded string array, e.g. '["Yes","No"]' */
-  reference: string;
-};
-
-/** Filter for excluding a set of discrete string values */
-export type StringNotInFilter = {
-  type: 'string_notIn';
-  /** JSON-encoded string array, e.g. '["Yes","No"]' */
-  reference: string;
-};
-
-export type DiscreteFilter = StringInFilter | StringNotInFilter;
-
-// temporary type, will be replaced with FilterUi from sdk/model
-export type PlTableFilter =
-  | DiscreteFilter
-  | { type: 'isNA' }
-  | { type: 'isNotNA' }
-  | { type: 'string_equals'
-    | 'string_notEquals'
-    | 'string_contains'
-    | 'string_doesNotContain';
-  reference: string; }
-  | { type: 'number_greaterThan'
-    | 'number_greaterThanOrEqualTo'
-    | 'number_lessThan'
-    | 'number_lessThanOrEqualTo'
-    | 'number_equals'
-    | 'number_notEquals';
-  reference: number; };
-export type Filter = {
-  value?: AnchoredColumnId;
-  filter?: PlTableFilter | DiscreteFilter;
-};
-
-export type FilterUI = Filter & {
-  id?: string;
-  isExpanded?: boolean;
-};
-
-export type PlTableFiltersDefault = {
-  column: AnchoredColumnId;
-  default: PlTableFilter | DiscreteFilter;
-};
-
-export type WorkflowPreset = 'in-vivo' | 'in-vitro';
-
-export type PresetDefaults = {
-  rankingOrder: RankingOrder[];
-  filters: PlTableFiltersDefault[];
-};
-
-export type Columns = {
-  // all props: clones + linked
-  props: AnchoredColumn[];
-  scores: AnchoredColumn[];
-  defaultFilters: PlTableFiltersDefault[];
-  defaultRankingOrder: RankingOrder[];
-  /** True when SHM mutation columns are present and In Vivo Score should replace them in ranking */
-  hasInVivoScore: boolean;
-  /** True when enrichment score columns are present */
-  hasEnrichmentScores: boolean;
-  /** Auto-detected preset based on available columns */
-  detectedPreset: WorkflowPreset | undefined;
-  /** Default ranking and filter settings for in-vivo workflow */
-  inVivoDefaults: PresetDefaults;
-  /** Default ranking and filter settings for in-vitro workflow */
-  inVitroDefaults: PresetDefaults;
-};
 
 /**
  * Checks if two cluster axes match by comparing their domains.
@@ -186,7 +84,7 @@ export function getVisibleClusterAxes<T extends { id: unknown; spec: { axesSpec:
   return visibleClusterAxes;
 }
 
-export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<BlockArgs, UiState>, inputAnchor: PlRef | undefined): Columns | undefined {
+export function getColumns(ctx: RenderCtx<BlockArgs, BlockData> | RenderCtxLegacy<BlockArgs, BlockData>, inputAnchor: PlRef | undefined): Columns | undefined {
   const anchor = inputAnchor;
   if (anchor === undefined)
     return undefined;
@@ -349,10 +247,10 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
   const hasEnrichmentScores = scores.some((s) => isEnrichmentColumn(s.column.spec.name));
 
   // Auto-detect preset based on available columns
-  const detectedPreset: WorkflowPreset | undefined = hasInVivoScore
-    ? 'in-vivo'
+  const detectedPreset = hasInVivoScore
+    ? 'in-vivo' as const
     : hasEnrichmentScores
-      ? 'in-vitro'
+      ? 'in-vitro' as const
       : undefined;
 
   // Build default ranking, excluding mutation columns when In Vivo Score replaces them
@@ -378,7 +276,7 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
   }
 
   // In Vitro defaults: annotation-driven defaults, excluding mutation columns
-  const inVitroRankingOrder: RankingOrder[] = scores
+  const inVitroRankingOrder = scores
     .filter((s) => s.column.spec.valueType !== 'String')
     .filter((s) => !IN_VIVO_MUTATION_COLUMNS.has(s.column.spec.name))
     .map((s) => ({
@@ -386,7 +284,7 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
       rankingOrder: (s.column.spec.annotations?.['pl7.app/score/rankingOrder'] as 'increasing' | 'decreasing') ?? 'decreasing',
     }));
 
-  const inVitroDefaults: PresetDefaults = {
+  const inVitroDefaults = {
     rankingOrder: inVitroRankingOrder,
     filters: defaultFilters,
   };
@@ -429,7 +327,7 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
       .map((s) => anchoredColumnId(s).column),
   );
 
-  const inVivoDefaults: PresetDefaults = {
+  const inVivoDefaults = {
     rankingOrder: defaultRankingOrder.filter((r) => {
       const col = r.value?.column;
       return col === IN_VIVO_SCORE_COLUMN_ID || (col !== undefined && !enrichmentColumnIds.has(col));
@@ -448,4 +346,10 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
     inVivoDefaults,
     inVitroDefaults,
   };
+}
+
+export function getDefaultBlockLabel(data: {
+  datasetLabel?: string;
+}) {
+  return data.datasetLabel || 'Select dataset';
 }
