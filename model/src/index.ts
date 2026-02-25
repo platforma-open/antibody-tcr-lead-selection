@@ -19,6 +19,10 @@ import {
   createPlDataTableStateV2,
   createPlDataTableV2,
   deriveLabels,
+  getRelatedColumns,
+  isHiddenFromGraphColumn,
+  isHiddenFromUIColumn,
+  isLinkerColumn,
 } from '@platforma-sdk/model';
 import { getDefaultBlockLabel } from './label';
 import type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter, WorkflowPreset } from './util';
@@ -464,7 +468,15 @@ export const model = BlockModel.create()
     const columns = getColumns(ctx, ctx.args.inputAnchor);
     if (!columns) return undefined;
 
-    return createPFrameForGraphs(ctx, columns.props.map((c) => c.column));
+    // Build p-frame for MSA without linker columns to prevent row multiplication
+    // in the MSA's outer join. The SC cell-to-clonotype linker has one entry per
+    // cell, so the left join multiplies each clonotype by its cell count.
+    const blockColumns = columns.props.map((c) => c.column);
+    const suitableSpec = (spec: PColumnSpec) =>
+      !isHiddenFromUIColumn(spec) && !isHiddenFromGraphColumn(spec);
+    const allColumns = getRelatedColumns(ctx, { columns: blockColumns, predicate: suitableSpec });
+    const msaColumns = allColumns.filter((col) => !isLinkerColumn(col.spec));
+    return ctx.createPFrame(msaColumns);
   })
 
   // Use the cdr3LengthsCalculated cols
