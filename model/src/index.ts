@@ -396,6 +396,7 @@ export const model = BlockModel.create()
     const options = getDisambiguatedOptions(
       columns.props.filter((c) => {
         if (c.column.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true') return false;
+        if (c.column.spec.name === 'pl7.app/vdj/lead-selection') return false;
         if (c.column.spec.valueType !== 'String') return true;
         if (c.column.spec.annotations?.['pl7.app/discreteValues']) return true;
         return false;
@@ -423,6 +424,7 @@ export const model = BlockModel.create()
     const options = getDisambiguatedOptions(
       columns.props.filter((c) =>
         c.column.spec.valueType !== 'String'
+        && c.column.spec.name !== 'pl7.app/vdj/lead-selection'
         && c.column.spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true'
         // Hide mutation columns from ranking when In Vivo Score replaces them
         && !(columns.hasInVivoScore && IN_VIVO_MUTATION_COLUMNS.has(c.column.spec.name)),
