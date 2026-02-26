@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 2.0.1
+
+### Patch Changes
+
+- 60a81eb: Fix MSA row duplication for single cell data
+
 ## 2.0.0
 
 ### Major Changes
