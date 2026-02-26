@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import '@milaboratories/graph-maker/styles';
 import { PlMultiSequenceAlignment } from '@milaboratories/multi-sequence-alignment';
 import strings from '@milaboratories/strings';
 import { PlBlockPage, PlBtnGhost, PlSlideModal } from '@platforma-sdk/ui-vue';
