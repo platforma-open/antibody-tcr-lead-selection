@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 2.0.2
+
+### Patch Changes
+
+- 592b8dd: Fix lead filter
+
 ## 2.0.1
 
 ### Patch Changes
