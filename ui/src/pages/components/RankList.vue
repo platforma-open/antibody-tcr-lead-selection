@@ -24,7 +24,7 @@ const getMetricLabel = (value: AnchoredColumnId | undefined) => {
 };
 
 const addRankColumn = () => {
-  const ui = app.model.ui;
+  const ui = app.model.data;
 
   if (!Array.isArray(ui.rankingOrder)) {
     ui.rankingOrder = [];
@@ -41,7 +41,7 @@ const addRankColumn = () => {
 const getPresetDefaults = () => {
   const config = app.model.outputs.rankingConfig;
   if (!config) return undefined;
-  const preset = app.model.ui.preset;
+  const preset = app.model.data.preset;
   if (preset === 'in-vivo') return config.inVivoDefaults;
   if (preset === 'in-vitro') return config.inVitroDefaults;
   return undefined;
@@ -49,7 +49,7 @@ const getPresetDefaults = () => {
 
 const resetToDefaults = () => {
   const defaults = getPresetDefaults();
-  app.model.ui.rankingOrder = defaults?.map((defaultRank: { value?: AnchoredColumnId; rankingOrder: 'increasing' | 'decreasing' }) => ({
+  app.model.data.rankingOrder = defaults?.map((defaultRank: { value?: AnchoredColumnId; rankingOrder: 'increasing' | 'decreasing' }) => ({
     id: generateUniqueId(),
     value: defaultRank.value,
     rankingOrder: defaultRank.rankingOrder,
@@ -59,20 +59,20 @@ const resetToDefaults = () => {
 
 // Use shared anchor sync logic
 useAnchorSyncedDefaults({
-  getAnchor: () => app.model.args.inputAnchor,
+  getAnchor: () => app.model.data.inputAnchor,
   getConfig: () => app.model.outputs.rankingConfig,
   clearState: () => {
-    app.model.ui.rankingOrder = [];
+    app.model.data.rankingOrder = [];
   },
   applyDefaults: () => {
     resetToDefaults();
   },
   hasDefaults: () => (getPresetDefaults()?.length ?? 0) > 0,
-  getPreset: () => app.model.ui.preset,
+  getPreset: () => app.model.data.preset,
   // Preserve existing user selections on component remount (e.g., when Settings panel reopens)
   // Returns true if existing state uses columns from the current config
   hasExistingStateForConfig: (config) => {
-    const items = app.model.ui.rankingOrder ?? [];
+    const items = app.model.data.rankingOrder ?? [];
     if (items.length === 0) {
       return false;
     }
@@ -87,16 +87,16 @@ useAnchorSyncedDefaults({
   },
   // Check if there are any items at all (used to avoid clearing on remount before config loads)
   hasAnyItems: () => {
-    const count = app.model.ui.rankingOrder?.length ?? 0;
+    const count = app.model.data.rankingOrder?.length ?? 0;
     return count > 0;
   },
   // Persisted tracking of which anchor's defaults have been applied
   getInitializedAnchorKey: () => {
-    const key = app.model.ui.rankingsInitializedForAnchor;
+    const key = app.model.data.rankingsInitializedForAnchor;
     return key;
   },
   setInitializedAnchorKey: (key) => {
-    app.model.ui.rankingsInitializedForAnchor = key;
+    app.model.data.rankingsInitializedForAnchor = key;
   },
 });
 </script>
@@ -112,7 +112,7 @@ useAnchorSyncedDefaults({
     </PlRow>
 
     <PlElementList
-      v-model:items="app.model.ui.rankingOrder"
+      v-model:items="app.model.data.rankingOrder"
       :get-item-key="(item) => item.id ?? 0"
       :is-expanded="(item) => item.isExpanded === true"
       :on-expand="(item) => item.isExpanded = !item.isExpanded"
@@ -122,7 +122,7 @@ useAnchorSyncedDefaults({
       </template>
       <template #item-content="{ index }">
         <RankCard
-          v-model="app.model.ui.rankingOrder[index]"
+          v-model="app.model.data.rankingOrder[index]"
           :options="app.model.outputs.rankingConfig?.options"
         />
       </template>

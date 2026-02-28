@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { PredefinedGraphOption } from '@milaboratories/graph-maker';
 import { GraphMaker } from '@milaboratories/graph-maker';
-import '@milaboratories/graph-maker/styles';
 import { PlBlockPage } from '@platforma-sdk/ui-vue';
 import strings from '@milaboratories/strings';
 import { computed } from 'vue';
@@ -49,7 +48,7 @@ const defaultOptions = computed((): PredefinedGraphOption<'discrete'>[] => {
 <template>
   <PlBlockPage>
     <GraphMaker
-      v-model="app.model.ui.cdr3StackedBarPlotState"
+      v-model="app.model.data.cdr3StackedBarPlotState"
       chartType="discrete"
       :p-frame="app.model.outputs.spectratypePf"
       :default-options="defaultOptions"
