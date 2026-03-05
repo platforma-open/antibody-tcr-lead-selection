@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 2.0.3
+
+### Patch Changes
+
+- 1cca83c: Fix NaN parsing for number filters
+
 ## 2.0.2
 
 ### Patch Changes
