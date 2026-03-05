@@ -109,7 +109,11 @@ const getReferenceValue = (filter?: AnyFilter): string | number | undefined => {
 const setReferenceValue = (filter: AnyFilter, value: string | number) => {
   if (hasReference(filter)) {
     if (isNumberFilter(filter.type)) {
-      filter.reference = Number(value);
+      let r = Number(value);
+      if (Number.isNaN(r)) {
+        r = 0.0; // TMP fix to avoid NaN on text or incomplete number input (e.g. "1e-")
+      }
+      filter.reference = r;
     } else if (isStringFilter(filter.type)) {
       filter.reference = String(value);
     }
@@ -138,10 +142,6 @@ const updateReferenceValue = (value: string | undefined) => {
     setReferenceValue(model.value.filter, value);
   }
 };
-
-const showNumberInput = computed(() => {
-  return model.value.filter && isNumberFilter(model.value.filter.type);
-});
 
 const showStringInput = computed(() => {
   return model.value.filter && isStringFilter(model.value.filter.type) && !getDiscreteValues();
@@ -302,7 +302,6 @@ watch(() => model.value.value?.column, (newColumn, oldColumn) => {
   />
 
   <PlTextField
-    v-if="showNumberInput"
     :model-value="referenceValue"
     label="Value"
     required
