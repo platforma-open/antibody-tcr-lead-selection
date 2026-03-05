@@ -143,6 +143,10 @@ const updateReferenceValue = (value: string | undefined) => {
   }
 };
 
+const showNumberInput = computed(() => {
+  return model.value.filter && isNumberFilter(model.value.filter.type);
+});
+
 const showStringInput = computed(() => {
   return model.value.filter && isStringFilter(model.value.filter.type) && !getDiscreteValues();
 });
@@ -302,6 +306,7 @@ watch(() => model.value.value?.column, (newColumn, oldColumn) => {
   />
 
   <PlTextField
+    v-if="showNumberInput"
     :model-value="referenceValue"
     label="Value"
     required
