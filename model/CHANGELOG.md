@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 2.0.3
+
+### Patch Changes
+
+- f5800e7: Allow to use mutation columns in rank
+
 ## 2.0.2
 
 ### Patch Changes
