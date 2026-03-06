@@ -26,7 +26,7 @@ import {
 } from '@platforma-sdk/model';
 import { getDefaultBlockLabel } from './label';
 import type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter, WorkflowPreset } from './util';
-import { anchoredColumnId, clusterAxisDomainsMatch, getColumns, getVisibleClusterAxes, IN_VIVO_MUTATION_COLUMNS, IN_VIVO_SCORE_COLUMN_ID } from './util';
+import { anchoredColumnId, clusterAxisDomainsMatch, getColumns, getVisibleClusterAxes, IN_VIVO_SCORE_COLUMN_ID } from './util';
 
 /**
  * Checks if any cluster data is present by examining clusterId axes.
@@ -425,9 +425,7 @@ export const model = BlockModel.create()
       columns.props.filter((c) =>
         c.column.spec.valueType !== 'String'
         && !c.column.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection')
-        && c.column.spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true'
-        // Hide mutation columns from ranking when In Vivo Score replaces them
-        && !(columns.hasInVivoScore && IN_VIVO_MUTATION_COLUMNS.has(c.column.spec.name)),
+        && c.column.spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true',
       ),
       (c) => c.column.spec,
     ).map((o) => ({
