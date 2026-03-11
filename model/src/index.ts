@@ -361,10 +361,19 @@ export const model = BlockModel.create()
   })
 
   // Activate "Run" button only after these conditions are satisfied
-  .argsValid((ctx) => (ctx.args.inputAnchor !== undefined
+  .argsValid((ctx) => (
+    ctx.args.inputAnchor !== undefined
     && ctx.args.topClonotypes !== undefined
-    && ctx.args.rankingOrder.every((order) => order.value !== undefined)),
-  )
+    && ctx.args.rankingOrder.every((order) => order.value !== undefined)
+    && ctx.args.filters.every((f) => {
+      if (!f.value || !f.filter) return false;
+      if (f.filter.type === 'string_in' || f.filter.type === 'string_notIn') {
+        const ref = f.filter?.reference;
+        return ref !== '[]';
+      }
+      return true;
+    })
+  ))
 
   .output('inputOptions', (ctx) =>
     ctx.resultPool.getOptions([{
