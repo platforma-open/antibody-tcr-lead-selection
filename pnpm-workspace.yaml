@@ -18,8 +18,8 @@ catalog:
   '@platforma-sdk/model': 1.53.15
   '@platforma-sdk/ui-vue': 1.54.1
   '@platforma-sdk/tengo-builder': 2.4.18
-  '@platforma-sdk/package-builder': 3.11.4
-  '@platforma-sdk/block-tools': 2.6.48
+  '@platforma-sdk/package-builder': 3.11.6
+  '@platforma-sdk/block-tools': 2.6.68
   '@platforma-sdk/eslint-config': 1.2.0
   '@platforma-sdk/test': 1.54.4
   '@milaboratories/helpers': 1.13.3

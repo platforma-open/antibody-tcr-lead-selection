@@ -164,7 +164,8 @@ wf.body(func(args) {
                 datasetSpec: datasetSpec,
                 topClonotypes: args.topClonotypes,
                 diversificationColumn: clusterColumnHeader,
-                filterTraceLabel: filterTraceLabel
+                filterTraceLabel: filterTraceLabel,
+                customBlockLabel: args.customBlockLabel
             })
 
             // Get the filtered clonotypes from the template result
