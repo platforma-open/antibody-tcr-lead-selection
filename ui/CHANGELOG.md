@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 2.0.5
+
+### Patch Changes
+
+- 140ce30: Support custom block label
+
 ## 2.0.4
 
 ### Patch Changes
