@@ -105,6 +105,10 @@ self.body(func(inputs) {
     if is_undefined(traceLabel) || traceLabel == "" {
         traceLabel = "Selected Leads"
     }
+    customBlockLabel := inputs.customBlockLabel
+    if !is_undefined(customBlockLabel) && customBlockLabel != "" {
+        traceLabel = customBlockLabel + " / " + traceLabel
+    }
     trace := pSpec.makeTrace(datasetSpec,
         {
             type: "milaboratories.antibody-tcr-lead-selection",
