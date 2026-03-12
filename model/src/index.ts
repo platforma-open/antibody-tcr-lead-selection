@@ -161,7 +161,9 @@ export const platforma = BlockModelV3.create(blockDataModel)
     // Build p-frame for MSA without linker columns to prevent row multiplication
     // in the MSA's outer join. The SC cell-to-clonotype linker has one entry per
     // cell, so the left join multiplies each clonotype by its cell count.
-    const blockColumns = columns.props.map((c) => c.column);
+    const blockColumns = columns.props
+      .filter((c) => !isLinkerColumn(c.column.spec))
+      .map((c) => c.column);
     const suitableSpec = (spec: PColumnSpec) =>
       !isHiddenFromUIColumn(spec) && !isHiddenFromGraphColumn(spec);
     const allColumns
@@ -529,7 +531,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
         axesToMatch = [anchorSpec.axesSpec[1], {}];
       }
 
-      // Get linkers as PlRefs
+      // Get only cluster linkers (those with a clusterId axis) as PlRefs
       const linkers = ctx.resultPool.getOptions([
         {
           axes: axesToMatch,
@@ -542,6 +544,11 @@ export const platforma = BlockModelV3.create(blockDataModel)
       });
 
       for (const link of linkers) {
+        // Only include linkers that have a clusterId axis (from clonotype-clustering)
+        const linkerSpec = ctx.resultPool.getPColumnSpecByRef(link.ref);
+        if (!linkerSpec?.axesSpec.some((axis) => axis.name === 'pl7.app/vdj/clusterId')) {
+          continue;
+        }
         options.push({
           label: link.label || 'Cluster',
           ref: link.ref,

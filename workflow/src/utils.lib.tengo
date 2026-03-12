@@ -421,7 +421,7 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec) {
     if addedCols {
         cloneTable.mem("16GiB")
         cloneTable.cpu(1)
-        builtTable = cloneTable.build()
+        builtTable = cloneTable.build({joinType: "Inner"})
         
         // Resolve diversificationColumn ref to header name
         clusterColumnHeader = resolveClusterColumnHeader(args, columns, sortedLinkers)
