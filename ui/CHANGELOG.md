@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 2.0.6
+
+### Patch Changes
+
+- 1e872e3: Allow in filter options multiple choice filters without defaul valuet
+- Updated dependencies [1e872e3]
+  - @platforma-open/milaboratories.top-antibodies.model@2.0.4
+
 ## 2.0.5
 
 ### Patch Changes
