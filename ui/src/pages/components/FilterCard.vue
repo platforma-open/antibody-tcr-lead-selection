@@ -91,7 +91,6 @@ const isMultiSelectColumn = (option?: { column?: { spec: { annotations?: Record<
   if (!option?.column?.spec?.annotations) return false;
   const ann = option.column.spec.annotations;
   return ann['pl7.app/isDiscreteFilter'] === 'true'
-    && !!ann['pl7.app/score/defaultCutoff']
     && !!ann['pl7.app/discreteValues'];
 };
 
