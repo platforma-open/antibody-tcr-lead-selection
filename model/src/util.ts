@@ -198,6 +198,7 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
   // linker columns
   const linkProps: AnchoredColumn[] = [];
   let i = 0;
+  const seenLinkerRefs = new Set<string>();
   for (const idx of [0, 1]) {
     let axesToMatch;
     if (idx === 0) {
@@ -227,6 +228,11 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
     ]);
 
     for (const link of linkers) {
+      // deduplicate linker refs discovered in both axis orientations
+      const refKey = JSON.stringify(link.ref);
+      if (seenLinkerRefs.has(refKey)) continue;
+      seenLinkerRefs.add(refKey);
+
       const anchorName = 'linker-' + i;
       const anchorSpec: Record<string, PlRef> = {};
       anchorSpec[anchorName] = link.ref;
