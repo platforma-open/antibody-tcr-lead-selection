@@ -246,6 +246,7 @@ wf.body(func(args) {
                 // Convert kabat.tsv to PFrame with proper specs (bulk: select heavy/light)
                 kabatPf := xsv.importFile(kabatFile, "tsv", kabatConv.getColumns(datasetSpec, featName, bulkChain), {cpu: 1, mem: "8GiB"})
                 outputs["assemblingKabatPf"] = pframes.exportFrame(kabatPf)
+                outputs["kabatStatsContent"] = assem.output("kabatStats")
             }
         }
     }

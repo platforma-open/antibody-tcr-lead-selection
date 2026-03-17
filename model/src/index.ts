@@ -878,6 +878,16 @@ export const model = BlockModel.create()
     return options.length > 0 ? options : undefined;
   })
 
+  .output('kabatWarning', (ctx) => {
+    if (!ctx.args.kabatNumbering) return undefined;
+    const numbered = parseInt(ctx.outputs?.resolve({ field: 'kabatStatsContent', assertFieldType: 'Input', allowPermanentAbsence: true })?.getDataAsString() ?? '', 10);
+    if (Number.isNaN(numbered)) return undefined;
+    if (numbered === 0) {
+      return 'Kabat numbering could not be applied to any clonotype. The framework regions may be too divergent from known germline sequences. Kabat sequence columns will be empty.';
+    }
+    return `Kabat numbering was applied to ${numbered.toLocaleString()} clonotype${numbered === 1 ? '' : 's'}. Clonotypes that could not be numbered will have empty Kabat sequence columns.`;
+  })
+
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)
 
   .title(() => 'Antibody/TCR Leads')

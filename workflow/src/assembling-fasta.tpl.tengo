@@ -6,7 +6,7 @@ pt := import("@platforma-sdk/workflow-tengo:pt")
 pframes := import("@platforma-sdk/workflow-tengo:pframes")
 anarciSw := assets.importSoftware("@platforma-open/milaboratories.software-anarci:main")
 
-self.defineOutputs("kabat")
+self.defineOutputs("kabat", "kabatStats")
 
 self.body(func(inputs) {
 
@@ -37,13 +37,17 @@ self.body(func(inputs) {
     
     anarciFileNameBulk := "anarci.csv_" + bulkChain + ".csv"
     
+    // Pre-create empty CSV placeholders so that saveFile always finds the files,
+    // even when ANARCI cannot number any sequences (e.g. heavily engineered scaffolds)
      anarciBuilder := exec.builder().
         software(anarciSw).
         arg("-i").arg("assembling.fasta").
         arg("--scheme").arg("kabat").
         arg("--ncpu").argWithVar("{system.cpu}").
         arg("-o").arg("anarci.csv").arg("--csv").
-        addFile("assembling.fasta", cmd.getFile("assembling.fasta"))
+        addFile("assembling.fasta", cmd.getFile("assembling.fasta")).
+        writeFile("anarci.csv_H.csv", "Id\n").
+        writeFile("anarci.csv_KL.csv", "Id\n")
     if isSingleCell {
         anarciBuilder = anarciBuilder.saveFile("anarci.csv_H.csv").saveFile("anarci.csv_KL.csv")
     } else {
@@ -73,16 +77,16 @@ self.body(func(inputs) {
     }
     kabatExec = kabatExec.
         arg("--out_tsv").arg("kabat.tsv").
+        arg("--numbered_count_file").arg("numbered_count.txt").
         saveFile("kabat.tsv").
+        saveFileContent("numbered_count.txt").
         printErrStreamToStdout().
         cache(24 * 60 * 60 * 1000).
         run()
-    
-    kabat := kabatExec.getFile("kabat.tsv")
 
     return {
-        kabat: kabat
-      //  kabatPf: pframes.exportFrame(kabatDf)
+        kabat: kabatExec.getFile("kabat.tsv"),
+        kabatStats: kabatExec.getFileContent("numbered_count.txt")
     }
 })
 
