@@ -94,7 +94,7 @@ def main() -> None:
     write_kabat_tsv(args.out_tsv, h_rows, h_pos, kl_rows, kl_pos)
 
     if args.numbered_count_file:
-        numbered = len(h_rows or {}) + len(kl_rows or {})
+        numbered = len(set(h_rows or {}) | set(kl_rows or {}))
         with open(args.numbered_count_file, "w") as f:
             f.write(str(numbered))
 
