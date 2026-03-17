@@ -85,12 +85,18 @@ def main() -> None:
     p.add_argument("--h_csv", required=False, help="Path to H chain ANARCI CSV")
     p.add_argument("--kl_csv", required=False, help="Path to KL chain ANARCI CSV")
     p.add_argument("--out_tsv", required=True, help="Output KABAT TSV path")
+    p.add_argument("--numbered_count_file", required=False, help="File to write count of numbered clonotypes")
     args = p.parse_args()
     print(args)
 
     h_rows, h_pos = load_anarci_csv(args.h_csv)
     kl_rows, kl_pos = load_anarci_csv(args.kl_csv)
     write_kabat_tsv(args.out_tsv, h_rows, h_pos, kl_rows, kl_pos)
+
+    if args.numbered_count_file:
+        numbered = len(set(h_rows or {}) | set(kl_rows or {}))
+        with open(args.numbered_count_file, "w") as f:
+            f.write(str(numbered))
 
 
 if __name__ == "__main__":

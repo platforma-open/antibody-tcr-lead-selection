@@ -185,6 +185,9 @@ watch(() => [app.model.args.inputAnchor, app.model.args.kabatNumbering], () => {
         Settings
       </PlBtnGhost>
     </template>
+    <PlAlert v-if="app.model.outputs.kabatWarning" type="warn">
+      {{ app.model.outputs.kabatWarning }}
+    </PlAlert>
     <PlAgDataTableV2
       v-model="app.model.ui.tableState"
       v-model:selection="selection"
