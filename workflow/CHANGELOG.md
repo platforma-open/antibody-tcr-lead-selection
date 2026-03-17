@@ -1,5 +1,16 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 2.1.0
+
+### Minor Changes
+
+- 84a7fe5: Deal with ANARCI numbering issues
+
+### Patch Changes
+
+- Updated dependencies [84a7fe5]
+  - @platforma-open/milaboratories.top-antibodies.anarci-kabat@1.4.0
+
 ## 2.0.1
 
 ### Patch Changes

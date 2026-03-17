@@ -1,5 +1,16 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 2.1.0
+
+### Minor Changes
+
+- 84a7fe5: Deal with ANARCI numbering issues
+
+### Patch Changes
+
+- Updated dependencies [84a7fe5]
+  - @platforma-open/milaboratories.top-antibodies.model@2.1.0
+
 ## 2.0.6
 
 ### Patch Changes

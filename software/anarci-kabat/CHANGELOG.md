@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.anarci-kabat
 
+## 1.4.0
+
+### Minor Changes
+
+- 84a7fe5: Deal with ANARCI numbering issues
+
 ## 1.3.0
 
 ### Minor Changes
