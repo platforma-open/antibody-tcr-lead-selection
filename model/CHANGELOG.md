@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 2.1.1
+
+### Patch Changes
+
+- d80f198: fix filter options, update dependencies
+
 ## 2.1.0
 
 ### Minor Changes
