@@ -2,15 +2,14 @@ import type { GraphMakerState } from '@milaboratories/graph-maker';
 import strings from '@milaboratories/strings';
 import type {
   AxisSpec,
-  CreatePlDataTableOps,
   InferOutputsType,
   PColumn, PColumnDataUniversal,
   PColumnIdAndSpec,
   PColumnSpec,
-  PlDataTableStateV2,
-  PlMultiSequenceAlignmentModel,
   PlRef,
   PObjectId,
+  PlDataTableStateV2,
+  PlMultiSequenceAlignmentModel,
 } from '@platforma-sdk/model';
 import {
   Annotation,
@@ -25,7 +24,7 @@ import {
   isLinkerColumn,
 } from '@platforma-sdk/model';
 import { getDefaultBlockLabel } from './label';
-import type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter, WorkflowPreset } from './util';
+import type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, PlTableFilter, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter, WorkflowPreset } from './util';
 import { anchoredColumnId, clusterAxisDomainsMatch, getColumns, getVisibleClusterAxes, IN_VIVO_SCORE_COLUMN_ID } from './util';
 
 /**
@@ -715,9 +714,10 @@ export const model = BlockModel.create()
       (col) => col.spec.name === 'pl7.app/vdj/ranking-order',
     );
 
-    const ops: CreatePlDataTableOps = {
-      coreColumnPredicate: (col) => col.spec.name === 'pl7.app/vdj/lead-selection',
-      coreJoinType: 'inner',
+    const ops: Parameters<typeof createPlDataTableV2>[3] = {
+      coreColumnPredicate: (spec: PColumnIdAndSpec) =>
+        spec.spec.name === 'pl7.app/vdj/lead-selection',
+      coreJoinType: 'inner' as const,
     };
 
     // If ranking-order column is present, sort by it ascending
@@ -906,4 +906,4 @@ export const model = BlockModel.create()
 export type BlockOutputs = InferOutputsType<typeof model>;
 
 export { getDefaultBlockLabel } from './label';
-export type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter, WorkflowPreset };
+export type { AnchoredColumnId, DiscreteFilter, Filter, FilterUI, PlTableFilter, RankingOrder, RankingOrderUI, StringInFilter, StringNotInFilter, WorkflowPreset };

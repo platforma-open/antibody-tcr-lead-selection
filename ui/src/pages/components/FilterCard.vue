@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import type { AnchoredColumnId, DiscreteFilter, FilterUI } from '@platforma-open/milaboratories.top-antibodies.model';
-import type { PlTableFilter } from '@platforma-sdk/model';
+import type { AnchoredColumnId, DiscreteFilter, FilterUI, PlTableFilter } from '@platforma-open/milaboratories.top-antibodies.model';
 import { PlDropdown, PlDropdownMulti, PlTextField } from '@platforma-sdk/ui-vue';
 import { computed, watch } from 'vue';
 

@@ -5,7 +5,6 @@ import {
   type PColumn,
   type PColumnValues,
   type PlRef,
-  type PlTableFilter,
   type RenderCtx,
   type RenderCtxLegacy,
   type SUniversalPColumnId,
@@ -69,6 +68,21 @@ export type StringNotInFilter = {
 
 export type DiscreteFilter = StringInFilter | StringNotInFilter;
 
+// temporary type, will be replaced with FilterUi from sdk/model
+export type PlTableFilter =
+  | DiscreteFilter
+  | { type: 'string_equals'
+    | 'string_notEquals'
+    | 'string_contains'
+    | 'string_doesNotContain';
+  reference: string; }
+  | { type: 'number_greaterThan'
+    | 'number_greaterThanOrEqualTo'
+    | 'number_lessThan'
+    | 'number_lessThanOrEqualTo'
+    | 'number_equals'
+    | 'number_notEquals';
+  reference: number; };
 export type Filter = {
   value?: AnchoredColumnId;
   filter?: PlTableFilter | DiscreteFilter;
