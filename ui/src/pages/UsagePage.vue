@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import type { PredefinedGraphOption } from '@milaboratories/graph-maker';
 import { GraphMaker } from '@milaboratories/graph-maker';
-import '@milaboratories/graph-maker/styles';
 import strings from '@milaboratories/strings';
 import { computed } from 'vue';
 import { useApp } from '../app';
