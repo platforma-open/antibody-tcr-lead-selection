@@ -406,9 +406,7 @@ export const model = BlockModel.create()
       columns.props.filter((c) => {
         if (c.column.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true') return false;
         if (c.column.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection')) return false;
-        if (c.column.spec.valueType !== 'String') return true;
-        if (c.column.spec.annotations?.['pl7.app/discreteValues']) return true;
-        return false;
+        return true;
       }),
       (c) => c.column.spec,
     ).map((o) => ({
