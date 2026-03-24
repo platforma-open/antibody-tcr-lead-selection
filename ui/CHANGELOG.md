@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 2.1.2
+
+### Patch Changes
+
+- fac7dd3: update dependencies
+
 ## 2.1.1
 
 ### Patch Changes
