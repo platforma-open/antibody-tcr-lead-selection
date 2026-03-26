@@ -71,6 +71,8 @@ export type DiscreteFilter = StringInFilter | StringNotInFilter;
 // temporary type, will be replaced with FilterUi from sdk/model
 export type PlTableFilter =
   | DiscreteFilter
+  | { type: 'isNA' }
+  | { type: 'isNotNA' }
   | { type: 'string_equals'
     | 'string_notEquals'
     | 'string_contains'

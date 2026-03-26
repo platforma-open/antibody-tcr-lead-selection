@@ -581,7 +581,9 @@ filterOperatorMap := {
     "string_contains": "contains",
     "string_doesNotContain": "not contains",
     "string_in": "in",
-    "string_notIn": "not in"
+    "string_notIn": "not in",
+    "isNA": "is empty",
+    "isNotNA": "is not empty"
 }
 
 /**
@@ -601,6 +603,11 @@ formatFilterDescription := func(columnLabel, filter) {
     op := filterOperatorMap[filter.type]
     if is_undefined(op) {
         op = filter.type
+    }
+
+    // isNA/isNotNA have no reference value
+    if filter.type == "isNA" || filter.type == "isNotNA" {
+        return columnLabel + " " + op
     }
 
     ref := filter.reference
