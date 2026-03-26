@@ -20,6 +20,8 @@ type StringFilterType =
 
 type DiscreteFilterType = 'string_in' | 'string_notIn';
 
+type NAFilterType = 'isNA' | 'isNotNA';
+
 const model = defineModel<FilterUI>({
   default: {
     filter: { type: 'number_greaterThan', reference: 0 },
@@ -43,6 +45,8 @@ const filterTypeOptions = [
   { value: 'string_doesNotContain', label: 'Does not contain' },
   { value: 'string_in', label: 'Is one of' },
   { value: 'string_notIn', label: 'Is not one of' },
+  { value: 'isNA', label: 'Is empty (NA)' },
+  { value: 'isNotNA', label: 'Is not empty (NA)' },
 ];
 
 const getFilterTypeOptions = (columnId?: AnchoredColumnId) => {
@@ -61,15 +65,16 @@ const getFilterTypeOptions = (columnId?: AnchoredColumnId) => {
   const valueType = selectedOption.column.spec.valueType;
 
   // If String, return only string filters; otherwise return only number filters
+  // isNA/isNotNA is available for all column types
   if (valueType === 'String') {
     // Multi-select discrete columns get "Is one of" / "Is not one of" options
     if (isMultiSelectColumn(selectedOption)) {
-      return filterTypeOptions.filter((opt) => isDiscreteFilterType(opt.value));
+      return filterTypeOptions.filter((opt) => isDiscreteFilterType(opt.value) || isNAFilterType(opt.value));
     }
-    return filterTypeOptions.filter((opt) => opt.value.startsWith('string_') && !isDiscreteFilterType(opt.value));
+    return filterTypeOptions.filter((opt) => (opt.value.startsWith('string_') && !isDiscreteFilterType(opt.value)) || isNAFilterType(opt.value));
   } else {
-    // Double, Int, Long, etc. - return only number filters
-    return filterTypeOptions.filter((opt) => opt.value.startsWith('number_'));
+    // Double, Int, Long, etc. - return only number filters + NA filters
+    return filterTypeOptions.filter((opt) => opt.value.startsWith('number_') || isNAFilterType(opt.value));
   }
 };
 
@@ -83,6 +88,10 @@ const isStringFilter = (type?: string): type is StringFilterType => {
 
 const isDiscreteFilterType = (type?: string): type is DiscreteFilterType => {
   return type === 'string_in' || type === 'string_notIn';
+};
+
+const isNAFilterType = (type?: string): type is NAFilterType => {
+  return type === 'isNA' || type === 'isNotNA';
 };
 
 /** Check if a column option supports multi-select discrete filtering */
@@ -120,7 +129,9 @@ const setReferenceValue = (filter: AnyFilter, value: string | number) => {
 };
 
 const createFilter = (type: string): AnyFilter => {
-  if (isNumberFilter(type)) {
+  if (isNAFilterType(type)) {
+    return { type } as AnyFilter;
+  } else if (isNumberFilter(type)) {
     return { type, reference: 0 };
   } else if (isDiscreteFilterType(type)) {
     return { type, reference: '[]' };
@@ -259,13 +270,17 @@ watch(() => model.value.value?.column, (newColumn, oldColumn) => {
   // If column not found in options, don't reset - options may be stale during anchor transition
   if (newValueType === undefined) return;
 
+  const currentFilterType = model.value.filter?.type;
+
+  // isNA/isNotNA is compatible with all column types — keep it
+  if (isNAFilterType(currentFilterType)) return;
+
   // Check if the new column is multi-select discrete
   const selectedOption = props.options?.find((opt) =>
     opt.value.column === model.value.value?.column,
   );
   const newIsMultiSelect = isMultiSelectColumn(selectedOption);
 
-  const currentFilterType = model.value.filter?.type;
   if (newIsMultiSelect) {
     // Switch to string_in if not already a discrete filter type
     if (!isDiscreteFilterType(currentFilterType)) {

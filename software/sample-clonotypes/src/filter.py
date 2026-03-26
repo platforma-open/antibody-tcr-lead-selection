@@ -19,20 +19,24 @@ def parse_arguments():
 def apply_filter(df, column_name, filter_type, reference_value):
     """
     Apply a filter to a Polars DataFrame column based on the filter type and reference value.
-    
+
     Args:
         df: polars DataFrame
         column_name: name of the column to filter on
         filter_type: type of filter to apply
-        reference_value: reference value for the filter
-    
+        reference_value: reference value for the filter (None for isNA/isNotNA)
+
     Returns:
         polars DataFrame with filtered rows
     """
-    
+
     print(f"Applying filter: {column_name} {filter_type} {reference_value}")
-    
-    if filter_type == "number_greaterThan":
+
+    if filter_type == "isNA":
+        return df.filter(pl.col(column_name).is_null() | (pl.col(column_name).cast(pl.Utf8) == ""))
+    elif filter_type == "isNotNA":
+        return df.filter(pl.col(column_name).is_not_null() & (pl.col(column_name).cast(pl.Utf8) != ""))
+    elif filter_type == "number_greaterThan":
         return df.filter((pl.col(column_name) > reference_value) & (pl.col(column_name).is_not_nan()))
     elif filter_type == "number_greaterThanOrEqualTo":
         return df.filter((pl.col(column_name) >= reference_value) & (pl.col(column_name).is_not_nan()))
@@ -65,7 +69,7 @@ def apply_filter(df, column_name, filter_type, reference_value):
                             number_lessThanOrEqualTo, number_equals, \
                             number_notEquals, string_equals, string_notEquals, \
                             string_contains, string_doesNotContain, \
-                            string_in, string_notIn")
+                            string_in, string_notIn, isNA, isNotNA")
 
 
 def apply_filters(df, filter_map):
@@ -95,19 +99,25 @@ def apply_filters(df, filter_map):
     print(f"Found Filter_* columns: {filter_columns}")
     print(f"Filter map keys: {list(filter_map.keys())}")
     
-    # Apply filters 
+    # Apply filters
     for column_name in filter_columns:
         filter_spec = filter_map[column_name]
-        
+
         filter_type = filter_spec["type"]
-        reference_value = filter_spec["reference"]
+        reference_value = filter_spec.get("reference")
         data_type = filter_spec["valueType"]
-        
-        # Apply the filter if is correct for the given data type
-        if (((data_type == "String") and (filter_type.startswith("string_"))) or
-            ((data_type != "String") and (filter_type.startswith("number_")))):
+
+        # isNA/isNotNA applies to any data type
+        if filter_type in ("isNA", "isNotNA"):
             filtered_df = apply_filter(filtered_df, column_name, filter_type, reference_value)
-        
+            rows_after_filter = filtered_df.height
+            print(f"Filter '{column_name}' {filter_type}: {initial_rows} -> {rows_after_filter} rows")
+            initial_rows = rows_after_filter
+        # Apply the filter if is correct for the given data type
+        elif (((data_type == "String") and (filter_type.startswith("string_"))) or
+              ((data_type != "String") and (filter_type.startswith("number_")))):
+            filtered_df = apply_filter(filtered_df, column_name, filter_type, reference_value)
+
             rows_after_filter = filtered_df.height
             print(f"Filter '{column_name}' {filter_type} {reference_value}: {initial_rows} -> {rows_after_filter} rows")
             initial_rows = rows_after_filter
