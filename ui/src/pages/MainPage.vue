@@ -167,8 +167,8 @@ watch(() => [app.model.data.inputAnchor, app.model.data.kabatNumbering], () => {
 
 <template>
   <PlBlockPage
-    v-model:subtitle="app.model.args.customBlockLabel"
-    :subtitle-placeholder="app.model.args.defaultBlockLabel"
+    v-model:subtitle="app.model.data.customBlockLabel"
+    :subtitle-placeholder="app.model.data.defaultBlockLabel"
     title="Antibody/TCR Leads"
   >
     <template #append>
