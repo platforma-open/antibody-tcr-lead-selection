@@ -21,7 +21,7 @@ import {
   isHiddenFromUIColumn,
   isLinkerColumn,
 } from '@platforma-sdk/model';
-import { anchoredColumnId, clusterAxisDomainsMatch, getColumns, getVisibleClusterAxes, IN_VIVO_MUTATION_COLUMNS, IN_VIVO_SCORE_COLUMN_ID } from './util';
+import { anchoredColumnId, clusterAxisDomainsMatch, getColumns, getVisibleClusterAxes, IN_VIVO_SCORE_COLUMN_ID } from './util';
 import { convertFilterUI, convertRankingOrderUI } from './converters';
 import { blockDataModel } from './dataModel';
 import type { BlockArgs } from './types';
@@ -422,7 +422,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
   })
 
   .output('calculating', (ctx) => {
-    if (ctx.args?.inputAnchor === undefined)
+    if (ctx.data.inputAnchor === undefined)
       return false;
 
     // If outputs object doesn't exist yet, workflow hasn't been run - not calculating
@@ -440,7 +440,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
   // Use UMAP output from ctx from clonotype-space block
   .outputWithStatus('umapPf', (ctx) => {
-    const anchor = ctx.args?.inputAnchor;
+    const anchor = ctx.data.inputAnchor;
     if (anchor === undefined)
       return undefined;
 
@@ -466,7 +466,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
   })
 
   .outputWithStatus('umapPcols', (ctx) => {
-    const anchor = ctx.args?.inputAnchor;
+    const anchor = ctx.data.inputAnchor;
     if (anchor === undefined)
       return undefined;
 
@@ -498,7 +498,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
   })
 
   .output('hasClusterData', (ctx) => {
-    const columns = getColumns(ctx, ctx.args?.inputAnchor);
+    const columns = getColumns(ctx, ctx.data.inputAnchor);
     if (columns === undefined)
       return false;
 
@@ -507,7 +507,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
   })
 
   .output('clusterColumnOptions', (ctx) => {
-    const anchor = ctx.args?.inputAnchor;
+    const anchor = ctx.data.inputAnchor;
     if (anchor === undefined)
       return undefined;
 
@@ -553,7 +553,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
   })
 
   .output('kabatWarning', (ctx) => {
-    if (!ctx.args.kabatNumbering) return undefined;
+    if (!ctx.data.kabatNumbering) return undefined;
     const numbered = parseInt(ctx.outputs?.resolve({ field: 'kabatStatsContent', assertFieldType: 'Input', allowPermanentAbsence: true })?.getDataAsString() ?? '', 10);
     if (Number.isNaN(numbered)) return undefined;
     if (numbered === 0) {
