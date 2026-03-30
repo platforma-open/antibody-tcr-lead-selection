@@ -1,5 +1,5 @@
 import type { GraphMakerState } from '@milaboratories/graph-maker';
-import type { DataInfo, PColumn, PColumnValues, PlDataTableStateV2, PlMultiSequenceAlignmentModel, PlRef, SUniversalPColumnId, TreeNodeAccessor } from '@platforma-sdk/model';
+import type { ColumnMatch, DataInfo, PColumn, PColumnValues, PlDataTableStateV2, PlMultiSequenceAlignmentModel, PlRef, SUniversalPColumnId, TreeNodeAccessor } from '@platforma-sdk/model';
 import type { PlTableFilter } from './typesFilters';
 
 export * from './typesFilters';
@@ -130,10 +130,11 @@ export type PresetDefaults = {
   filters: PlTableFiltersDefault[];
 };
 
-export type Columns = {
-  // all props: clones + linked
-  props: AnchoredColumn[];
-  scores: AnchoredColumn[];
+export type ColumnsMeta = {
+  /** All discovered columns (direct + linked via linker traversal) */
+  allMatches: ColumnMatch[];
+  /** Score columns (subset of allMatches with pl7.app/isScore annotation) */
+  scores: ColumnMatch[];
   defaultFilters: PlTableFiltersDefault[];
   defaultRankingOrder: RankingOrder[];
   /** True when SHM mutation columns are present and In Vivo Score should replace them in ranking */
