@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 2.1.1
+
+### Patch Changes
+
+- 29bb936: Remove console.error calls from model code (console unavailable in model sandbox)
+
 ## 2.1.0
 
 ### Minor Changes
