@@ -282,7 +282,7 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
         const value = JSON.parse(valueString) as string[];
         // should be an array of strings
         if (!Array.isArray(value)) {
-          console.error('defaultFilters: invalid string filter', valueString);
+          // invalid string filter — skip silently (console unavailable in model sandbox)
           continue;
         }
         const isDiscreteFilter = spec.annotations?.['pl7.app/isDiscreteFilter'] === 'true';
@@ -305,8 +305,8 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
             },
           });
         }
-      } catch (e) {
-        console.error('defaultFilters: invalid string filter', valueString, e);
+      } catch (_e) {
+        // invalid string filter — skip silently (console unavailable in model sandbox)
         continue;
       }
     } else {
@@ -314,13 +314,13 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
         // Assuming non-String valueType implies a number
         const numericValue = parseFloat(valueString);
         if (isNaN(numericValue)) {
-          console.error('defaultFilters: invalid numeric value', valueString);
+          // invalid numeric value — skip silently (console unavailable in model sandbox)
           continue;
         }
 
         const direction = spec.annotations?.['pl7.app/score/rankingOrder'] ?? 'increasing';
         if (direction !== 'increasing' && direction !== 'decreasing') {
-          console.error('defaultFilters: invalid ranking order', direction);
+          // invalid ranking order — skip silently (console unavailable in model sandbox)
           continue;
         }
 
@@ -331,8 +331,8 @@ export function getColumns(ctx: RenderCtx<BlockArgs, UiState> | RenderCtxLegacy<
             reference: numericValue,
           },
         });
-      } catch (e) {
-        console.error('defaultFilters: invalid numeric value', valueString, e);
+      } catch (_e) {
+        // invalid numeric value — skip silently (console unavailable in model sandbox)
         continue;
       }
     }
