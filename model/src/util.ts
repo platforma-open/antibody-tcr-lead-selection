@@ -88,9 +88,12 @@ export function buildCollection(
   const anchorSpec = ctx.resultPool.getPColumnSpecByRef(inputAnchor);
   if (!anchorSpec) return undefined;
 
-  // Exclude File-type columns — the WASM spec frame doesn't support the File value type
+  // Exclude columns unsupported by the WASM spec frame:
+  // - File value type is not recognized
+  // - Linker columns with >2 axes have >2 connected components, which the spec frame rejects
   const resultPoolColumns = ctx.resultPool.selectColumns(
-    (spec) => (spec.valueType as string) !== 'File',
+    (spec) => (spec.valueType as string) !== 'File'
+      && !(spec.annotations?.['pl7.app/isLinkerColumn'] === 'true' && spec.axesSpec.length > 2),
   );
   const builder = new ColumnCollectionBuilder(ctx)
     .addSource(resultPoolColumns);

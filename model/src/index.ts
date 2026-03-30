@@ -1,15 +1,12 @@
 import strings from '@milaboratories/strings';
 import type {
-  AxisSpec,
+  ColumnSource,
   InferHrefType,
   InferOutputsType,
   PColumn,
   PColumnDataUniversal,
   PColumnIdAndSpec,
-  PColumnSpec,
   PlRef,
-  PObjectId,
-  PTableSorting,
 } from '@platforma-sdk/model';
 import {
   Annotation,
@@ -21,7 +18,7 @@ import {
   isHiddenFromGraphColumn,
   isHiddenFromUIColumn,
 } from '@platforma-sdk/model';
-import { buildCollection, clusterAxisDomainsMatch, getVisibleClusterAxes, IN_VIVO_SCORE_COLUMN_ID, matchToColumnId } from './util';
+import { buildCollection, IN_VIVO_SCORE_COLUMN_ID, matchToColumnId } from './util';
 import { convertFilterUI, convertRankingOrderUI } from './converters';
 import { blockDataModel } from './dataModel';
 import type { BlockArgs } from './types';
@@ -258,161 +255,35 @@ export const platforma = BlockModelV3.create(blockDataModel)
       }
     }
 
-    const assemblingKabatPf = ctx.outputs?.resolve({
+    const assemblingKabatAccessor = ctx.outputs?.resolve({
       field: 'assemblingKabatPf',
       assertFieldType: 'Input',
       allowPermanentAbsence: true,
-    })?.getPColumns();
-
-    // Discover result pool columns via new collection API
-    const result = buildCollection(ctx, anchor);
-    if (!result) return undefined;
-
-    const matches = result.collection.findColumns({
-      mode: 'enrichment',
-      exclude: [{ annotations: { 'pl7.app/sequence/isAnnotation': 'true' } }],
     });
 
-    // Materialize discovered result pool columns to PColumn[]
-    const discoveredColumns: PColumn<PColumnDataUniversal>[] = [];
-    for (const m of matches) {
-      if (!m.column.data) continue;
-      const data = m.column.data.get();
-      if (!data) return undefined;
-      discoveredColumns.push({ id: m.column.id, spec: m.column.spec, data });
-    }
-
-    // Combine result pool columns with workflow output columns (same pattern as old code)
-    const allColumns = [
-      ...discoveredColumns,
-      ...sampledRows,
-      ...(assemblingKabatPf ?? []),
-    ];
-
-    // Filter out result pool columns exported by a previous run of this block
-    const filtered = allColumns.filter(
-      (col) => !col.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection'),
+    // Build sources: filtered result pool + workflow outputs
+    // Exclude columns unsupported by the WASM spec frame:
+    // - File value type is not recognized
+    // - Linker columns with >2 axes have >2 connected components
+    // Wrap in ArrayColumnProvider — V3 only accepts ColumnSnapshotProvider instances
+    const resultPoolColumns = ctx.resultPool.selectColumns(
+      (spec) => (spec.valueType as string) !== 'File'
+        && !(spec.annotations?.['pl7.app/isLinkerColumn'] === 'true' && spec.axesSpec.length > 2),
     );
-
-    // Extract column IDs from filter/ranking settings
-    const filterColumnIds = new Set<string>(
-      ctx.activeArgs?.filters
-        .filter((f) => f.value?.column !== undefined)
-        .map((f) => f.value!.column as string),
-    );
-
-    const rankingColumnIds = new Set<string>(
-      ctx.activeArgs?.rankingOrder
-        .filter((r) => r.value?.column !== undefined)
-        .map((r) => r.value!.column as string),
-    );
-
-    // Determine visible cluster axes and default visible columns
-    const visibleClusterAxes: AxisSpec[] = getVisibleClusterAxes(filtered, filterColumnIds, rankingColumnIds);
-    const kabatEnabled = ctx.activeArgs?.kabatNumbering ?? false;
-    const defaultVisible = getDefaultVisibleColumns(filtered, filterColumnIds, rankingColumnIds, kabatEnabled);
-
-    // Apply visibility and ordering annotations
-    const withVisibility = filtered.map((col) => {
-      const isVisible = defaultVisible.has(col.id);
-      const colIdStr = col.id as string;
-      const isFilterOrRankColumn = filterColumnIds.has(colIdStr) || rankingColumnIds.has(colIdStr);
-      const isLinker = col.spec.annotations?.[Annotation.IsLinkerColumn] === 'true';
-
-      const annotations = col.spec.annotations || {};
-      let orderPriority = annotations[Annotation.Table.OrderPriority];
-
-      const isCloneLabelColumn = col.spec.name === Annotation.Label
-        && col.spec.axesSpec.length === 1
-        && (col.spec.axesSpec[0].name === 'pl7.app/vdj/clonotypeKey'
-          || col.spec.axesSpec[0].name === 'pl7.app/vdj/scClonotypeKey');
-
-      if (isCloneLabelColumn) {
-        orderPriority = '1000000';
-      } else if (isFullProteinSequence(col.spec)) {
-        orderPriority = '999000';
-      } else if (isFilterOrRankColumn) {
-        orderPriority = '7000';
-      }
-
-      // V3 drops 'hidden' columns entirely before building the table, so use 'optional'
-      // for columns that were originally hidden but need to stay in the join (e.g., lead-selection).
-      // Only linker columns use 'hidden' — V3 preserves linker columns separately.
-      const visibility = isLinker
-        ? 'hidden'
-        : (isVisible ? 'default' : 'optional');
-
-      const newAnnotations = {
-        ...col.spec.annotations,
-        [Annotation.Table.Visibility]: visibility,
-        ...(orderPriority && { [Annotation.Table.OrderPriority]: orderPriority }),
-      };
-
-      // Update axes annotations
-      const updatedAxesSpec = col.spec.axesSpec.map((axis) => {
-        const isClonotypeAxis = axis.name === 'pl7.app/vdj/clonotypeKey'
-          || axis.name === 'pl7.app/vdj/scClonotypeKey';
-        const isClusterAxis = axis.name === 'pl7.app/vdj/clusterId';
-
-        if (isClonotypeAxis) {
-          return {
-            ...axis,
-            annotations: {
-              ...axis.annotations,
-              [Annotation.Table.OrderPriority]: '1000000',
-            },
-          };
-        }
-
-        if (isClusterAxis) {
-          const shouldBeVisible = visibleClusterAxes.some((visibleAxis: AxisSpec) =>
-            clusterAxisDomainsMatch(visibleAxis, axis),
-          );
-
-          if (!shouldBeVisible) {
-            return {
-              ...axis,
-              annotations: {
-                ...axis.annotations,
-                [Annotation.Table.Visibility]: 'optional',
-              },
-            };
-          }
-        }
-
-        return axis;
-      });
-
-      return {
-        ...col,
-        spec: {
-          ...col.spec,
-          annotations: newAnnotations,
-          axesSpec: updatedAxesSpec,
-        },
-      };
-    });
-
-    // Find ranking-order column if present
-    const rankingOrderCol = filtered.find(
-      (col) => col.spec.name === 'pl7.app/vdj/ranking-order',
-    );
-
-    const sorting: PTableSorting[] | undefined = rankingOrderCol
-      ? [{
-          column: { type: 'column', id: rankingOrderCol.id },
-          ascending: true,
-          naAndAbsentAreLeastValues: false,
-        }]
-      : undefined;
+    const sources: ColumnSource[] = [new ArrayColumnProvider(resultPoolColumns)];
+    if (sampledRows) sources.push(new ArrayColumnProvider(sampledRows));
+    const kabatCols = assemblingKabatAccessor?.getPColumns();
+    if (kabatCols) sources.push(new ArrayColumnProvider(kabatCols));
 
     return createPlDataTableV3(ctx, {
-      source: new ArrayColumnProvider(withVisibility),
-      columns: {},
+      source: sources,
+      columns: {
+        anchors: { main: anchorSpec },
+        mode: 'enrichment',
+      },
       state: ctx.data.tableState,
       coreColumnPredicate: (col) => col.spec.name === 'pl7.app/vdj/lead-selection',
       coreJoinType: 'inner',
-      sorting,
     });
   })
 
@@ -562,56 +433,3 @@ export const platforma = BlockModelV3.create(blockDataModel)
   })
 
   .done();
-
-/**
- * Check if a column is a full protein sequence (main assembling feature, aminoacid)
- */
-function isFullProteinSequence(spec: PColumnSpec): boolean {
-  return (
-    spec.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'
-    && spec.annotations?.['pl7.app/vdj/isMainSequence'] === 'true'
-    && spec.domain?.['pl7.app/alphabet'] === 'aminoacid'
-  );
-}
-
-/**
- * Determine which columns should be visible by default
- */
-function getDefaultVisibleColumns(
-  columns: PColumn<PColumnDataUniversal>[],
-  filterColumnIds: Set<string>,
-  rankingColumnIds: Set<string>,
-  kabatEnabled: boolean,
-): Set<PObjectId> {
-  const visible = new Set<PObjectId>();
-
-  for (const col of columns) {
-    if (isFullProteinSequence(col.spec)) {
-      visible.add(col.id);
-      continue;
-    }
-
-    if (col.spec.name === 'pl7.app/vdj/ranking-order') {
-      visible.add(col.id);
-      continue;
-    }
-
-    if (col.spec.name === 'pl7.app/vdj/inVivoScore') {
-      visible.add(col.id);
-      continue;
-    }
-
-    if (kabatEnabled && col.spec.name.startsWith('pl7.app/vdj/kabatSequence')) {
-      visible.add(col.id);
-      continue;
-    }
-
-    const colIdStr = col.id as string;
-    if (filterColumnIds.has(colIdStr) || rankingColumnIds.has(colIdStr)) {
-      visible.add(col.id);
-      continue;
-    }
-  }
-
-  return visible;
-}
