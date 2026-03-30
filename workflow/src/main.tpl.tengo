@@ -45,7 +45,6 @@ wf.prepare(func(args){
                     validRanks = true
                     continue
                 }
-                bundleBuilder.addAnchor(col.value.anchorName, col.value.anchorRef)
                 bundleBuilder.addSingle(col.value.column)
                 validRanks = true
             }
@@ -56,7 +55,6 @@ wf.prepare(func(args){
     if len(args.filters) > 0 {
         for filter in args.filters {
             if filter.value != undefined {
-                bundleBuilder.addAnchor(filter.value.anchorName, filter.value.anchorRef)
                 bundleBuilder.addSingle(filter.value.column)
             }
         }
