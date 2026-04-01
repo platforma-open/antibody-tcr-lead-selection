@@ -1,5 +1,12 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 2.2.1
+
+### Patch Changes
+
+- Updated dependencies [6ecafd5]
+  - @platforma-open/milaboratories.top-antibodies.anarci-kabat@1.4.1
+
 ## 2.2.0
 
 ### Minor Changes

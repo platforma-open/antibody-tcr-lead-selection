@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.anarci-kabat
 
+## 1.4.1
+
+### Patch Changes
+
+- 6ecafd5: Update anarci software package version to fix container start command
+
 ## 1.4.0
 
 ### Minor Changes
