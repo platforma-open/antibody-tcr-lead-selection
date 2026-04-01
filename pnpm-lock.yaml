@@ -28,8 +28,8 @@ catalogs:
       specifier: ^1.4.9
       version: 1.5.9
     '@platforma-open/milaboratories.software-anarci':
-      specifier: ^0.0.3
-      version: 0.0.3
+      specifier: 1.0.1
+      version: 1.0.1
     '@platforma-sdk/block-tools':
       specifier: 2.7.2
       version: 2.7.2
@@ -290,7 +290,7 @@ importers:
     dependencies:
       '@platforma-open/milaboratories.software-anarci':
         specifier: 'catalog:'
-        version: 0.0.3
+        version: 1.0.1
       '@platforma-open/milaboratories.top-antibodies.anarci-kabat':
         specifier: workspace:*
         version: link:../software/anarci-kabat
@@ -1537,8 +1537,8 @@ packages:
   '@platforma-open/milaboratories.runenv-python-3@1.5.9':
     resolution: {integrity: sha512-1vVau+4+xdOLQLe8daJCCdxaTRgHhSXVDkhtNrDVSkcKs6Pi6G0YsTH0/7ykdghkxlX38RenIepXzzM2GRiGFw==}
 
-  '@platforma-open/milaboratories.software-anarci@0.0.3':
-    resolution: {integrity: sha512-BtzWsu32K/V7Sw3uCS/lzkILoI+JVHYl7mE3PNf0UEj1ZImjlRFuMFbo/t8LpywYTAGdUIwR9cu2i6ayq/hDGQ==}
+  '@platforma-open/milaboratories.software-anarci@1.0.1':
+    resolution: {integrity: sha512-Y86dkacjjC/z+NnSUdKBTPfaQ/5lQx9MTH/K7sBynUMthwwfeSyk3UciMni7OVX2Tk7bWgtQiCpsbmecgl1cNA==}
 
   '@platforma-open/milaboratories.software-ptabler.schema@1.14.2':
     resolution: {integrity: sha512-iqGFCOxbRVPOAiEH+dTtD1Y0nMjh07X/GHFJpB7LZ4Gb84DdIdcxs4jPWhT+uUFQ7rGz473K8m4FigY+34vkpw==}
@@ -8568,7 +8568,7 @@ snapshots:
       '@platforma-open/milaboratories.runenv-python-3.12.10-rapids': 1.3.9
       '@platforma-open/milaboratories.runenv-python-3.12.10-sccoda': 1.2.22
 
-  '@platforma-open/milaboratories.software-anarci@0.0.3': {}
+  '@platforma-open/milaboratories.software-anarci@1.0.1': {}
 
   '@platforma-open/milaboratories.software-ptabler.schema@1.14.2':
     dependencies:
