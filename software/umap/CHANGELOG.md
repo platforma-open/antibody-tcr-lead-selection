@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.umap
 
+## 1.2.2
+
+### Patch Changes
+
+- 199e95d: Updated dependencies
+
 ## 1.2.1
 
 ### Patch Changes

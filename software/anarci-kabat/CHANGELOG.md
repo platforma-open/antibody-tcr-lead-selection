@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.anarci-kabat
 
+## 1.4.2
+
+### Patch Changes
+
+- 199e95d: Updated dependencies
+
 ## 1.4.1
 
 ### Patch Changes

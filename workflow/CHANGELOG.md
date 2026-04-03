@@ -1,5 +1,17 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 2.2.2
+
+### Patch Changes
+
+- 199e95d: Updated dependencies
+- Updated dependencies [199e95d]
+  - @platforma-open/milaboratories.top-antibodies.anarci-kabat@1.4.2
+  - @platforma-open/milaboratories.top-antibodies.assembling-fasta@1.3.1
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@2.1.1
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.8.2
+  - @platforma-open/milaboratories.top-antibodies.umap@1.2.2
+
 ## 2.2.1
 
 ### Patch Changes

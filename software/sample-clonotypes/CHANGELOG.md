@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 2.1.1
+
+### Patch Changes
+
+- 199e95d: Updated dependencies
+
 ## 2.1.0
 
 ### Minor Changes
