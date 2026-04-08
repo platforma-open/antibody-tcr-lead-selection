@@ -3,6 +3,7 @@ import {
   type AnchoredColumnCollection,
   type AxisSpec,
   type ColumnMatch,
+  type PColumnSpec,
   type PlRef,
   type RenderCtx,
   type SUniversalPColumnId,
@@ -95,15 +96,25 @@ export function buildCollection(
     (spec) => (spec.valueType as string) !== 'File'
       && !(spec.annotations?.['pl7.app/isLinkerColumn'] === 'true' && spec.axesSpec.length > 2),
   );
-  const builder = new ColumnCollectionBuilder(ctx)
+  // Build with only the clonotypeKey axis (idx 1) as the trunk anchor.
+  // The full anchorSpec has [sampleId, clonotypeKey] but we want to discover
+  // columns keyed by clonotypeKey only, omitting the sample dimension.
+  const clonotypeAxisSpec: PColumnSpec = {
+    ...anchorSpec,
+    axesSpec: [anchorSpec.axesSpec[1]],
+  };
+  const builder = new ColumnCollectionBuilder(ctx.services.pframeSpec)
     .addSource(resultPoolColumns);
-  const collection = builder.build({ anchors: { main: anchorSpec } });
+  const collection = builder.build({ anchors: { main: clonotypeAxisSpec } });
   if (!collection) return undefined;
 
-  // Discover all enrichment-compatible columns (replaces manual linker iteration)
+  // Discover all enrichment-compatible columns keyed by clonotypeKey.
+  // The 'enrichment' mode ensures only columns whose axes are satisfiable
+  // by the trunk (clonotypeKey) — directly or via linker traversal — are returned.
   const allMatches = collection.findColumns({
-    mode: 'enrichment',
+    mode: 'related',
     exclude: [{ annotations: { 'pl7.app/sequence/isAnnotation': 'true' } }],
+    maxHops: 2,
   });
 
   // Extract scores

@@ -168,6 +168,29 @@ export const platforma = BlockModelV3.create(blockDataModel)
     };
   }, { retentive: true })
 
+  .output('debugBuildCollection', (ctx) => {
+    const result = buildCollection(ctx, ctx.data.inputAnchor);
+    if (!result) return undefined;
+
+    return {
+      matchCount: result.meta.allMatches.length,
+      scoreCount: result.meta.scores.length,
+      matches: result.meta.allMatches.map((m) => ({
+        id: m.column.id,
+        name: m.column.spec.name,
+        dataStatus: m.column.dataStatus,
+        axesNames: m.column.spec.axesSpec.map((a) => a.name),
+        pathLength: m.path.length,
+        path: m.path.map((s) => ({
+          linkerId: s.linker.columnId,
+          linkerAxes: s.linker.spec.axesSpec.map((a) => a.name),
+        })),
+        isLinker: m.column.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true',
+        label: m.column.spec.annotations?.['pl7.app/label'],
+      })),
+    };
+  })
+
   .outputWithStatus('pf', (ctx) => {
     const anchor = ctx.data.inputAnchor;
     if (!anchor) return undefined;
@@ -261,28 +284,35 @@ export const platforma = BlockModelV3.create(blockDataModel)
       allowPermanentAbsence: true,
     });
 
-    // Build sources: filtered result pool + workflow outputs
-    // Exclude columns unsupported by the WASM spec frame:
-    // - File value type is not recognized
-    // - Linker columns with >2 axes have >2 connected components
-    // Wrap in ArrayColumnProvider — V3 only accepts ColumnSnapshotProvider instances
+    // Let V3 discover directly from sources — preserves linkerPath for proper join routing.
+    // Pass filtered result pool + workflow output sources.
     const resultPoolColumns = ctx.resultPool.selectColumns(
       (spec) => (spec.valueType as string) !== 'File'
         && !(spec.annotations?.['pl7.app/isLinkerColumn'] === 'true' && spec.axesSpec.length > 2),
     );
-    const sources: ColumnSource[] = [new ArrayColumnProvider(resultPoolColumns)];
-    if (sampledRows) sources.push(new ArrayColumnProvider(sampledRows));
-    const kabatCols = assemblingKabatAccessor?.getPColumns();
-    if (kabatCols) sources.push(new ArrayColumnProvider(kabatCols));
+    const sources: ColumnSource[] = [
+      new ArrayColumnProvider(resultPoolColumns),
+      new ArrayColumnProvider(sampledRows),
+    ];
+    if (assemblingKabatAccessor) {
+      const kabatCols = assemblingKabatAccessor.getPColumns();
+      if (kabatCols) sources.push(new ArrayColumnProvider(kabatCols));
+    }
 
+    // Use single-axis anchor (clonotypeKey only) for table discovery.
+    // With full 2-axis anchor, enrichment mode also discovers columns sharing
+    // sampleId (like cdr3Spectratype) which are irrelevant to this table.
+    // const clonotypeOnlySpec: PColumnSpec = {
+    //   ...anchorSpec,
+    //   axesSpec: [anchorSpec.axesSpec[1]],
+    // };
     return createPlDataTableV3(ctx, {
-      source: sources,
-      columns: {
-        anchors: { main: anchorSpec },
+      sources,
+      anchors: { main: anchorSpec },
+      columnsSelector: {
         mode: 'enrichment',
       },
-      state: ctx.data.tableState,
-      coreColumnPredicate: (col) => col.spec.name === 'pl7.app/vdj/lead-selection',
+      tableState: ctx.data.tableState,
       coreJoinType: 'inner',
     });
   })

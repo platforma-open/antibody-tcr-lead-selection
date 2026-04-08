@@ -20,5 +20,11 @@
     "typescript": "catalog:",
     "shx": "catalog:"
   },
-  "packageManager": "pnpm@9.12.0"
+  "packageManager": "pnpm@9.12.0",
+  "pnpm": {
+    "overrides": {
+      "@platforma-sdk/model": "file:/Users/mzueva/Work/dev/platforma/core/platforma/sdk/model/package.tgz",
+      "@platforma-sdk/ui-vue": "file:/Users/mzueva/Work/dev/platforma/core/platforma/sdk/ui-vue/package.tgz"
+    }
+  }
 }
