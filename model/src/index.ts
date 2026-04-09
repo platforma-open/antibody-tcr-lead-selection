@@ -6,7 +6,7 @@ import type {
   PColumn,
   PColumnDataUniversal,
   PColumnIdAndSpec,
-  // PColumnSpec,
+  PColumnSpec,
   PlRef,
 } from '@platforma-sdk/model';
 import {
@@ -91,7 +91,10 @@ export const platforma = BlockModelV3.create(blockDataModel)
         { annotations: { 'pl7.app/isLinkerColumn': 'true' } },
         { annotations: { 'pl7.app/sequence/isAnnotation': 'true' } },
       ],
-    }).filter((m) => !m.column.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection'));
+    }).filter((m) =>
+      !m.column.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection')
+      && !m.column.spec.axesSpec.some((a) => a.name === result.sampleAxisName),
+    );
 
     // deriveLabels replaces getDisambiguatedOptions
     const labeled = deriveLabels(
@@ -126,7 +129,8 @@ export const platforma = BlockModelV3.create(blockDataModel)
       ],
     }).filter((m) =>
       m.column.spec.valueType !== 'String'
-      && !m.column.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection'),
+      && !m.column.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection')
+      && !m.column.spec.axesSpec.some((a) => a.name === result.sampleAxisName),
     );
 
     const labeled = deriveLabels(
@@ -321,7 +325,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
         .filter((r) => r.value?.column !== undefined)
         .map((r) => r.value!.column as string),
     );
-    // const kabatEnabled = ctx.activeArgs?.kabatNumbering ?? false;
+    const kabatEnabled = ctx.activeArgs?.kabatNumbering ?? false;
 
     // Resolve filter/ranking IDs to spec signatures for matching in ColumnMatcher
     const collectionResult = buildCollection(ctx, anchor);
@@ -338,8 +342,8 @@ export const platforma = BlockModelV3.create(blockDataModel)
         }
       }
     }
-    // const isFilterOrRank = (spec: PColumnSpec): boolean =>
-    //   filterRankSpecs.has(canonicalizeJson({ name: spec.name, domain: spec.domain }));
+    const isFilterOrRank = (spec: PColumnSpec): boolean =>
+      filterRankSpecs.has(canonicalizeJson({ name: spec.name, domain: spec.domain }));
 
     return createPlDataTableV3(ctx, {
       sources,
@@ -349,11 +353,51 @@ export const platforma = BlockModelV3.create(blockDataModel)
       },
       tableState: ctx.data.tableState,
       coreJoinType: 'inner',
-      sortBySpec: [{
-        match: (spec) => spec.name === 'pl7.app/vdj/ranking-order',
-        ascending: true,
-        naAndAbsentAreLeastValues: false,
-      }],
+      // sortBySpec: [{
+      //   match: (spec) => spec.name === 'pl7.app/vdj/ranking-order',
+      //   ascending: true,
+      //   naAndAbsentAreLeastValues: false,
+      // }],
+      columnsDisplayOptions: {
+        ordering: [
+          {
+            match: (spec) => spec.name === Annotation.Label
+              && spec.axesSpec.length === 1
+              && (spec.axesSpec[0].name === 'pl7.app/vdj/clonotypeKey'
+                || spec.axesSpec[0].name === 'pl7.app/vdj/scClonotypeKey'),
+            priority: 1000000,
+          },
+          {
+            match: (spec) =>
+              spec.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'
+              && spec.annotations?.['pl7.app/vdj/isMainSequence'] === 'true'
+              && spec.domain?.['pl7.app/alphabet'] === 'aminoacid',
+            priority: 999000,
+          },
+          {
+            match: isFilterOrRank,
+            priority: 7000,
+          },
+        ],
+        visibility: [
+          {
+            match: (spec) =>
+              spec.name === 'pl7.app/vdj/ranking-order'
+              || spec.name === 'pl7.app/vdj/inVivoScore'
+              || isFilterOrRank(spec)
+              || (spec.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'
+                && spec.annotations?.['pl7.app/vdj/isMainSequence'] === 'true'
+                && spec.domain?.['pl7.app/alphabet'] === 'aminoacid')
+              || (kabatEnabled && spec.name.startsWith('pl7.app/vdj/kabatSequence')),
+            visibility: 'default',
+          },
+          // Catch-all: everything else optional (except linkers — V3 manages those)
+          {
+            match: (spec) => spec.annotations?.['pl7.app/isLinkerColumn'] !== 'true',
+            visibility: 'optional',
+          },
+        ],
+      },
     });
   })
 

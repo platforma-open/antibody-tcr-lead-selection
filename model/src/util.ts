@@ -82,7 +82,7 @@ export function getVisibleClusterAxes<T extends { id: unknown; spec: { axesSpec:
 export function buildCollection(
   ctx: RenderCtx<BlockArgs, BlockData>,
   inputAnchor: PlRef | undefined,
-): { collection: AnchoredColumnCollection; meta: ColumnsMeta } | undefined {
+): { collection: AnchoredColumnCollection; meta: ColumnsMeta; sampleAxisName: string } | undefined {
   if (!inputAnchor) return undefined;
 
   const anchorSpec = ctx.resultPool.getPColumnSpecByRef(inputAnchor);
@@ -95,24 +95,32 @@ export function buildCollection(
     (spec) => (spec.valueType as string) !== 'File'
       && !(spec.annotations?.['pl7.app/isLinkerColumn'] === 'true' && spec.axesSpec.length > 2),
   );
-  // Use full 2-axis anchor for ID derivation (so IDs match the workflow's anchor mapping).
-  // Override trunk to clonotypeKey only — limits discovery to clonotypeKey-related columns.
+  // Use RelaxedColumnSelector anchor matching clonotypeKey axis.
+  // This resolves to columns with clonotypeKey — their axes intersection
+  // determines the ID derivation (clonotypeKey-only) and trunk.
+  const clonotypeAxisName = anchorSpec.axesSpec[1].name;
   const builder = new ColumnCollectionBuilder(ctx.services.pframeSpec)
     .addSource(resultPoolColumns);
   const collection = builder.build({
-    anchors: { main: anchorSpec },
-    trunkAxes: [[anchorSpec.axesSpec[1]]],
+    anchors: { main: { axes: [{ name: clonotypeAxisName }] } },
   });
   if (!collection) return undefined;
 
   // Discover all enrichment-compatible columns keyed by clonotypeKey.
   // The 'enrichment' mode ensures only columns whose axes are satisfiable
   // by the trunk (clonotypeKey) — directly or via linker traversal — are returned.
+  const sampleAxisName = anchorSpec.axesSpec[0].name;
   const allMatches = collection.findColumns({
     mode: 'related',
-    exclude: [{ annotations: { 'pl7.app/sequence/isAnnotation': 'true' } }],
+    exclude: [
+      { annotations: { 'pl7.app/sequence/isAnnotation': 'true' } },
+    ],
     maxHops: 2,
-  });
+  }).filter(
+    // Exclude columns with sampleId axis — they produce ambiguous literal AxisIds
+    // in the workflow's anchoredQuery resolution
+    (m) => !m.column.spec.axesSpec.some((a) => a.name === sampleAxisName),
+  );
 
   // Extract scores
   const scores = allMatches.filter(
@@ -125,6 +133,7 @@ export function buildCollection(
 
   return {
     collection,
+    sampleAxisName,
     meta: {
       allMatches,
       scores,
