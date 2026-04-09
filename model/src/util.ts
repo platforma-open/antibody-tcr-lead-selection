@@ -3,7 +3,6 @@ import {
   type AnchoredColumnCollection,
   type AxisSpec,
   type ColumnMatch,
-  type PColumnSpec,
   type PlRef,
   type RenderCtx,
   type SUniversalPColumnId,
@@ -96,16 +95,14 @@ export function buildCollection(
     (spec) => (spec.valueType as string) !== 'File'
       && !(spec.annotations?.['pl7.app/isLinkerColumn'] === 'true' && spec.axesSpec.length > 2),
   );
-  // Build with only the clonotypeKey axis (idx 1) as the trunk anchor.
-  // The full anchorSpec has [sampleId, clonotypeKey] but we want to discover
-  // columns keyed by clonotypeKey only, omitting the sample dimension.
-  const clonotypeAxisSpec: PColumnSpec = {
-    ...anchorSpec,
-    axesSpec: [anchorSpec.axesSpec[1]],
-  };
+  // Use full 2-axis anchor for ID derivation (so IDs match the workflow's anchor mapping).
+  // Override trunk to clonotypeKey only — limits discovery to clonotypeKey-related columns.
   const builder = new ColumnCollectionBuilder(ctx.services.pframeSpec)
     .addSource(resultPoolColumns);
-  const collection = builder.build({ anchors: { main: clonotypeAxisSpec } });
+  const collection = builder.build({
+    anchors: { main: anchorSpec },
+    trunkAxes: [[anchorSpec.axesSpec[1]]],
+  });
   if (!collection) return undefined;
 
   // Discover all enrichment-compatible columns keyed by clonotypeKey.

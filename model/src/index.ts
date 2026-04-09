@@ -6,12 +6,14 @@ import type {
   PColumn,
   PColumnDataUniversal,
   PColumnIdAndSpec,
+  // PColumnSpec,
   PlRef,
 } from '@platforma-sdk/model';
 import {
   Annotation,
   ArrayColumnProvider,
   BlockModelV3,
+  canonicalizeJson,
   createPFrameForGraphs,
   createPlDataTableV3,
   deriveLabels,
@@ -284,8 +286,10 @@ export const platforma = BlockModelV3.create(blockDataModel)
       allowPermanentAbsence: true,
     });
 
-    // Let V3 discover directly from sources — preserves linkerPath for proper join routing.
-    // Pass filtered result pool + workflow output sources.
+    // Let V3 discover directly from raw sources.
+    // trunkAxes overrides discovery to clonotypeKey only — prevents sampleId-based
+    // joins pulling in SingleCell and other unrelated datasets.
+    // Full anchor is used for core column identification (buildAnchorIdSet).
     const resultPoolColumns = ctx.resultPool.selectColumns(
       (spec) => (spec.valueType as string) !== 'File'
         && !(spec.annotations?.['pl7.app/isLinkerColumn'] === 'true' && spec.axesSpec.length > 2),
@@ -299,21 +303,57 @@ export const platforma = BlockModelV3.create(blockDataModel)
       if (kabatCols) sources.push(new ArrayColumnProvider(kabatCols));
     }
 
-    // Use single-axis anchor (clonotypeKey only) for table discovery.
-    // With full 2-axis anchor, enrichment mode also discovers columns sharing
-    // sampleId (like cdr3Spectratype) which are irrelevant to this table.
-    // const clonotypeOnlySpec: PColumnSpec = {
-    //   ...anchorSpec,
-    //   axesSpec: [anchorSpec.axesSpec[1]],
-    // };
+    // Use lead-selection column as anchor — it has [clonotypeKey] axis only,
+    // so the inner join core is keyed by clonotypeKey (no sampleId duplication).
+    const leadSelectionCol = sampledRows.find(
+      (col) => col.spec.name === 'pl7.app/vdj/lead-selection',
+    );
+    if (!leadSelectionCol) return undefined;
+
+    // Build filter/ranking spec lookup for columnsDisplayOptions matchers
+    const filterColumnIds = new Set<string>(
+      ctx.activeArgs?.filters
+        .filter((f) => f.value?.column !== undefined)
+        .map((f) => f.value!.column as string),
+    );
+    const rankingColumnIds = new Set<string>(
+      ctx.activeArgs?.rankingOrder
+        .filter((r) => r.value?.column !== undefined)
+        .map((r) => r.value!.column as string),
+    );
+    // const kabatEnabled = ctx.activeArgs?.kabatNumbering ?? false;
+
+    // Resolve filter/ranking IDs to spec signatures for matching in ColumnMatcher
+    const collectionResult = buildCollection(ctx, anchor);
+    const filterRankSpecs = new Set<string>();
+    if (collectionResult) {
+      for (const m of collectionResult.meta.allMatches) {
+        const idStr = m.column.id as string;
+        if (filterColumnIds.has(idStr) || rankingColumnIds.has(idStr)) {
+          const sig = canonicalizeJson({
+            name: m.column.spec.name,
+            domain: m.column.spec.domain,
+          });
+          filterRankSpecs.add(sig);
+        }
+      }
+    }
+    // const isFilterOrRank = (spec: PColumnSpec): boolean =>
+    //   filterRankSpecs.has(canonicalizeJson({ name: spec.name, domain: spec.domain }));
+
     return createPlDataTableV3(ctx, {
       sources,
-      anchors: { main: anchorSpec },
+      anchors: { main: leadSelectionCol.spec },
       columnsSelector: {
         mode: 'enrichment',
       },
       tableState: ctx.data.tableState,
       coreJoinType: 'inner',
+      sortBySpec: [{
+        match: (spec) => spec.name === 'pl7.app/vdj/ranking-order',
+        ascending: true,
+        naAndAbsentAreLeastValues: false,
+      }],
     });
   })
 
