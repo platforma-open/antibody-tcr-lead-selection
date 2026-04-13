@@ -95,15 +95,15 @@ export function buildCollection(
     (spec) => (spec.valueType as string) !== 'File'
       && !(spec.annotations?.['pl7.app/isLinkerColumn'] === 'true' && spec.axesSpec.length > 2),
   );
-  // Use RelaxedColumnSelector anchor matching clonotypeKey axis.
-  // This resolves to columns with clonotypeKey — their axes intersection
-  // determines the ID derivation (clonotypeKey-only) and trunk.
-  const clonotypeAxisName = anchorSpec.axesSpec[1].name;
-  const builder = new ColumnCollectionBuilder(ctx.services.pframeSpec)
-    .addSource(resultPoolColumns);
-  const collection = builder.build({
-    anchors: { main: { axes: [{ name: clonotypeAxisName }] } },
-  });
+  // Use the full 2-axis input anchor as PColumnSpec.
+  // This makes the anchored ID deriver use idx:0=sampleId, idx:1=clonotypeKey,
+  // matching the workflow's `addAnchor("main", inputAnchor)` reference frame —
+  // so column IDs from model discovery resolve correctly in bundleBuilder.
+  // Discovery scope is restricted via JS post-filter below: sampleId-axis columns
+  // are dropped to avoid ambiguous literal AxisIds in workflow's anchoredQuery.
+  const collection = new ColumnCollectionBuilder(ctx.services.pframeSpec)
+    .addSource(resultPoolColumns)
+    .build({ anchors: { main: anchorSpec } });
   if (!collection) return undefined;
 
   // Discover all enrichment-compatible columns keyed by clonotypeKey.

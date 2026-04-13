@@ -8,6 +8,7 @@ import type {
   PColumnIdAndSpec,
   PColumnSpec,
   PlRef,
+  PTableSorting,
 } from '@platforma-sdk/model';
 import {
   Annotation,
@@ -188,7 +189,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
         axesNames: m.column.spec.axesSpec.map((a) => a.name),
         pathLength: m.path.length,
         path: m.path.map((s) => ({
-          linkerId: s.linker.columnId,
+          linkerId: s.linker.id,
           linkerAxes: s.linker.spec.axesSpec.map((a) => a.name),
         })),
         isLinker: m.column.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true',
@@ -314,7 +315,8 @@ export const platforma = BlockModelV3.create(blockDataModel)
     );
     if (!leadSelectionCol) return undefined;
 
-    // Build filter/ranking spec lookup for columnsDisplayOptions matchers
+    // Build filter/ranking spec lookup for columnsDisplayOptions matchers.
+    // Match by spec signature (name + domain) since ColumnMatcher receives spec, not ID.
     const filterColumnIds = new Set<string>(
       ctx.activeArgs?.filters
         .filter((f) => f.value?.column !== undefined)
@@ -327,37 +329,43 @@ export const platforma = BlockModelV3.create(blockDataModel)
     );
     const kabatEnabled = ctx.activeArgs?.kabatNumbering ?? false;
 
-    // Resolve filter/ranking IDs to spec signatures for matching in ColumnMatcher
     const collectionResult = buildCollection(ctx, anchor);
     const filterRankSpecs = new Set<string>();
     if (collectionResult) {
       for (const m of collectionResult.meta.allMatches) {
         const idStr = m.column.id as string;
         if (filterColumnIds.has(idStr) || rankingColumnIds.has(idStr)) {
-          const sig = canonicalizeJson({
+          filterRankSpecs.add(canonicalizeJson({
             name: m.column.spec.name,
             domain: m.column.spec.domain,
-          });
-          filterRankSpecs.add(sig);
+          }));
         }
       }
     }
     const isFilterOrRank = (spec: PColumnSpec): boolean =>
       filterRankSpecs.has(canonicalizeJson({ name: spec.name, domain: spec.domain }));
 
+    // Sort by ranking-order column (from sampledRows). V3 remaps the ID via originalId.
+    const rankingOrderCol = sampledRows.find(
+      (col) => col.spec.name === 'pl7.app/vdj/ranking-order',
+    );
+    const sorting: PTableSorting[] | undefined = rankingOrderCol
+      ? [{
+          column: { type: 'column', id: rankingOrderCol.id },
+          ascending: true,
+          naAndAbsentAreLeastValues: false,
+        }]
+      : undefined;
+
     return createPlDataTableV3(ctx, {
-      sources,
-      anchors: { main: leadSelectionCol.spec },
-      columnsSelector: {
-        mode: 'enrichment',
+      discoverColumnOptions: {
+        sources,
+        anchors: { main: leadSelectionCol.spec },
+        columnsSelector: { mode: 'enrichment' },
       },
       tableState: ctx.data.tableState,
-      coreJoinType: 'inner',
-      // sortBySpec: [{
-      //   match: (spec) => spec.name === 'pl7.app/vdj/ranking-order',
-      //   ascending: true,
-      //   naAndAbsentAreLeastValues: false,
-      // }],
+      primaryJoinType: 'full',
+      sorting,
       columnsDisplayOptions: {
         ordering: [
           {

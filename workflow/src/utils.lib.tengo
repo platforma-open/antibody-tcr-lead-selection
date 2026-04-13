@@ -338,10 +338,62 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec) {
         }
     }
 
-    // Get linker columns and add them to the table
+    // Collect axes used by filter/ranking columns (excluding clonotypeKey)
+    // to determine which linkers are actually needed
+    usedNonMainAxes := {}
+    for i, filter in args.filters {
+        if filter.value != undefined {
+            colSpec := columns.getColumn(filter.value.column)
+            if !is_undefined(colSpec) && !is_undefined(colSpec.spec) {
+                for ax in colSpec.spec.axesSpec {
+                    if ax.name != datasetSpec.axesSpec[1].name {
+                        usedNonMainAxes[ax.name] = true
+                    }
+                }
+            }
+        }
+    }
+    for i, col in args.rankingOrder {
+        if col.value != undefined && col.value.column != "pl7.app/vdj/inVivoScore" {
+            colSpec := columns.getColumn(col.value.column)
+            if !is_undefined(colSpec) && !is_undefined(colSpec.spec) {
+                for ax in colSpec.spec.axesSpec {
+                    if ax.name != datasetSpec.axesSpec[1].name {
+                        usedNonMainAxes[ax.name] = true
+                    }
+                }
+            }
+        }
+    }
+    // Diversification also needs its linker
+    if !is_undefined(args.diversificationColumn) {
+        selectedLinkerSpec := columns.getSpec(args.diversificationColumn)
+        if !is_undefined(selectedLinkerSpec) {
+            for ax in selectedLinkerSpec.axesSpec {
+                if ax.name != datasetSpec.axesSpec[1].name {
+                    usedNonMainAxes[ax.name] = true
+                }
+            }
+        }
+    }
+
+    // Get linker columns — only add to clone table if their non-main axis is used
     linkerClusterIdAxesWithIdx := []
-    
+
     for linkerIdx, col in sortedLinkers {
+        // Determine the linker's non-clonotypeKey axis
+        otherAxis := undefined
+        if datasetSpec.axesSpec[1].name == col.spec.axesSpec[1].name {
+            otherAxis = col.spec.axesSpec[0]
+        } else if datasetSpec.axesSpec[1].name == col.spec.axesSpec[0].name {
+            otherAxis = col.spec.axesSpec[1]
+        }
+
+        // Skip this linker if its non-main axis is not used by any filter/ranking/diversification
+        if is_undefined(otherAxis) || is_undefined(usedNonMainAxes[otherAxis.name]) {
+            continue
+        }
+
         clusterIdAxis := undefined
         if datasetSpec.axesSpec[1].name == col.spec.axesSpec[1].name {
             // clonotypeKey is in second axis

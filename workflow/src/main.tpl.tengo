@@ -61,7 +61,9 @@ wf.prepare(func(args){
     }
     
 
-    // Add linker columns
+    // Add linker columns — always fetch them for metadata,
+    // but initializeCloneTable only adds linkers to the join when needed
+    // by filter/ranking columns or diversification.
     bundleBuilder.addMulti({
         axes: [{ anchor: "main", idx: 1 }], // this will do partial axes match (unlike in the model)
         annotations: { "pl7.app/isLinkerColumn": "true" },
