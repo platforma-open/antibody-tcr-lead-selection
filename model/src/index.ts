@@ -291,13 +291,10 @@ export const platforma = BlockModelV3.create(blockDataModel)
       allowPermanentAbsence: true,
     });
 
-    // Let V3 discover directly from raw sources.
-    // trunkAxes overrides discovery to clonotypeKey only — prevents sampleId-based
-    // joins pulling in SingleCell and other unrelated datasets.
-    // Full anchor is used for core column identification (buildAnchorIdSet).
     const resultPoolColumns = ctx.resultPool.selectColumns(
       (spec) => (spec.valueType as string) !== 'File'
-        && !(spec.annotations?.['pl7.app/isLinkerColumn'] === 'true' && spec.axesSpec.length > 2),
+        && !(spec.annotations?.['pl7.app/isLinkerColumn'] === 'true' && spec.axesSpec.length > 2)
+        && !spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection'),
     );
     const sources: ColumnSource[] = [
       new ArrayColumnProvider(resultPoolColumns),
