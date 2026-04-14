@@ -21,7 +21,7 @@ import {
   isHiddenFromGraphColumn,
   isHiddenFromUIColumn,
 } from '@platforma-sdk/model';
-import { buildCollection, IN_VIVO_SCORE_COLUMN_ID, matchToColumnId } from './util';
+import { buildCollection, commonExcludeSelectors, IN_VIVO_SCORE_COLUMN_ID, isSelectableMatch, matchToColumnId } from './util';
 import { convertFilterUI, convertRankingOrderUI } from './converters';
 import { blockDataModel } from './dataModel';
 import type { BlockArgs } from './types';
@@ -85,17 +85,10 @@ export const platforma = BlockModelV3.create(blockDataModel)
     const result = buildCollection(ctx, ctx.data.inputAnchor);
     if (!result) return undefined;
 
-    // Discover filterable columns — exclude linkers and own trace
     const filterableMatches = result.collection.findColumns({
       mode: 'enrichment',
-      exclude: [
-        { annotations: { 'pl7.app/isLinkerColumn': 'true' } },
-        { annotations: { 'pl7.app/sequence/isAnnotation': 'true' } },
-      ],
-    }).filter((m) =>
-      !m.column.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection')
-      && !m.column.spec.axesSpec.some((a) => a.name === result.sampleAxisName),
-    );
+      exclude: commonExcludeSelectors,
+    }).filter((m) => isSelectableMatch(m, result.sampleAxisName));
 
     // deriveLabels replaces getDisambiguatedOptions
     const labeled = deriveLabels(
@@ -124,14 +117,10 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
     const rankableMatches = result.collection.findColumns({
       mode: 'enrichment',
-      exclude: [
-        { annotations: { 'pl7.app/isLinkerColumn': 'true' } },
-        { annotations: { 'pl7.app/sequence/isAnnotation': 'true' } },
-      ],
+      exclude: commonExcludeSelectors,
     }).filter((m) =>
-      m.column.spec.valueType !== 'String'
-      && !m.column.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection')
-      && !m.column.spec.axesSpec.some((a) => a.name === result.sampleAxisName),
+      isSelectableMatch(m, result.sampleAxisName)
+      && m.column.spec.valueType !== 'String',
     );
 
     const labeled = deriveLabels(
@@ -395,6 +384,12 @@ export const platforma = BlockModelV3.create(blockDataModel)
                 && spec.domain?.['pl7.app/alphabet'] === 'aminoacid')
               || (kabatEnabled && spec.name.startsWith('pl7.app/vdj/kabatSequence')),
             visibility: 'default',
+          },
+          // Clone-to-cluster mapping (name: pl7.app/vdj/clusterId, axes: [clonotypeKey])
+          // is always hidden — it duplicates the clusterId axis label column.
+          {
+            match: (spec) => spec.name === 'pl7.app/vdj/clusterId',
+            visibility: 'hidden',
           },
           // Catch-all: everything else optional (except linkers — V3 manages those)
           {

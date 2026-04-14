@@ -1,6 +1,8 @@
 import {
+  Annotation,
   ColumnCollectionBuilder,
   type AnchoredColumnCollection,
+  type AnchoredFindColumnsOptions,
   type AxisSpec,
   type ColumnMatch,
   type PlRef,
@@ -8,6 +10,21 @@ import {
   type SUniversalPColumnId,
 } from '@platforma-sdk/model';
 import type { AnchoredColumnId, BlockArgs, BlockData, ColumnsMeta, PlTableFiltersDefault, RankingOrder } from './types';
+
+/** Common WASM exclude selectors shared across filter/rank/table discovery. */
+export const commonExcludeSelectors: NonNullable<AnchoredFindColumnsOptions['exclude']> = [
+  { annotations: { 'pl7.app/isLinkerColumn': 'true' } },
+  { annotations: { 'pl7.app/sequence/isAnnotation': 'true' } },
+];
+
+/** JS post-filter for column matches — excludes sampleId-axis, cluster mapping, label,
+ *  and columns produced by this block. */
+export function isSelectableMatch(m: ColumnMatch, sampleAxisName: string): boolean {
+  return !m.column.spec.axesSpec.some((a) => a.name === sampleAxisName)
+    && m.column.spec.name !== 'pl7.app/vdj/clusterId'
+    && m.column.spec.name !== 'pl7.app/label'
+    && !m.column.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection');
+}
 
 /** Converts a ColumnMatch to an AnchoredColumnId for the workflow wire format. */
 export function matchToColumnId(match: ColumnMatch, anchorRef: PlRef): AnchoredColumnId {
@@ -112,15 +129,9 @@ export function buildCollection(
   const sampleAxisName = anchorSpec.axesSpec[0].name;
   const allMatches = collection.findColumns({
     mode: 'related',
-    exclude: [
-      { annotations: { 'pl7.app/sequence/isAnnotation': 'true' } },
-    ],
+    exclude: commonExcludeSelectors,
     maxHops: 2,
-  }).filter(
-    // Exclude columns with sampleId axis — they produce ambiguous literal AxisIds
-    // in the workflow's anchoredQuery resolution
-    (m) => !m.column.spec.axesSpec.some((a) => a.name === sampleAxisName),
-  );
+  }).filter((m) => isSelectableMatch(m, sampleAxisName));
 
   // Extract scores
   const scores = allMatches.filter(
