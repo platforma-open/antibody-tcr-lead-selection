@@ -511,10 +511,15 @@ export const platforma = BlockModelV3.create(blockDataModel)
         if (!linkerSpec?.axesSpec.some((axis) => axis.name === 'pl7.app/vdj/clusterId')) {
           continue;
         }
-        options.push({
-          label: link.label || 'Cluster',
-          ref: link.ref,
-        });
+        // Extract clustering trace element label directly to avoid verbose
+        // disambiguation when vdj-integration linkers are present in the pool.
+        let label = 'Cluster';
+        try {
+          const trace = JSON.parse(linkerSpec.annotations?.['pl7.app/trace'] ?? '[]') as { type?: string; label?: string }[];
+          const clusteringElement = trace.find((t) => t.type === 'milaboratories.clonotype-clustering.clustering');
+          if (clusteringElement?.label) label = clusteringElement.label;
+        } catch { /* use default */ }
+        options.push({ label, ref: link.ref });
       }
     }
 
