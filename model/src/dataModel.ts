@@ -31,6 +31,11 @@ export const blockDataModel = new DataModelBuilder()
       currentTab: null,
       layersSettings: { heatmap: { normalizationDirection: null } },
     },
+    selectionPlotState: {
+      title: 'Selection Plot',
+      template: 'selection',
+      currentTab: null,
+    },
     alignmentModel: uiState?.alignmentModel ?? {},
     filtersInitializedForAnchor: uiState?.filtersInitializedForAnchor,
     rankingsInitializedForAnchor: uiState?.rankingsInitializedForAnchor,
@@ -60,6 +65,11 @@ export const blockDataModel = new DataModelBuilder()
       template: 'heatmap',
       currentTab: null,
       layersSettings: { heatmap: { normalizationDirection: null } },
+    },
+    selectionPlotState: {
+      title: 'Selection Plot',
+      template: 'selection',
+      currentTab: null,
     },
     alignmentModel: {},
     filtersInitializedForAnchor: undefined,

@@ -710,6 +710,31 @@ buildFilterTraceLabel := func(filters, columns) {
     return result
 }
 
+/**
+ * Builds an ordered list of filter stage names for the Selection Plot valueLabels.
+ * Returns one label per filter, in the same order filters are applied.
+ *
+ * @param filters - Array of filter objects from block args
+ * @param columns - PBundle to look up column specs for labels
+ * @return Array of strings, one per filter stage
+ */
+buildFilterStageNames := func(filters, columns) {
+    names := []
+    for filter in filters {
+        // Same guard as initializeCloneTable: skip filters with missing upstream columns
+        if !is_undefined(filter.value) && !is_undefined(columns.getColumn(filter.value.column).spec) {
+            colSpec := columns.getColumn(filter.value.column).spec
+            label := colSpec.name
+            colLabel := colSpec.annotations["pl7.app/label"]
+            if !is_undefined(colLabel) && colLabel != "" {
+                label = colLabel
+            }
+            names = names + [label]
+        }
+    }
+    return names
+}
+
 export {
     clusterAxisDomainsMatch: clusterAxisDomainsMatch,
     findMatchingLinkerIndex: findMatchingLinkerIndex,
@@ -723,5 +748,6 @@ export {
     initializeAssemSeqTable: initializeAssemSeqTable,
     formatFilterDescription: formatFilterDescription,
     buildFilterTraceLabel: buildFilterTraceLabel,
+    buildFilterStageNames: buildFilterStageNames,
     inVivoScoreSourceColumns: inVivoScoreSourceColumns
 }

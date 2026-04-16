@@ -46,6 +46,7 @@ export type BlockData = {
   graphStateUMAP: GraphMakerState;
   cdr3StackedBarPlotState: GraphMakerState;
   vjUsagePlotState: GraphMakerState;
+  selectionPlotState: GraphMakerState;
   alignmentModel: PlMultiSequenceAlignmentModel;
   /** Tracks which anchor's filter defaults have been applied (prevents re-applying on panel reopen) */
   filtersInitializedForAnchor?: string;

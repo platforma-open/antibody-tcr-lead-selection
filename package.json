@@ -20,5 +20,12 @@
     "typescript": "catalog:",
     "shx": "catalog:"
   },
-  "packageManager": "pnpm@9.12.0"
+  "packageManager": "pnpm@9.12.0",
+  "pnpm": {
+    "overrides": {
+      "@milaboratories/graph-maker": "file:/Users/kevindetry/Developer/milaboratories/tasks/MILAB-6015/visualizations/packages/graph-maker/milaboratories-graph-maker-1.2.10-local.1777047873.tgz",
+      "@milaboratories/miplots4": "file:/Users/kevindetry/Developer/milaboratories/tasks/MILAB-6015/visualizations/packages/miplots4/milaboratories-miplots4-1.0.179-local.1777047873.tgz",
+      "@milaboratories/pf-plots": "file:/Users/kevindetry/Developer/milaboratories/tasks/MILAB-6015/visualizations/packages/pf-plots/milaboratories-pf-plots-1.1.70-local.1777047873.tgz"
+    }
+  }
 }

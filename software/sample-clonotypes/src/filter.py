@@ -13,6 +13,7 @@ def parse_arguments():
     parser.add_argument("--parquet", required=True, help="Path to input Parquet file")
     parser.add_argument("--out", required=True, help="Path to output Parquet file")
     parser.add_argument("--filter-map", required=True, help="JSON string containing filter mapping")
+    parser.add_argument("--emit-selection", required=False, help="Path to output selection stage parquet (clonotypeKey + selectionStage)")
     return parser.parse_args()
 
 
@@ -76,36 +77,47 @@ def apply_filters(df, filter_map):
     """
     Apply all filters specified in the filter_map to the DataFrame.
     If filter_map is empty, return the input table with a "top" column added with value 1.
-    
+
     Args:
         df: polars DataFrame
         filter_map: dictionary mapping column names to filter specifications
-    
+
     Returns:
-        polars DataFrame with all filters applied and "top" columns or input table with "top" column if no filters
+        tuple of (filtered polars DataFrame, selection stage polars DataFrame or None)
+        Selection stage DataFrame has columns: clonotypeKey, selectionStage (Int32)
+        selectionStage = filter index (1-based) that eliminated the clone,
+        or N_filters+1 for clones that survived all filters.
     """
-    # If filter_map is empty, return input table with "top" column
+    # If filter_map is empty, all clones survive (stage 1)
     if not filter_map:
         print("Filter map is empty. Returning input table with 'top' column added.")
-        return df.with_columns(pl.lit(1).alias("top"))
-    
+        selection_df = df.select("clonotypeKey").with_columns(
+            pl.lit(1).cast(pl.Int64).alias("selectionStage")
+        )
+        return df.with_columns(pl.lit(1).alias("top")), selection_df
+
     filtered_df = df.clone()
     initial_rows = filtered_df.height
-    
+
     # Find all Filter_* columns in the DataFrame
     filter_columns = sorted([col for col in df.columns if re.match(r'^Filter_\d+$', col)],
                            key=lambda x: int(x[7:]))  # Extract number after "Filter_"
-    
+
     print(f"Found Filter_* columns: {filter_columns}")
     print(f"Filter map keys: {list(filter_map.keys())}")
-    
+
+    n_filters = len(filter_columns)
+    selection_parts = []
+
     # Apply filters
-    for column_name in filter_columns:
+    for stage_idx, column_name in enumerate(filter_columns, start=1):
         filter_spec = filter_map[column_name]
 
         filter_type = filter_spec["type"]
         reference_value = filter_spec.get("reference")
         data_type = filter_spec["valueType"]
+
+        before_keys = filtered_df.select("clonotypeKey")
 
         # isNA/isNotNA applies to any data type
         if filter_type in ("isNA", "isNotNA"):
@@ -121,8 +133,25 @@ def apply_filters(df, filter_map):
             rows_after_filter = filtered_df.height
             print(f"Filter '{column_name}' {filter_type} {reference_value}: {initial_rows} -> {rows_after_filter} rows")
             initial_rows = rows_after_filter
-    
-    return filtered_df
+
+        # Track eliminated clones at this stage
+        after_keys = filtered_df.select("clonotypeKey")
+        eliminated = before_keys.join(after_keys, on="clonotypeKey", how="anti")
+        if eliminated.height > 0:
+            selection_parts.append(
+                eliminated.with_columns(pl.lit(stage_idx).cast(pl.Int64).alias("selectionStage"))
+            )
+
+    # Surviving clones get selectionStage = N_filters + 1
+    survivors = filtered_df.select("clonotypeKey").with_columns(
+        pl.lit(n_filters + 1).cast(pl.Int64).alias("selectionStage")
+    )
+    selection_parts.append(survivors)
+
+    selection_df = pl.concat(selection_parts)
+    print(f"Selection stage tracking: {selection_df.height} total clones across {n_filters} filter stages")
+
+    return filtered_df, selection_df
 
 
 def aggregate_across_samples(df):
@@ -151,9 +180,10 @@ def aggregate_across_samples(df):
 
 def main():
     start_time = time.time()
-    print(f"Starting clonotype filtering at {time.strftime('%H:%M:%S')}")
-    
+    print(f"filter.py:main() START at {time.strftime('%H:%M:%S')}")
+
     args = parse_arguments()
+    print(f"filter.py:args: parquet={args.parquet} out={args.out} emit_selection={args.emit_selection}")
 
     # Load Parquet file
     load_start = time.time()
@@ -169,12 +199,17 @@ def main():
     # Check if file is empty
     if df.height == 0:
         print("Warning: Input Parquet file is empty. Creating empty output file with minimal headers.")
-        # Create empty output file with minimal required columns
         empty_df = pl.DataFrame(schema={
             'clonotypeKey': pl.Utf8,
             'top': pl.Int64,
         })
         empty_df.write_parquet(args.out)
+        if args.emit_selection:
+            empty_selection = pl.DataFrame(schema={
+                'clonotypeKey': pl.Utf8,
+                'selectionStage': pl.Int64,
+            })
+            empty_selection.write_parquet(args.emit_selection)
         total_time = time.time() - start_time
         print(f"Empty output file created: {args.out}")
         print(f"Total time: {total_time:.3f}s")
@@ -225,25 +260,33 @@ def main():
     # Apply filters
     filtering_start = time.time()
     print(f"Initial rows: {df.height}")
-    filtered_df = apply_filters(df, filter_map)
+    filtered_df, selection_df = apply_filters(df, filter_map)
     filtering_time = time.time() - filtering_start
     print(f"Rows after filtering: {filtered_df.height}")
     print(f"Filtering: {filtering_time:.3f}s")
 
     # Add a column named top with value 1
     filtered_df = filtered_df.with_columns(pl.lit(1).alias("top"))
-    
+
     # Output filtered data to parquet
     output_start = time.time()
     if filtered_df.height == 0:
         print("Warning: No rows remain after filtering. Creating empty output file.")
-    
+
     filtered_df.write_parquet(args.out)
     output_time = time.time() - output_start
     print(f"Output: {output_time:.3f}s (wrote to {args.out})")
-    
+
+    # Write selection stage data if requested
+    if args.emit_selection:
+        print(f"filter.py:writing selection parquet: schema={selection_df.schema} rows={selection_df.height}")
+        selection_df.write_parquet(args.emit_selection)
+        print(f"filter.py:wrote selection parquet: {args.emit_selection}")
+    else:
+        print(f"filter.py:WARNING: --emit-selection not passed")
+
     total_time = time.time() - start_time
-    print(f"Total time: {total_time:.3f}s")
+    print(f"filter.py:DONE in {total_time:.3f}s")
 
 if __name__ == "__main__":
     main() 
