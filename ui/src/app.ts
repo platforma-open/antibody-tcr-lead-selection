@@ -3,6 +3,7 @@ import { plRefsEqual } from '@platforma-sdk/model';
 import { defineAppV3 } from '@platforma-sdk/ui-vue';
 import { watchEffect } from 'vue';
 import MainPage from './pages/MainPage.vue';
+import SelectionPage from './pages/SelectionPage.vue';
 import SpectratypePage from './pages/SpectratypePage.vue';
 import UmapPage from './pages/UmapPage.vue';
 import UsagePage from './pages/UsagePage.vue';
@@ -19,6 +20,7 @@ export const sdkPlugin = defineAppV3(platforma, (app) => {
       '/umap': () => UmapPage,
       '/spectratype': () => SpectratypePage,
       '/usage': () => UsagePage,
+      '/selection': () => SelectionPage,
     },
   };
 });

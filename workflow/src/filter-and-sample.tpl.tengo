@@ -8,9 +8,10 @@ pSpec := import("@platforma-sdk/workflow-tengo:pframes.spec")
 render := import("@platforma-sdk/workflow-tengo:render")
 sampledColsConv := import(":sampled-cols-conv")
 sampledExportConv := import(":sampled-export-conv")
+selectionStageConv := import(":selection-stage-conv")
 json := import("json")
 
-self.defineOutputs("sampledRows", "finalClonotypes", "sampledColumnsExport")
+self.defineOutputs("sampledRows", "finalClonotypes", "sampledColumnsExport", "selectionStagePf")
 
 self.body(func(inputs) {
 
@@ -22,8 +23,8 @@ self.body(func(inputs) {
 
     outputs := {}
     finalClonotypes := undefined
-    
-    // Run filtering script
+
+    // Run filtering script with selection stage tracking
     filterResult := exec.builder().
         software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.sample-clonotypes:filter")).
         mem("16GiB").
@@ -32,13 +33,16 @@ self.body(func(inputs) {
         arg("--parquet").arg("clonotypes.parquet").
         arg("--out").arg("filteredClonotypes.parquet").
         arg("--filter-map").arg(string(json.encode(filterMap))).
+        arg("--emit-selection").arg("selection.parquet").
         saveFile("filteredClonotypes.parquet").
+        saveFile("selection.parquet").
         printErrStreamToStdout().
         cache(24 * 60 * 60 * 1000).
         run()
 
-    // Save filtered parquet file
+    // Save filtered parquet file and selection stage data
     filteredClonotypes := filterResult.getFile("filteredClonotypes.parquet")
+    selectionParquet := filterResult.getFile("selection.parquet")
 
     // Check if In Vivo Score is in the ranking map
     hasInVivoScore := false
@@ -60,15 +64,18 @@ self.body(func(inputs) {
 	if topClonotypes != undefined {
 
 		////////// Top Clonotypes Sampling //////////
-		// Run sampling script on filtered data
+		// Run sampling script on filtered data, with selection stage merging
 		builder := exec.builder().
 			software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.sample-clonotypes:main")).
 			mem("16GiB").
 			cpu(1).
 			addFile("filteredClonotypes.parquet", filteredClonotypes).
+			addFile("selection_in.parquet", selectionParquet).
 			arg("--parquet").arg("filteredClonotypes.parquet").
 			arg("--n").arg(string(topClonotypes)).
-			arg("--ranking-map").arg(string(json.encode(rankingMap)))
+			arg("--ranking-map").arg(string(json.encode(rankingMap))).
+			arg("--selection-in").arg("selection_in.parquet").
+			arg("--selection-out").arg("selection_out.parquet")
 
 		// Add diversification column if provided
 		if inputs.diversificationColumn != undefined && inputs.diversificationColumn != "" {
@@ -78,21 +85,49 @@ self.body(func(inputs) {
 		sampleClones := builder.
 			arg("--out").arg("sampledClonotypes_top.parquet").
 			saveFile("sampledClonotypes_top.parquet").
+			saveFile("selection_out.parquet").
 			printErrStreamToStdout().
 			cache(24 * 60 * 60 * 1000).
 			run()
 
 		// Save top clonotypes parquet file
 		finalClonotypes = sampleClones.getFile("sampledClonotypes_top.parquet")
-		
+		// Updated selection stages with "Selected" stage
+		selectionParquet = sampleClones.getFile("selection_out.parquet")
+
 		// Store outputs
         sampledColsParams := sampledColsConv.getColumns(datasetSpec, true, hasInVivoScore) // Add ranking column
 		sampledColumnsPf := xsv.importFile(finalClonotypes, "parquet", sampledColsParams,
 											{cpu: 1, mem: "16GiB"})
 		outputs["sampledRows"] = pframes.exportFrame(sampledColumnsPf)
-	} 
+	}
 
     outputs["finalClonotypes"] = finalClonotypes
+
+    // Build valueLabels for selectionStage from filter stage names
+    filterStageNames := inputs.filterStageNames
+    valueLabels := {}
+    stageIdx := 1
+    if !is_undefined(filterStageNames) {
+        for name in filterStageNames {
+            valueLabels[string(stageIdx)] = name
+            stageIdx = stageIdx + 1
+        }
+    }
+
+    if topClonotypes != undefined {
+        valueLabels[string(stageIdx)] = "Filtered"
+        valueLabels[string(stageIdx + 1)] = "Selected"
+    } else {
+        valueLabels[string(stageIdx)] = "Passed Filters"
+    }
+
+    // Import selection stage parquet as selectionStage PColumn
+    selectionStageParams := selectionStageConv.getColumns(datasetSpec, valueLabels)
+    selectionStagePf := xsv.importFile(selectionParquet, "parquet", selectionStageParams,
+                                        {cpu: 1, mem: "16GiB"})
+    // Expose as a dedicated output for the Selection Plot page's pre-bound pframe.
+    outputs["selectionStagePf"] = pframes.exportFrame(selectionStagePf)
 
     // Export only the sampling column to be used as a filter downstream
     sampledExportsParams := sampledExportConv.getColumns(datasetSpec, filterMap,
@@ -100,7 +135,7 @@ self.body(func(inputs) {
     sampledColumnsOnlyPf := xsv.importFile(finalClonotypes, "parquet", sampledExportsParams,
                                         {cpu: 1, mem: "16GiB"})
 
-    // Create trace with filter descriptions and inject into exported column
+    // Create trace with filter descriptions and inject into exported columns
     traceLabel := inputs.filterTraceLabel
     if is_undefined(traceLabel) || traceLabel == "" {
         traceLabel = "Selected Leads"
@@ -117,6 +152,7 @@ self.body(func(inputs) {
         })
     exportPf := pframes.pFrameBuilder()
     exportPf.add("link", trace.inject(sampledColumnsOnlyPf["link.spec"]), sampledColumnsOnlyPf["link.data"])
+    exportPf.add("selectionStage", trace.inject(selectionStagePf["selectionStage.spec"]), selectionStagePf["selectionStage.data"])
     outputs["sampledColumnsExport"] = exportPf.build()
 
     return outputs

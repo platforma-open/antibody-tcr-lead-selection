@@ -1,9 +1,15 @@
 import { createPlDataTableStateV2, DataModelBuilder } from '@platforma-sdk/model';
-import type { BlockData, LegacyBlockArgs, LegacyUiState } from './types';
+import type { BlockData, BlockData_Ver_2026_02_25, LegacyBlockArgs, LegacyUiState } from './types';
 import { getDefaultBlockLabel } from './util';
 
+const defaultSelectionPlotState = (): BlockData['selectionPlotState'] => ({
+  title: 'Selection Plot',
+  template: 'selection',
+  currentTab: null,
+});
+
 export const blockDataModel = new DataModelBuilder()
-  .from<BlockData>('Ver_2026_02_25')
+  .from<BlockData_Ver_2026_02_25>('Ver_2026_02_25')
   .upgradeLegacy<LegacyBlockArgs, LegacyUiState>(({ args, uiState }) => ({
     defaultBlockLabel: args.defaultBlockLabel,
     customBlockLabel: args.customBlockLabel,
@@ -36,6 +42,10 @@ export const blockDataModel = new DataModelBuilder()
     rankingsInitializedForAnchor: uiState?.rankingsInitializedForAnchor,
     preset: uiState?.preset,
   }))
+  .migrate<BlockData>('Ver_2026_05_08', (prev) => ({
+    ...prev,
+    selectionPlotState: defaultSelectionPlotState(),
+  }))
   .init(() => ({
     defaultBlockLabel: getDefaultBlockLabel({}),
     customBlockLabel: '',
@@ -60,6 +70,11 @@ export const blockDataModel = new DataModelBuilder()
       template: 'heatmap',
       currentTab: null,
       layersSettings: { heatmap: { normalizationDirection: null } },
+    },
+    selectionPlotState: {
+      title: 'Selection Plot',
+      template: 'selection',
+      currentTab: null,
     },
     alignmentModel: {},
     filtersInitializedForAnchor: undefined,

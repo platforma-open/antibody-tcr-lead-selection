@@ -241,6 +241,17 @@ export const platforma = BlockModelV3.create(blockDataModel)
     return createPFrameForGraphs(ctx, pCols);
   })
 
+  .outputWithStatus('selectionStagePf', (ctx) => {
+    const pCols = ctx.outputs?.resolve({
+      field: 'selectionStagePf',
+      assertFieldType: 'Input',
+      allowPermanentAbsence: true,
+    })?.getPColumns();
+    if (pCols === undefined) return undefined;
+
+    return createPFrameForGraphs(ctx, pCols);
+  })
+
   .outputWithStatus('table', (ctx) => {
     const anchor = ctx.activeArgs?.inputAnchor;
     if (!anchor) return undefined;
@@ -571,6 +582,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     const sections: Array<{ type: 'link'; href: `/${string}`; label: string }> = [
       { type: 'link', href: '/', label: strings.titles.main },
       { type: 'link', href: '/umap', label: isPeptide ? 'Peptide Space' : 'Clonotype Space' },
+      { type: 'link', href: '/selection', label: 'Selection Plot' },
     ];
     if (!isPeptide) {
       sections.push(
