@@ -196,7 +196,8 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
     // Restrict MSA to columns sharing the input-anchor clonotype axis (main
     // dataset only). Cross-axis SC columns are excluded so PFrame never has
-    // to join disjoint axes for MSA.
+    // to join disjoint axes for MSA. Also drop per-sample columns (axis set
+    // contains sampleAxis) — they'd duplicate rows in the alignment.
     const anchorClonotypeAxisName = ctx.resultPool.getPColumnSpecByRef(anchor)
       ?.axesSpec[1]?.name;
     if (!anchorClonotypeAxisName) return undefined;
@@ -209,7 +210,8 @@ export const platforma = BlockModelV3.create(blockDataModel)
     }).filter((m) =>
       !isHiddenFromUIColumn(m.column.spec)
       && !isHiddenFromGraphColumn(m.column.spec)
-      && m.column.spec.axesSpec.some((a) => a.name === anchorClonotypeAxisName),
+      && m.column.spec.axesSpec.some((a) => a.name === anchorClonotypeAxisName)
+      && !m.column.spec.axesSpec.some((a) => a.name === result.sampleAxisName),
     );
 
     const pCols: PColumn<PColumnDataUniversal>[] = [];

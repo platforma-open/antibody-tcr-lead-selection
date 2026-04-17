@@ -215,6 +215,9 @@ function computeDefaultFilters(scores: ColumnMatch[], anchorRef: PlRef): PlTable
     }
   }
 
+  return defaultFilters;
+}
+
 function computePresets(
   scores: ColumnMatch[],
   defaultFilters: PlTableFiltersDefault[],
