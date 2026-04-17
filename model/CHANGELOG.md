@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 3.0.0
+
+### Major Changes
+
+- c2c2b06: VDJ Integration support, BlockV3 api migration
+
 ## 2.2.1
 
 ### Patch Changes
