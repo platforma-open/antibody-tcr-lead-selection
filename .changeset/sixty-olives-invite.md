@@ -1,6 +1,7 @@
 ---
-"@platforma-open/milaboratories.top-antibodies.model": minor
-"@platforma-open/milaboratories.top-antibodies.ui": minor
+"@platforma-open/milaboratories.top-antibodies.workflow": major
+"@platforma-open/milaboratories.top-antibodies.model": major
+"@platforma-open/milaboratories.top-antibodies.ui": major
 ---
 
-Migrate to block v3 api
+VDJ Integration support, BlockV3 api migration
