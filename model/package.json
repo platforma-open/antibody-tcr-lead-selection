@@ -27,6 +27,7 @@
   "dependencies": {
     "@platforma-sdk/model": "catalog:",
     "@milaboratories/graph-maker": "catalog:",
+    "@milaboratories/helpers": "catalog:",
     "@milaboratories/strings": "catalog:"
   },
   "devDependencies": {
