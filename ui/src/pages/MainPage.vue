@@ -47,6 +47,20 @@ const selection = ref<PlSelectionModel>({
   selectedKeys: [],
 });
 
+// MSA's pf contains only bulk-clonotype columns (axis `pl7.app/vdj/clonotypeKey`).
+// The table spans both clonotype axes, so raw `selection` can have a composite
+// axesSpec PFrame can't align with MSA's 1-axis sequence columns. Project the
+// selection down to the clonotype axis so the selection filter actually narrows.
+const msaSelection = computed<PlSelectionModel>(() => {
+  const sel = selection.value;
+  const idx = sel.axesSpec.findIndex((a) => a.name === 'pl7.app/vdj/clonotypeKey');
+  if (idx < 0) return { axesSpec: [], selectedKeys: [] };
+  return {
+    axesSpec: [sel.axesSpec[idx]],
+    selectedKeys: sel.selectedKeys.map((k) => [k[idx]]),
+  };
+});
+
 // Temporary typed bridge until model types are regenerated
 const kabatNumbering = computed<boolean>({
   get: () => (app.model.data.kabatNumbering ?? false),
@@ -292,7 +306,7 @@ watch(() => [app.model.data.inputAnchor, app.model.data.kabatNumbering], () => {
         v-model="app.model.data.alignmentModel"
         :sequence-column-predicate="isSequenceColumn"
         :p-frame="app.model.outputs.pf?.ok ? app.model.outputs.pf.value : undefined"
-        :selection="selection"
+        :selection="msaSelection"
       />
     </PlSlideModal>
   </PlBlockPage>

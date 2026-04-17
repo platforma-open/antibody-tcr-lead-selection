@@ -194,13 +194,23 @@ export const platforma = BlockModelV3.create(blockDataModel)
     const result = buildCollection(ctx, anchor);
     if (!result) return undefined;
 
-    // Discover columns for MSA — exclude linkers and hidden columns
+    // Restrict MSA to columns sharing the input-anchor clonotype axis (main
+    // dataset only). Cross-axis SC columns are excluded so PFrame never has
+    // to join disjoint axes for MSA.
+    const anchorClonotypeAxisName = ctx.resultPool.getPColumnSpecByRef(anchor)
+      ?.axesSpec[1]?.name;
+    if (!anchorClonotypeAxisName) return undefined;
+
     const msaMatches = result.collection.findColumns({
       mode: 'enrichment',
       exclude: [
         { annotations: { 'pl7.app/isLinkerColumn': 'true' } },
       ],
-    }).filter((m) => !isHiddenFromUIColumn(m.column.spec) && !isHiddenFromGraphColumn(m.column.spec));
+    }).filter((m) =>
+      !isHiddenFromUIColumn(m.column.spec)
+      && !isHiddenFromGraphColumn(m.column.spec)
+      && m.column.spec.axesSpec.some((a) => a.name === anchorClonotypeAxisName),
+    );
 
     const pCols: PColumn<PColumnDataUniversal>[] = [];
     for (const m of msaMatches) {
@@ -352,6 +362,12 @@ export const platforma = BlockModelV3.create(blockDataModel)
       tableState: ctx.data.tableState,
       primaryJoinType: 'full',
       sorting,
+      labelsOptions: {
+        linkerLabelFormatter: (labels, spec) =>
+          (spec as PColumnSpec).axesSpec.some((a) => a.name === 'pl7.app/vdj/clusterId')
+            ? undefined
+            : `via ${labels.join(' > ')}`,
+      },
       columnsDisplayOptions: {
         ordering: [
           {
