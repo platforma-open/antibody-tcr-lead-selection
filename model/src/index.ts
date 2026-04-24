@@ -9,6 +9,7 @@ import type {
   PColumnSpec,
   PlRef,
   PTableSorting,
+  RenderCtx,
 } from '@platforma-sdk/model';
 import {
   Annotation,
@@ -24,7 +25,28 @@ import {
 import { buildCollection, commonExcludeSelectors, IN_VIVO_SCORE_COLUMN_ID, isSelectableMatch, matchToColumnId } from './util';
 import { convertFilterUI, convertRankingOrderUI } from './converters';
 import { blockDataModel } from './dataModel';
-import type { BlockArgs } from './types';
+import type { BlockArgs, BlockData } from './types';
+
+/** Fetch UMAP columns (from clonotype-space ctx) joined with sampled rows. */
+function getUmapPCols(
+  ctx: RenderCtx<BlockArgs, BlockData>,
+): PColumn<PColumnDataUniversal>[] | undefined {
+  const anchor = ctx.data.inputAnchor;
+  if (anchor === undefined) return undefined;
+
+  const umap = ctx.resultPool.getAnchoredPColumns({ main: anchor }, [{
+    axes: [{ anchor: 'main', idx: 1 }],
+    namePattern: '^pl7\\.app/vdj/umap[12]$',
+  }]);
+  if (umap === undefined || umap.length === 0) return undefined;
+
+  const sampledRows = ctx.outputs?.resolve({
+    field: 'sampledRows',
+    assertFieldType: 'Input',
+    allowPermanentAbsence: true,
+  })?.getPColumns();
+  return [...umap, ...(sampledRows ?? [])];
+}
 
 export * from './types';
 export * from './converters';
@@ -163,29 +185,6 @@ export const platforma = BlockModelV3.create(blockDataModel)
       hasEnrichmentScores: result.meta.hasEnrichmentScores,
     };
   }, { retentive: true })
-
-  .output('debugBuildCollection', (ctx) => {
-    const result = buildCollection(ctx, ctx.data.inputAnchor);
-    if (!result) return undefined;
-
-    return {
-      matchCount: result.meta.allMatches.length,
-      scoreCount: result.meta.scores.length,
-      matches: result.meta.allMatches.map((m) => ({
-        id: m.column.id,
-        name: m.column.spec.name,
-        dataStatus: m.column.dataStatus,
-        axesNames: m.column.spec.axesSpec.map((a) => a.name),
-        pathLength: m.path.length,
-        path: m.path.map((s) => ({
-          linkerId: s.linker.id,
-          linkerAxes: s.linker.spec.axesSpec.map((a) => a.name),
-        })),
-        isLinker: m.column.spec.annotations?.['pl7.app/isLinkerColumn'] === 'true',
-        label: m.column.spec.annotations?.['pl7.app/label'],
-      })),
-    };
-  })
 
   .outputWithStatus('pf', (ctx) => {
     const anchor = ctx.data.inputAnchor;
@@ -433,55 +432,13 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
   // Use UMAP output from ctx from clonotype-space block
   .outputWithStatus('umapPf', (ctx) => {
-    const anchor = ctx.data.inputAnchor;
-    if (anchor === undefined)
-      return undefined;
-
-    const umap = ctx.resultPool.getAnchoredPColumns(
-      { main: anchor },
-      [
-        {
-          axes: [{ anchor: 'main', idx: 1 }],
-          namePattern: '^pl7\\.app/vdj/umap[12]$',
-        },
-      ],
-    );
-
-    if (umap === undefined || umap.length === 0)
-      return undefined;
-
-    const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
-
-    return createPFrameForGraphs(ctx, [...umap, ...(sampledRows ?? [])]);
+    const cols = getUmapPCols(ctx);
+    return cols ? createPFrameForGraphs(ctx, cols) : undefined;
   })
 
   .outputWithStatus('umapPcols', (ctx) => {
-    const anchor = ctx.data.inputAnchor;
-    if (anchor === undefined)
-      return undefined;
-
-    const umap = ctx.resultPool.getAnchoredPColumns(
-      { main: anchor },
-      [
-        {
-          axes: [{ anchor: 'main', idx: 1 }],
-          namePattern: '^pl7\\.app/vdj/umap[12]$',
-        },
-      ],
-    );
-
-    if (umap === undefined || umap.length === 0)
-      return undefined;
-
-    const sampledRows = ctx.outputs?.resolve({ field: 'sampledRows', assertFieldType: 'Input', allowPermanentAbsence: true })?.getPColumns();
-
-    return [...umap, ...(sampledRows ?? [])].map(
-      (c) =>
-        ({
-          columnId: c.id,
-          spec: c.spec,
-        } satisfies PColumnIdAndSpec),
-    );
+    const cols = getUmapPCols(ctx);
+    return cols?.map((c) => ({ columnId: c.id, spec: c.spec } satisfies PColumnIdAndSpec));
   })
 
   .output('hasClusterData', (ctx) => {
