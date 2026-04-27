@@ -47,13 +47,15 @@ const selection = ref<PlSelectionModel>({
   selectedKeys: [],
 });
 
-// MSA's pf contains only bulk-clonotype columns (axis `pl7.app/vdj/clonotypeKey`).
-// The table spans both clonotype axes, so raw `selection` can have a composite
-// axesSpec PFrame can't align with MSA's 1-axis sequence columns. Project the
-// selection down to the clonotype axis so the selection filter actually narrows.
+// MSA's pf is keyed by the anchor's clonotype axis (axesSpec[1]):
+// `pl7.app/vdj/clonotypeKey` for bulk, `pl7.app/vdj/scClonotypeKey` for single cell.
+// The table can span a composite axesSpec PFrame can't align with MSA's 1-axis
+// sequence columns, so project the selection down to that axis.
 const msaSelection = computed<PlSelectionModel>(() => {
   const sel = selection.value;
-  const idx = sel.axesSpec.findIndex((a) => a.name === 'pl7.app/vdj/clonotypeKey');
+  const msaAxisName = app.model.outputs.inputAnchorSpec?.axesSpec?.[1]?.name;
+  if (!msaAxisName) return { axesSpec: [], selectedKeys: [] };
+  const idx = sel.axesSpec.findIndex((a) => a.name === msaAxisName);
   if (idx < 0) return { axesSpec: [], selectedKeys: [] };
   return {
     axesSpec: [sel.axesSpec[idx]],
