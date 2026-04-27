@@ -333,10 +333,10 @@ export const platforma = BlockModelV3.create(blockDataModel)
       : undefined;
 
     return createPlDataTableV3(ctx, {
-      discoverColumnOptions: {
+      columns: {
         sources,
         anchors: { main: leadSelectionCol.spec },
-        columnsSelector: { mode: 'enrichment' },
+        selector: { mode: 'enrichment' },
       },
       tableState: ctx.data.tableState,
       primaryJoinType: 'full',
@@ -347,7 +347,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
             ? undefined
             : `via ${labels.join(' > ')}`,
       },
-      columnsDisplayOptions: {
+      displayOptions: {
         ordering: [
           {
             match: (spec) => spec.name === Annotation.Label

@@ -1,5 +1,5 @@
 import type { GraphMakerState } from '@milaboratories/graph-maker';
-import type { ColumnMatch, DataInfo, PColumn, PColumnValues, PlDataTableStateV2, PlMultiSequenceAlignmentModel, PlRef, SUniversalPColumnId, TreeNodeAccessor } from '@platforma-sdk/model';
+import type { ColumnMatch, DataInfo, PColumn, PColumnValues, PlDataTableStateV2, PlMultiSequenceAlignmentModel, PlRef, PObjectId, TreeNodeAccessor } from '@platforma-sdk/model';
 import type { PlTableFilter } from './typesFilters';
 
 export * from './typesFilters';
@@ -76,10 +76,11 @@ export type AnchoredColumn = {
   column: Column;
 };
 
+// @todo: rename this , because there is nothing "anchored"
 export type AnchoredColumnId = {
   anchorRef: PlRef;
   anchorName: string;
-  column: SUniversalPColumnId;
+  column: PObjectId; // SUniversalPColumnId
 };
 
 export type RankingOrder = {

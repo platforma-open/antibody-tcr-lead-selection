@@ -1,7 +1,6 @@
 import {
   Annotation,
-  ColumnCollectionBuilder,
-  type AnchoredColumnCollection,
+  ColumnCollectionBuilder, type AnchoredColumnCollection,
   type AnchoredFindColumnsOptions,
   type AxisSpec,
   type ColumnMatch,
@@ -118,7 +117,7 @@ export function buildCollection(
   // so column IDs from model discovery resolve correctly in bundleBuilder.
   // Discovery scope is restricted via JS post-filter below: sampleId-axis columns
   // are dropped to avoid ambiguous literal AxisIds in workflow's anchoredQuery.
-  const collection = new ColumnCollectionBuilder(ctx.services.pframeSpec)
+  const collection = new ColumnCollectionBuilder(ctx.getService('pframeSpec'))
     .addSource(resultPoolColumns)
     .build({ anchors: { main: anchorSpec } });
   if (!collection) return undefined;
