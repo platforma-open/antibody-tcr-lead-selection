@@ -8,7 +8,7 @@ import {
   type RenderCtx,
   type SUniversalPColumnId,
 } from '@platforma-sdk/model';
-import type { AnchoredColumnId, BlockArgs, BlockData, ColumnsMeta, PlTableFiltersDefault, RankingOrder } from './types';
+import type { ScopedColumnId, BlockArgs, BlockData, ColumnsMeta, PlTableFiltersDefault, RankingOrder } from './types';
 
 /** Common WASM exclude selectors shared across filter/rank/table discovery. */
 export const commonExcludeSelectors: NonNullable<AnchoredFindColumnsOptions['exclude']> = [
@@ -25,8 +25,8 @@ export function isSelectableMatch(m: ColumnMatch, sampleAxisName: string): boole
     && !m.column.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection');
 }
 
-/** Converts a ColumnMatch to an AnchoredColumnId for the workflow wire format. */
-export function matchToColumnId(match: ColumnMatch, anchorRef: PlRef): AnchoredColumnId {
+/** Converts a ColumnMatch to a ScopedColumnId for the workflow wire format. */
+export function matchToColumnId(match: ColumnMatch, anchorRef: PlRef): ScopedColumnId {
   return { anchorRef, anchorName: 'main', column: match.column.id };
 }
 

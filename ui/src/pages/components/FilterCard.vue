@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AnchoredColumnId, DiscreteFilter, FilterUI, PlTableFilter } from '@platforma-open/milaboratories.top-antibodies.model';
+import type { ScopedColumnId, DiscreteFilter, FilterUI, PlTableFilter } from '@platforma-open/milaboratories.top-antibodies.model';
 import { PlDropdown, PlDropdownMulti, PlTextField } from '@platforma-sdk/ui-vue';
 import { computed, watch } from 'vue';
 
@@ -29,7 +29,7 @@ const model = defineModel<FilterUI>({
 });
 
 const props = defineProps<{
-  options?: { label: string; value: AnchoredColumnId; column?: { spec: { valueType?: string; annotations?: Record<string, string> } } }[];
+  options?: { label: string; value: ScopedColumnId; column?: { spec: { valueType?: string; annotations?: Record<string, string> } } }[];
 }>();
 
 const filterTypeOptions = [
@@ -49,7 +49,7 @@ const filterTypeOptions = [
   { value: 'isNotNA', label: 'Is not empty (NA)' },
 ];
 
-const getFilterTypeOptions = (columnId?: AnchoredColumnId) => {
+const getFilterTypeOptions = (columnId?: ScopedColumnId) => {
   if (!columnId) return filterTypeOptions;
 
   // Find the selected option to access column spec

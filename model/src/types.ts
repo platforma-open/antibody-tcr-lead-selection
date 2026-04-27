@@ -70,21 +70,20 @@ export type BlockArgs = {
 // @todo: move this type to SDK
 export type Column = PColumn<DataInfo<TreeNodeAccessor> | TreeNodeAccessor | PColumnValues>;
 
-export type AnchoredColumn = {
+export type ScopedColumn = {
   anchorRef: PlRef;
   anchorName: string;
   column: Column;
 };
 
-// @todo: rename this , because there is nothing "anchored"
-export type AnchoredColumnId = {
+export type ScopedColumnId = {
   anchorRef: PlRef;
   anchorName: string;
   column: PObjectId; // SUniversalPColumnId
 };
 
 export type RankingOrder = {
-  value?: AnchoredColumnId;
+  value?: ScopedColumnId;
   rankingOrder: 'increasing' | 'decreasing';
 };
 
@@ -110,7 +109,7 @@ export type StringNotInFilter = {
 export type DiscreteFilter = StringInFilter | StringNotInFilter;
 
 export type Filter = {
-  value?: AnchoredColumnId;
+  value?: ScopedColumnId;
   filter?: PlTableFilter | DiscreteFilter;
 };
 
@@ -120,7 +119,7 @@ export type FilterUI = Filter & {
 };
 
 export type PlTableFiltersDefault = {
-  column: AnchoredColumnId;
+  column: ScopedColumnId;
   default: PlTableFilter | DiscreteFilter;
 };
 

@@ -1,10 +1,10 @@
-import type { AnchoredColumnId } from '@platforma-open/milaboratories.top-antibodies.model';
+import type { ScopedColumnId } from '@platforma-open/milaboratories.top-antibodies.model';
 import type { PlRef } from '@platforma-sdk/model';
 import { plRefsEqual } from '@platforma-sdk/model';
 import { computed, ref, watch } from 'vue';
 
 export interface ConfigWithOptions {
-  options?: Array<{ value: AnchoredColumnId; label: string }>;
+  options?: Array<{ value: ScopedColumnId; label: string }>;
   defaults?: unknown[];
 }
 
