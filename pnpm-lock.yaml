@@ -54,9 +54,6 @@ catalogs:
     '@platforma-sdk/ui-vue':
       specifier: 1.68.1
       version: 1.68.1
-    '@platforma-sdk/workflow-tengo':
-      specifier: 5.15.0
-      version: 5.15.0
     '@types/lodash.debounce':
       specifier: ^4.0.9
       version: 4.0.9
@@ -90,6 +87,9 @@ catalogs:
     vue:
       specifier: ^3.5.24
       version: 3.5.25
+
+overrides:
+  '@platforma-sdk/workflow-tengo': file:/Users/aleksandr/GIT/MILAB/platforma/sdk/workflow-tengo/package.tgz
 
 importers:
 
@@ -313,8 +313,8 @@ importers:
         specifier: workspace:*
         version: link:../software/umap
       '@platforma-sdk/workflow-tengo':
-        specifier: 'catalog:'
-        version: 5.15.0
+        specifier: file:/Users/aleksandr/GIT/MILAB/platforma/sdk/workflow-tengo/package.tgz
+        version: file:../platforma/sdk/workflow-tengo/package.tgz
     devDependencies:
       '@platforma-sdk/tengo-builder':
         specifier: 'catalog:'
@@ -1611,8 +1611,9 @@ packages:
   '@platforma-sdk/ui-vue@1.68.1':
     resolution: {integrity: sha512-lP6CyeX7raWZLuMMCGgVbZta05kkxhFILcPlukfObBYotPcr/DAuw6EnggV4zQhr9unQ2XSk74y7m5r3Cx+kEA==}
 
-  '@platforma-sdk/workflow-tengo@5.15.0':
-    resolution: {integrity: sha512-ikgnZin8yP/NjxAx9rBxCzQ/yEC46ExySC9B/TuZexZby9kiAvwD9zj6wgkbEmvDQV2EK9xZk0yus+SvFlEQKg==}
+  '@platforma-sdk/workflow-tengo@file:../platforma/sdk/workflow-tengo/package.tgz':
+    resolution: {integrity: sha512-cRGnV6pNjr4qlEU7ww+pQmedaLMZUTItjCOaC0dNH77/M3/7abf9MLd7bQuPpgmz2U721dwHjXsIXkzccVm8Gg==, tarball: file:../platforma/sdk/workflow-tengo/package.tgz}
+    version: 5.15.0
 
   '@protobuf-ts/grpc-transport@2.11.1':
     resolution: {integrity: sha512-l6wrcFffY+tuNnuyrNCkRM8hDIsAZVLA8Mn7PKdVyYxITosYh60qW663p9kL6TWXYuDCL3oxH8ih3vLKTDyhtg==}
@@ -8190,7 +8191,7 @@ snapshots:
       '@milaboratories/ts-helpers': 1.8.1
       '@platforma-sdk/block-tools': 2.7.14
       '@platforma-sdk/model': 1.68.0
-      '@platforma-sdk/workflow-tengo': 5.15.0
+      '@platforma-sdk/workflow-tengo': file:../platforma/sdk/workflow-tengo/package.tgz
       canonicalize: 2.1.0
       denque: 2.1.0
       es-toolkit: 1.40.0
@@ -8871,7 +8872,7 @@ snapshots:
       - typescript
       - universal-cookie
 
-  '@platforma-sdk/workflow-tengo@5.15.0':
+  '@platforma-sdk/workflow-tengo@file:../platforma/sdk/workflow-tengo/package.tgz':
     dependencies:
       '@milaboratories/software-pframes-conv': 2.2.9
       '@platforma-open/milaboratories.software-ptabler': 1.15.2
