@@ -59,6 +59,10 @@ def parse_arguments():
     parser.add_argument("--ranking-map", type=str, help='JSON string specifying ranking direction for each column, e.g., {"Col0":"decreasing","Col1":"increasing","Col_linker.0.0":"decreasing"}')
     parser.add_argument("--diversification-column", type=str,
                         help="Column header name to use for diversified ranking (e.g., 'clusterAxis_0_0')")
+    parser.add_argument("--selection-in", type=str, required=False,
+                        help="Path to selection stage parquet from filter.py (clonotypeKey + selectionStage)")
+    parser.add_argument("--selection-out", type=str, required=False,
+                        help="Path to write updated selection stage parquet (sampled clones get bumped stage)")
     return parser.parse_args()
 
 
@@ -188,8 +192,9 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
 
 def main():
     start_time = time.time()
-    print(f"Starting clonotype sampling at {time.strftime('%H:%M:%S')}")
+    print(f"main.py:START at {time.strftime('%H:%M:%S')}")
     args = parse_arguments()
+    print(f"main.py:args: parquet={args.parquet} out={args.out} selection_in={args.selection_in} selection_out={args.selection_out}")
     # Handle deprecated flags: map old args to new diversification-column
     diversification_column = args.diversification_column
 
@@ -269,8 +274,26 @@ def main():
     output_time = time.time() - output_start
     print(f"Output: {output_time:.3f}s (wrote to {args.out})")
 
+    # Update selection stage data: bump sampled clones to a new final stage
+    if args.selection_in and args.selection_out:
+        selection = pl.read_parquet(args.selection_in)
+        print(f"main.py:read selection_in: schema={selection.schema} rows={selection.height}")
+        sampled_keys = result.select("clonotypeKey")
+        max_stage = selection["selectionStage"].max()
+        selection = selection.with_columns(
+            pl.when(pl.col("clonotypeKey").is_in(sampled_keys["clonotypeKey"]))
+            .then(pl.lit(max_stage + 1).cast(pl.Int64))
+            .otherwise(pl.col("selectionStage"))
+            .alias("selectionStage")
+        )
+        print(f"main.py:writing selection_out: schema={selection.schema} rows={selection.height}")
+        selection.write_parquet(args.selection_out)
+        print(f"main.py:wrote selection_out: bumped {sampled_keys.height} sampled clones to stage {max_stage + 1}")
+    else:
+        print(f"main.py:WARNING: --selection-in/--selection-out not both set")
+
     total_time = time.time() - start_time
-    print(f"Total time: {total_time:.3f}s")
+    print(f"main.py:DONE in {total_time:.3f}s")
 
 
 if __name__ == "__main__":

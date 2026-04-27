@@ -6,8 +6,8 @@
   "type": "module",
   "scripts": {
     "test": "vitest --passWithNoTests",
-    "type-check": "ts-builder type-check --target block-test",
-    "lint": "eslint ."
+    "check": "ts-builder check --target block-test",
+    "fmt": "ts-builder format"
   },
   "files": [],
   "keywords": [],

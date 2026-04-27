@@ -152,6 +152,8 @@ wf.body(func(args) {
 
             // Build trace label from filter descriptions
             filterTraceLabel := utils.buildFilterTraceLabel(args.filters, columns)
+            // Build per-filter stage names for Selection Plot
+            filterStageNames := utils.buildFilterStageNames(args.filters, columns)
 
             // Use ender.create to call the filter-clonotypes template
             filterSampleResult := render.create(filterAndSampleTpl, {
@@ -165,6 +167,7 @@ wf.body(func(args) {
                 topClonotypes: args.topClonotypes,
                 diversificationColumn: clusterColumnHeader,
                 filterTraceLabel: filterTraceLabel,
+                filterStageNames: filterStageNames,
                 customBlockLabel: args.customBlockLabel
             })
 
@@ -176,6 +179,10 @@ wf.body(func(args) {
 
             // Export only the sampling column for downstream (built inside sub-template to avoid hang)
             exports["sampledColumnsPf"] = filterSampleResult.output("sampledColumnsExport", 24 * 60 * 60 * 1000)
+
+            // Selection stage pframe for the Selection Plot page's pre-bound input
+            outputs["selectionStagePf"] = filterSampleResult.output("selectionStagePf", 24 * 60 * 60 * 1000)
+
 
             ////////// CDR3 Length Calculation //////////
             // Initialize and build CDR3 sequence table

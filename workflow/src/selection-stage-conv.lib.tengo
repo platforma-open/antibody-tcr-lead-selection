@@ -1,0 +1,33 @@
+ll := import("@platforma-sdk/workflow-tengo:ll")
+json := import("json")
+
+getColumns := func(datasetSpec, valueLabels) {
+  return {
+    axes: [
+      {
+        column: "clonotypeKey",
+        spec: datasetSpec.axesSpec[1]
+      }],
+    columns: [{
+      column: "selectionStage",
+      id: "selectionStage",
+      allowNA: false,
+      spec: {
+        name: "pl7.app/selectionStage",
+        valueType: "Int",
+        domain: {},
+        annotations: {
+          "pl7.app/label": "Selection Stage",
+          "pl7.app/valueLabels": string(json.encode(valueLabels)),
+          "pl7.app/isDiscreteFilter": "true"
+        }
+      }
+    }],
+    storageFormat: "Parquet",
+    partitionKeyLength: 0
+  }
+}
+
+export ll.toStrict({
+  getColumns: getColumns
+})

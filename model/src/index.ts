@@ -225,6 +225,17 @@ export const platforma = BlockModelV3.create(blockDataModel)
     return createPFrameForGraphs(ctx, pCols);
   })
 
+  .outputWithStatus('selectionStagePf', (ctx) => {
+    const pCols = ctx.outputs?.resolve({
+      field: 'selectionStagePf',
+      assertFieldType: 'Input',
+      allowPermanentAbsence: true,
+    })?.getPColumns();
+    if (pCols === undefined) return undefined;
+
+    return createPFrameForGraphs(ctx, pCols);
+  })
+
   .outputWithStatus('table', (ctx) => {
     const anchor = ctx.activeArgs?.inputAnchor;
     if (!anchor) return undefined;
@@ -543,6 +554,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
       { type: 'link', href: '/umap', label: 'Clonotype Space' },
       { type: 'link', href: '/spectratype', label: 'CDR3 V Spectratype' },
       { type: 'link', href: '/usage', label: 'V/J Gene Usage' },
+      { type: 'link', href: '/selection', label: 'Selection Plot' },
     ];
   })
 
