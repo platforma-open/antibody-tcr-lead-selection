@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 3.0.2
+
+### Patch Changes
+
+- d6674b7: Fix MSA sequence selection for single cell data
+
 ## 3.0.1
 
 ### Patch Changes
