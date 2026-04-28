@@ -21,9 +21,9 @@
     "shx": "catalog:"
   },
   "packageManager": "pnpm@9.12.0",
-  "pnpm": {
+  "//pnpm": {
     "overrides": {
-      "@platforma-sdk/workflow-tengo": "file:/Users/aleksandr/GIT/MILAB/platforma/sdk/workflow-tengo/package.tgz"
+      "@platforma-sdk/workflow-tengo": "file:../platforma/sdk/workflow-tengo/package.tgz"
     }
   }
 }
