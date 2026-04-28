@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AnchoredColumnId } from '@platforma-open/milaboratories.top-antibodies.model';
+import type { ScopedColumnId } from '@platforma-open/milaboratories.top-antibodies.model';
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from '@platforma-sdk/ui-vue';
 import { ref } from 'vue';
 import { useApp } from '../../app';
@@ -16,7 +16,7 @@ const generateUniqueId = () => {
   return `rank-${idCounter.value}-${Date.now()}`;
 };
 
-const getMetricLabel = (value: AnchoredColumnId | undefined) => {
+const getMetricLabel = (value: ScopedColumnId | undefined) => {
   const column = app.model.outputs.rankingConfig?.options?.find(
     (option) => option && option.value.column === value?.column,
   );
@@ -49,7 +49,7 @@ const getPresetDefaults = () => {
 
 const resetToDefaults = () => {
   const defaults = getPresetDefaults();
-  app.model.data.rankingOrder = defaults?.map((defaultRank: { value?: AnchoredColumnId; rankingOrder: 'increasing' | 'decreasing' }) => ({
+  app.model.data.rankingOrder = defaults?.map((defaultRank: { value?: ScopedColumnId; rankingOrder: 'increasing' | 'decreasing' }) => ({
     id: generateUniqueId(),
     value: defaultRank.value,
     rankingOrder: defaultRank.rankingOrder,

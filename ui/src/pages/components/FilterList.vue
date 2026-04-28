@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { AnchoredColumnId, DiscreteFilter, FilterUI, PlTableFilter } from '@platforma-open/milaboratories.top-antibodies.model';
+import type { ScopedColumnId, DiscreteFilter, FilterUI, PlTableFilter } from '@platforma-open/milaboratories.top-antibodies.model';
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from '@platforma-sdk/ui-vue';
 import { ref } from 'vue';
 import { useApp } from '../../app';
@@ -16,9 +16,9 @@ const generateUniqueId = () => {
   return `filter-${idCounter.value}-${Date.now()}`;
 };
 
-const getColumnLabel = (columnId: AnchoredColumnId | undefined) => {
+const getColumnLabel = (columnId: ScopedColumnId | undefined) => {
   const column = app.model.outputs.filterConfig?.options?.find(
-    (option: { value: AnchoredColumnId; label: string }) => option && option.value.column === columnId?.column,
+    (option: { value: ScopedColumnId; label: string }) => option && option.value.column === columnId?.column,
   );
   return column?.label ?? 'Set filter';
 };
@@ -49,7 +49,7 @@ const getPresetDefaults = () => {
 
 const resetToDefaults = () => {
   const defaults = getPresetDefaults();
-  app.model.data.filters = defaults?.map((defaultFilter: { column: AnchoredColumnId; default: PlTableFilter | DiscreteFilter }) => ({
+  app.model.data.filters = defaults?.map((defaultFilter: { column: ScopedColumnId; default: PlTableFilter | DiscreteFilter }) => ({
     id: generateUniqueId(),
     value: defaultFilter.column,
     filter: { ...defaultFilter.default },

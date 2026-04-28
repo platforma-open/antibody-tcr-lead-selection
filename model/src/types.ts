@@ -1,5 +1,5 @@
 import type { GraphMakerState } from '@milaboratories/graph-maker';
-import type { ColumnMatch, DataInfo, PColumn, PColumnValues, PlDataTableStateV2, PlMultiSequenceAlignmentModel, PlRef, SUniversalPColumnId, TreeNodeAccessor } from '@platforma-sdk/model';
+import type { ColumnMatch, DataInfo, PColumn, PColumnValues, PlDataTableStateV2, PlMultiSequenceAlignmentModel, PlRef, PObjectId, TreeNodeAccessor } from '@platforma-sdk/model';
 import type { PlTableFilter } from './typesFilters';
 
 export * from './typesFilters';
@@ -70,20 +70,20 @@ export type BlockArgs = {
 // @todo: move this type to SDK
 export type Column = PColumn<DataInfo<TreeNodeAccessor> | TreeNodeAccessor | PColumnValues>;
 
-export type AnchoredColumn = {
+export type ScopedColumn = {
   anchorRef: PlRef;
   anchorName: string;
   column: Column;
 };
 
-export type AnchoredColumnId = {
+export type ScopedColumnId = {
   anchorRef: PlRef;
   anchorName: string;
-  column: SUniversalPColumnId;
+  column: PObjectId; // SUniversalPColumnId
 };
 
 export type RankingOrder = {
-  value?: AnchoredColumnId;
+  value?: ScopedColumnId;
   rankingOrder: 'increasing' | 'decreasing';
 };
 
@@ -109,7 +109,7 @@ export type StringNotInFilter = {
 export type DiscreteFilter = StringInFilter | StringNotInFilter;
 
 export type Filter = {
-  value?: AnchoredColumnId;
+  value?: ScopedColumnId;
   filter?: PlTableFilter | DiscreteFilter;
 };
 
@@ -119,7 +119,7 @@ export type FilterUI = Filter & {
 };
 
 export type PlTableFiltersDefault = {
-  column: AnchoredColumnId;
+  column: ScopedColumnId;
   default: PlTableFilter | DiscreteFilter;
 };
 

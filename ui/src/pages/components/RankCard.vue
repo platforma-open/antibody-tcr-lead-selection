@@ -1,5 +1,5 @@
 <script setup lang="ts" >
-import type { AnchoredColumnId, RankingOrder } from '@platforma-open/milaboratories.top-antibodies.model';
+import type { ScopedColumnId, RankingOrder } from '@platforma-open/milaboratories.top-antibodies.model';
 import type { ListOption } from '@platforma-sdk/ui-vue';
 import { PlDropdown } from '@platforma-sdk/ui-vue';
 
@@ -16,7 +16,7 @@ const model = defineModel<RankingOrder>(
   });
 
 const props = defineProps<{
-  options?: ListOption<AnchoredColumnId>[];
+  options?: ListOption<ScopedColumnId>[];
 }>();
 </script>
 
