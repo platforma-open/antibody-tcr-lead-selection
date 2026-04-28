@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.anarci-kabat
 
+## 1.4.3
+
+### Patch Changes
+
+- 3e9c9ef: bump sdk for fix table query
+
 ## 1.4.2
 
 ### Patch Changes

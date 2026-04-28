@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 3.0.3
+
+### Patch Changes
+
+- 3e9c9ef: bump sdk for fix table query
+
 ## 3.0.2
 
 ### Patch Changes

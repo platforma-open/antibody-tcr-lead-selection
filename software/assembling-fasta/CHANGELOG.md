@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.assembling-fasta
 
+## 1.3.2
+
+### Patch Changes
+
+- 3e9c9ef: bump sdk for fix table query
+
 ## 1.3.1
 
 ### Patch Changes

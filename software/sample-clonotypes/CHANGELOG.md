@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 2.1.2
+
+### Patch Changes
+
+- 3e9c9ef: bump sdk for fix table query
+
 ## 2.1.1
 
 ### Patch Changes

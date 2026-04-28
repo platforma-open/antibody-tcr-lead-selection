@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.spectratype
 
+## 1.8.3
+
+### Patch Changes
+
+- 3e9c9ef: bump sdk for fix table query
+
 ## 1.8.2
 
 ### Patch Changes
