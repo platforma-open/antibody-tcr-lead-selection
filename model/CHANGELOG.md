@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 3.0.2
+
+### Patch Changes
+
+- 8fcb373: new export
+
 ## 3.0.1
 
 ### Patch Changes
