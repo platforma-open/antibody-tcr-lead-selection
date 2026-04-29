@@ -24,9 +24,9 @@ const defaultOptions = computed((): PredefinedGraphOption<'scatterplot-umap'>[] 
     return col?.spec;
   };
 
-  const umap1Col = getColSpec('pl7.app/vdj/umap1');
-  const umap2Col = getColSpec('pl7.app/vdj/umap2');
-  const leadSelectionCol = getColSpec('pl7.app/vdj/lead-selection');
+  const umap1Col = getColSpec('pl7.app/umap1');
+  const umap2Col = getColSpec('pl7.app/umap2');
+  const leadSelectionCol = getColSpec('pl7.app/lead-selection');
 
   if (!umap1Col || !umap2Col)
     return null;

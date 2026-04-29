@@ -252,7 +252,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
     // Verify sampledRows belong to current inputAnchor by checking axes
     const samplingCol = sampledRows.find(
-      (col) => col.spec.name === 'pl7.app/vdj/lead-selection',
+      (col) => col.spec.name === 'pl7.app/lead-selection',
     );
     if (samplingCol !== undefined) {
       const clonotypeAxisMatches = samplingCol.spec.axesSpec.some(
@@ -286,7 +286,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     // Use lead-selection column as anchor — it has [clonotypeKey] axis only,
     // so the inner join core is keyed by clonotypeKey (no sampleId duplication).
     const leadSelectionCol = sampledRows.find(
-      (col) => col.spec.name === 'pl7.app/vdj/lead-selection',
+      (col) => col.spec.name === 'pl7.app/lead-selection',
     );
     if (!leadSelectionCol) return undefined;
 
@@ -322,7 +322,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
     // Sort by ranking-order column (from sampledRows). V3 remaps the ID via originalId.
     const rankingOrderCol = sampledRows.find(
-      (col) => col.spec.name === 'pl7.app/vdj/ranking-order',
+      (col) => col.spec.name === 'pl7.app/ranking-order',
     );
     const sorting: PTableSorting[] | undefined = rankingOrderCol
       ? [{
@@ -344,7 +344,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
       labelsOptions: {
         formatters: {
           linker: (labels, spec) =>
-            (spec as PColumnSpec).axesSpec.some((a) => a.name === 'pl7.app/vdj/clusterId')
+            (spec as PColumnSpec).axesSpec.some((a) => a.name === 'pl7.app/clusterId')
               ? undefined
               : `via ${labels.join(' > ')}`,
         },
@@ -373,7 +373,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
         visibility: [
           {
             match: (spec) =>
-              spec.name === 'pl7.app/vdj/ranking-order'
+              spec.name === 'pl7.app/ranking-order'
               || spec.name === 'pl7.app/vdj/inVivoScore'
               || isFilterOrRank(spec)
               || (spec.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'
@@ -382,10 +382,10 @@ export const platforma = BlockModelV3.create(blockDataModel)
               || (kabatEnabled && spec.name.startsWith('pl7.app/vdj/kabatSequence')),
             visibility: 'default',
           },
-          // Clone-to-cluster mapping (name: pl7.app/vdj/clusterId, axes: [clonotypeKey])
+          // Clone-to-cluster mapping (name: pl7.app/clusterId, axes: [clonotypeKey])
           // is always hidden — it duplicates the clusterId axis label column.
           {
-            match: (spec) => spec.name === 'pl7.app/vdj/clusterId',
+            match: (spec) => spec.name === 'pl7.app/clusterId',
             visibility: 'hidden',
           },
           // Catch-all: everything else optional (except linkers — V3 manages those)
@@ -421,7 +421,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
       [
         {
           axes: [{ anchor: 'main', idx: 1 }],
-          namePattern: '^pl7\\.app/vdj/umap[12]$',
+          namePattern: '^pl7\\.app/umap[12]$',
         },
       ],
     );
@@ -444,7 +444,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
       [
         {
           axes: [{ anchor: 'main', idx: 1 }],
-          namePattern: '^pl7\\.app/vdj/umap[12]$',
+          namePattern: '^pl7\\.app/umap[12]$',
         },
       ],
     );
@@ -468,7 +468,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     if (!result) return false;
 
     return result.meta.allMatches.some((m) =>
-      m.column.spec.axesSpec.some((a) => a.name === 'pl7.app/vdj/clusterId'),
+      m.column.spec.axesSpec.some((a) => a.name === 'pl7.app/clusterId'),
     );
   })
 
@@ -505,7 +505,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
       for (const link of linkers) {
         const linkerSpec = ctx.resultPool.getPColumnSpecByRef(link.ref);
-        if (!linkerSpec?.axesSpec.some((axis) => axis.name === 'pl7.app/vdj/clusterId')) {
+        if (!linkerSpec?.axesSpec.some((axis) => axis.name === 'pl7.app/clusterId')) {
           continue;
         }
         // Extract clustering trace element label directly to avoid verbose
@@ -535,7 +535,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)
 
-  .title(() => 'Antibody/TCR Leads')
+  .title(() => 'Lead Selection')
 
   .subtitle((ctx) => ctx.data.customBlockLabel || ctx.data.defaultBlockLabel)
 

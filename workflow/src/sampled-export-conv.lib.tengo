@@ -18,7 +18,7 @@ getColumns := func(datasetSpec, filterMap, rankingMap, diversificationColumn, to
         id: "link",
         allowNA: false,
         spec: {
-          name: "pl7.app/vdj/lead-selection",
+          name: "pl7.app/lead-selection",
           valueType: "Int",
           domain: domain,
           annotations: {

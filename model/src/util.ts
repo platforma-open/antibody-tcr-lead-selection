@@ -20,7 +20,7 @@ export const commonExcludeSelectors: NonNullable<AnchoredFindColumnsOptions['exc
  *  and columns produced by this block. */
 export function isSelectableMatch(m: ColumnMatch, sampleAxisName: string): boolean {
   return !m.column.spec.axesSpec.some((a) => a.name === sampleAxisName)
-    && m.column.spec.name !== 'pl7.app/vdj/clusterId'
+    && m.column.spec.name !== 'pl7.app/clusterId'
     && m.column.spec.name !== 'pl7.app/label'
     && !m.column.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection');
 }
@@ -46,7 +46,7 @@ export const IN_VIVO_MUTATION_COLUMNS = new Set([
  * Used to identify which specific cluster axis is being used.
  */
 export function clusterAxisDomainsMatch(axis1: AxisSpec, axis2: AxisSpec): boolean {
-  if (axis1.name !== 'pl7.app/vdj/clusterId' || axis2.name !== 'pl7.app/vdj/clusterId') {
+  if (axis1.name !== 'pl7.app/clusterId' || axis2.name !== 'pl7.app/clusterId') {
     return false;
   }
 
@@ -77,7 +77,7 @@ export function getVisibleClusterAxes<T extends { id: unknown; spec: { axesSpec:
     if (!isFilterOrRankColumn) continue;
 
     for (const axis of col.spec.axesSpec) {
-      if (axis.name === 'pl7.app/vdj/clusterId') {
+      if (axis.name === 'pl7.app/clusterId') {
         const alreadyAdded = visibleClusterAxes.some((existingAxis) =>
           clusterAxisDomainsMatch(existingAxis, axis),
         );
@@ -226,7 +226,7 @@ function computePresets(
     (name) => scores.some((s) => s.column.spec.name === name),
   );
 
-  const ENRICHMENT_COLUMN_PREFIX = 'pl7.app/vdj/enrichment';
+  const ENRICHMENT_COLUMN_PREFIX = 'pl7.app/enrichment';
   const isEnrichmentColumn = (name: string) => name.startsWith(ENRICHMENT_COLUMN_PREFIX);
   const hasEnrichmentScores = scores.some((s) => isEnrichmentColumn(s.column.spec.name));
 
