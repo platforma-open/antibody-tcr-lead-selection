@@ -342,10 +342,12 @@ export const platforma = BlockModelV3.create(blockDataModel)
       primaryJoinType: 'full',
       sorting,
       labelsOptions: {
-        linkerLabelFormatter: (labels, spec) =>
-          (spec as PColumnSpec).axesSpec.some((a) => a.name === 'pl7.app/vdj/clusterId')
-            ? undefined
-            : `via ${labels.join(' > ')}`,
+        formatters: {
+          linker: (labels, spec) =>
+            (spec as PColumnSpec).axesSpec.some((a) => a.name === 'pl7.app/vdj/clusterId')
+              ? undefined
+              : `via ${labels.join(' > ')}`,
+        },
       },
       displayOptions: {
         ordering: [
