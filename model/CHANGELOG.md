@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 3.1.0
+
+### Minor Changes
+
+- 23ba36d: update sdk for fixing loading axes data in table
+
 ## 3.0.3
 
 ### Patch Changes
