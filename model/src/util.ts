@@ -41,6 +41,39 @@ export const IN_VIVO_MUTATION_COLUMNS = new Set([
   'pl7.app/vdj/sequence/nAAMutationsFWR',
 ]);
 
+// In Vivo preset allowlist: only score columns whose spec.name is in this set
+// can contribute discovery-driven defaults to the in-vivo filter list.
+// Mutation cutoffs (fractionCDRMutations, nMutations) are added separately with
+// preset-specific overrides.
+export const IN_VIVO_FILTER_SPEC_NAMES = new Set([
+  'pl7.app/vdj/isProductive',
+  'pl7.app/vdj/developabilityRisk',
+]);
+
+// In Vivo preset allowlist for ranking. The In Vivo Score sentinel is added
+// separately when mutation columns are present.
+export const IN_VIVO_RANKING_SPEC_NAMES = new Set([
+  'pl7.app/vdj/developabilityScore',
+]);
+
+// In Vitro preset allowlists. Same intersection-with-discovery approach as
+// in-vivo: only score columns with these spec names contribute defaults, so
+// new upstream score columns can't bloat the preset. Max Log2FC and Overall
+// Log2FC share the spec name `pl7.app/vdj/enrichment` — only Max carries
+// isScore=true upstream, so the discovery pipeline already excludes Overall.
+export const IN_VITRO_FILTER_SPEC_NAMES = new Set([
+  'pl7.app/vdj/isProductive',
+  'pl7.app/vdj/developabilityRisk',
+  'pl7.app/vdj/enrichmentQuality',
+  'pl7.app/vdj/bindingSpecificity',
+  'pl7.app/vdj/enrichment',
+]);
+
+export const IN_VITRO_RANKING_SPEC_NAMES = new Set([
+  'pl7.app/vdj/developabilityScore',
+  'pl7.app/vdj/enrichment',
+]);
+
 /**
  * Checks if two cluster axes match by comparing their domains.
  * Used to identify which specific cluster axis is being used.
@@ -254,22 +287,36 @@ function computePresets(
     });
   }
 
+  // Both presets intersect discovery-driven defaults with a per-preset
+  // allowlist of spec names, so new upstream score columns can't bloat them.
+  const specNameByColumnId = new Map(
+    scores.map((s) => [matchToColumnId(s, anchorRef).column, s.column.spec.name]),
+  );
+
   // In Vitro defaults
-  const inVitroRankingOrder = scores
-    .filter((s) => s.column.spec.valueType !== 'String')
-    .filter((s) => !IN_VIVO_MUTATION_COLUMNS.has(s.column.spec.name))
-    .map((s) => ({
-      value: matchToColumnId(s, anchorRef),
-      rankingOrder: (s.column.spec.annotations?.['pl7.app/score/rankingOrder'] as 'increasing' | 'decreasing') ?? 'decreasing',
-    }));
+  const inVitroFilters: PlTableFiltersDefault[] = defaultFilters.filter((f) => {
+    const specName = specNameByColumnId.get(f.column.column);
+    return specName !== undefined && IN_VITRO_FILTER_SPEC_NAMES.has(specName);
+  });
+
+  const inVitroRankingOrder: RankingOrder[] = defaultRankingOrder.filter((r) => {
+    const col = r.value?.column;
+    if (col === undefined) return false;
+    const specName = specNameByColumnId.get(col);
+    return specName !== undefined && IN_VITRO_RANKING_SPEC_NAMES.has(specName);
+  });
 
   const inVitroDefaults = {
     rankingOrder: inVitroRankingOrder,
-    filters: defaultFilters,
+    filters: inVitroFilters,
   };
 
-  // In Vivo defaults: In Vivo Score ranking + extra mutation filters
-  const inVivoFilters: PlTableFiltersDefault[] = [...defaultFilters];
+  // In Vivo defaults: allowlist + explicit mutation filters with
+  // preset-specific cutoffs.
+  const inVivoFilters: PlTableFiltersDefault[] = defaultFilters.filter((f) => {
+    const specName = specNameByColumnId.get(f.column.column);
+    return specName !== undefined && IN_VIVO_FILTER_SPEC_NAMES.has(specName);
+  });
 
   const fractionCDRMutationsCol = scores.find(
     (s) => s.column.spec.name === 'pl7.app/vdj/sequence/fractionCDRMutations',
@@ -291,18 +338,17 @@ function computePresets(
     });
   }
 
-  const enrichmentColumnIds = new Set(
-    scores
-      .filter((s) => isEnrichmentColumn(s.column.spec.name))
-      .map((s) => matchToColumnId(s, anchorRef).column),
-  );
+  const inVivoRankingOrder: RankingOrder[] = defaultRankingOrder.filter((r) => {
+    const col = r.value?.column;
+    if (col === IN_VIVO_SCORE_COLUMN_ID) return true;
+    if (col === undefined) return false;
+    const specName = specNameByColumnId.get(col);
+    return specName !== undefined && IN_VIVO_RANKING_SPEC_NAMES.has(specName);
+  });
 
   const inVivoDefaults = {
-    rankingOrder: defaultRankingOrder.filter((r) => {
-      const col = r.value?.column;
-      return col === IN_VIVO_SCORE_COLUMN_ID || (col !== undefined && !enrichmentColumnIds.has(col));
-    }),
-    filters: inVivoFilters.filter((f) => !enrichmentColumnIds.has(f.column.column)),
+    rankingOrder: inVivoRankingOrder,
+    filters: inVivoFilters,
   };
 
   return {
