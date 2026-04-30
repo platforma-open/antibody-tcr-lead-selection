@@ -44,6 +44,7 @@ const getPresetDefaults = () => {
   const preset = app.model.data.preset;
   if (preset === 'in-vivo') return config.inVivoDefaults;
   if (preset === 'in-vitro') return config.inVitroDefaults;
+  if (preset === 'peptide') return config.inPeptideDefaults;
   return undefined;
 };
 

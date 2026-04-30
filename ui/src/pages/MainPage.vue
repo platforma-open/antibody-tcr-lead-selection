@@ -121,22 +121,32 @@ watch(
 // Preset options for workflow type
 const NO_PRESET_VALUE = '__no_preset__';
 
-const presetOptions = [
-  { label: 'None', value: NO_PRESET_VALUE },
-  { label: 'In Vivo', value: 'in-vivo' },
-  { label: 'In Vitro', value: 'in-vitro' },
-];
+const isPeptideModality = computed(() => app.model.outputs.modality === 'peptide');
+
+const presetOptions = computed(() => {
+  if (isPeptideModality.value) {
+    return [
+      { label: 'None', value: NO_PRESET_VALUE },
+      { label: 'Peptide', value: 'peptide' },
+    ];
+  }
+  return [
+    { label: 'None', value: NO_PRESET_VALUE },
+    { label: 'In Vivo', value: 'in-vivo' },
+    { label: 'In Vitro', value: 'in-vitro' },
+  ];
+});
 
 const selectedPresetValue = computed<string>({
   get: () => app.model.data.preset ?? NO_PRESET_VALUE,
   set: (v: string) => {
-    app.model.data.preset = v === NO_PRESET_VALUE ? undefined : v as 'in-vivo' | 'in-vitro';
+    app.model.data.preset = v === NO_PRESET_VALUE ? undefined : v as 'in-vivo' | 'in-vitro' | 'peptide';
   },
 });
 
-// Reset preset when inputAnchor changes
+// Reset preset when inputAnchor or modality changes (clears stale presets when
 watch(
-  () => app.model.data.inputAnchor,
+  [() => app.model.data.inputAnchor, () => app.model.outputs.modality],
   () => {
     app.model.data.preset = undefined;
   },
@@ -278,7 +288,7 @@ watch(() => [app.model.data.inputAnchor, app.model.data.kabatNumbering], () => {
 
       <RankList />
 
-      <template v-if="isSamplingConfigured && isIGDataset">
+      <template v-if="isSamplingConfigured && isIGDataset && !isPeptideModality">
         <PlCheckbox v-model="kabatNumbering">
           Apply Kabat numbering
           <PlTooltip class="info" position="top">

@@ -4,11 +4,12 @@ import {
   type AnchoredFindColumnsOptions,
   type AxisSpec,
   type ColumnMatch,
+  type PColumnSpec,
   type PlRef,
   type RenderCtx,
   type SUniversalPColumnId,
 } from '@platforma-sdk/model';
-import type { ScopedColumnId, BlockArgs, BlockData, ColumnsMeta, PlTableFiltersDefault, RankingOrder } from './types';
+import type { ScopedColumnId, BlockArgs, BlockData, ColumnsMeta, PlTableFiltersDefault, RankingOrder, WorkflowPreset } from './types';
 
 /** Common WASM exclude selectors shared across filter/rank/table discovery. */
 export const commonExcludeSelectors: NonNullable<AnchoredFindColumnsOptions['exclude']> = [
@@ -139,7 +140,7 @@ export function buildCollection(
 
   // Compute defaults and presets
   const defaultFilters = computeDefaultFilters(scores, inputAnchor);
-  const presets = computePresets(scores, defaultFilters, inputAnchor);
+  const presets = computePresets(scores, defaultFilters, inputAnchor, anchorSpec);
 
   return {
     collection,
@@ -221,7 +222,10 @@ function computePresets(
   scores: ColumnMatch[],
   defaultFilters: PlTableFiltersDefault[],
   anchorRef: PlRef,
+  anchorSpec: PColumnSpec,
 ): Omit<ColumnsMeta, 'allMatches' | 'scores' | 'defaultFilters'> {
+  const isPeptide = anchorSpec.axesSpec[1]?.name === 'pl7.app/variantKey';
+
   const hasInVivoScore = [...IN_VIVO_MUTATION_COLUMNS].every(
     (name) => scores.some((s) => s.column.spec.name === name),
   );
@@ -230,11 +234,15 @@ function computePresets(
   const isEnrichmentColumn = (name: string) => name.startsWith(ENRICHMENT_COLUMN_PREFIX);
   const hasEnrichmentScores = scores.some((s) => isEnrichmentColumn(s.column.spec.name));
 
-  const detectedPreset = hasInVivoScore
-    ? 'in-vivo' as const
-    : hasEnrichmentScores
-      ? 'in-vitro' as const
-      : undefined;
+  // Peptide anchors always auto-select the peptide preset, regardless of which
+  // score columns are upstream.
+  const detectedPreset: WorkflowPreset | undefined = isPeptide
+    ? 'peptide'
+    : hasInVivoScore
+      ? 'in-vivo'
+      : hasEnrichmentScores
+        ? 'in-vitro'
+        : undefined;
 
   // Default ranking: all non-String scores, excluding mutation columns when In Vivo Score replaces them
   const defaultRankingOrder: RankingOrder[] = scores
@@ -305,6 +313,17 @@ function computePresets(
     filters: inVivoFilters.filter((f) => !enrichmentColumnIds.has(f.column.column)),
   };
 
+  // Peptide defaults: all numeric score columns; no SHM exclusions.
+  const inPeptideDefaults = {
+    rankingOrder: scores
+      .filter((s) => s.column.spec.valueType !== 'String')
+      .map((s) => ({
+        value: matchToColumnId(s, anchorRef),
+        rankingOrder: (s.column.spec.annotations?.['pl7.app/score/rankingOrder'] as 'increasing' | 'decreasing') ?? 'decreasing',
+      })),
+    filters: defaultFilters,
+  };
+
   return {
     defaultRankingOrder,
     hasInVivoScore,
@@ -312,6 +331,7 @@ function computePresets(
     detectedPreset,
     inVivoDefaults,
     inVitroDefaults,
+    inPeptideDefaults,
   };
 }
 
