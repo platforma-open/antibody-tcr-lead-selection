@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 4.0.0
+
+### Major Changes
+
+- 1c1c7c1: Support peptides
+
 ## 3.2.0
 
 ### Minor Changes

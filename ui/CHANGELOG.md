@@ -1,5 +1,16 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 4.0.0
+
+### Major Changes
+
+- 1c1c7c1: Support peptides
+
+### Patch Changes
+
+- Updated dependencies [1c1c7c1]
+  - @platforma-open/milaboratories.top-antibodies.model@4.0.0
+
 ## 3.0.7
 
 ### Patch Changes
