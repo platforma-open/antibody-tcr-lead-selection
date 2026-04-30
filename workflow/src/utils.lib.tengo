@@ -61,7 +61,7 @@ findMatchingLinkerIndex := func(colsSpec, linkerColumns) {
     // Find the clusterId axis in the ranking column
     rankingClusterIdAxis := undefined
     for axis in colsSpec.axesSpec {
-        if axis.name == "pl7.app/vdj/clusterId" {
+        if axis.name == "pl7.app/clusterId" {
             rankingClusterIdAxis = axis
             break
         }
@@ -76,7 +76,7 @@ findMatchingLinkerIndex := func(colsSpec, linkerColumns) {
         // Get the clusterId axis from the linker column
         linkerClusterIdAxis := undefined
         for axis in linkerCol.spec.axesSpec {
-            if axis.name == "pl7.app/vdj/clusterId" {
+            if axis.name == "pl7.app/clusterId" {
                 linkerClusterIdAxis = axis
                 break
             }
@@ -195,7 +195,7 @@ resolveClusterColumnHeader := func(args, columns, sortedLinkers) {
     // Find the clusterId axis in the selected linker
     selectedClusterIdAxis := undefined
     for axis in selectedLinkerSpec.axesSpec {
-        if axis.name == "pl7.app/vdj/clusterId" {
+        if axis.name == "pl7.app/clusterId" {
             selectedClusterIdAxis = axis
             break
         }
@@ -209,7 +209,7 @@ resolveClusterColumnHeader := func(args, columns, sortedLinkers) {
     for linkerIdx, col in sortedLinkers {
         // Get the clusterId axis from this linker
         for axis in col.spec.axesSpec {
-            if axis.name == "pl7.app/vdj/clusterId" {
+            if axis.name == "pl7.app/clusterId" {
                 // Use clusterAxisDomainsMatch for proper domain comparison
                 if clusterAxisDomainsMatch(selectedClusterIdAxis, axis) {
                     return "clusterAxis_" + string(linkerIdx) + "_0"
@@ -409,7 +409,7 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec) {
             addedCols = true
         }
         // Collect clusterId axes from linker columns to match cluster size columns
-        if !is_undefined(clusterIdAxis) && clusterIdAxis.name == "pl7.app/vdj/clusterId" {
+        if !is_undefined(clusterIdAxis) && clusterIdAxis.name == "pl7.app/clusterId" {
             linkerClusterIdAxesWithIdx = append(linkerClusterIdAxesWithIdx, {
                 axis: clusterIdAxis,
                 linkerIdx: linkerIdx
@@ -423,7 +423,7 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec) {
             // Find the clusterId axis in this cluster size column
             clusterSizeClusterIdAxis := undefined
             for axis in col.spec.axesSpec {
-                if axis.name == "pl7.app/vdj/clusterId" {
+                if axis.name == "pl7.app/clusterId" {
                     clusterSizeClusterIdAxis = axis
                     break
                 }

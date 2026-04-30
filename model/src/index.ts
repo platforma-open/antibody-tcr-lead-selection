@@ -71,6 +71,12 @@ export const platforma = BlockModelV3.create(blockDataModel)
         { name: 'pl7.app/vdj/scClonotypeKey' },
       ],
       annotations: { 'pl7.app/isAnchor': 'true' },
+    }, {
+      axes: [
+        { name: 'pl7.app/sampleId' },
+        { name: 'pl7.app/variantKey' },
+      ],
+      annotations: { 'pl7.app/isAnchor': 'true' },
     }], { refsWithEnrichments: true }),
   )
 
@@ -78,6 +84,14 @@ export const platforma = BlockModelV3.create(blockDataModel)
     const ref = ctx.data.inputAnchor;
     if (ref === undefined) return undefined;
     return ctx.resultPool.getPColumnSpecByRef(ref);
+  }, { retentive: true })
+
+  .output('modality', (ctx) => {
+    const ref = ctx.data.inputAnchor;
+    if (ref === undefined) return undefined;
+    const spec = ctx.resultPool.getPColumnSpecByRef(ref);
+    if (!spec) return undefined;
+    return spec.axesSpec[1]?.name === 'pl7.app/variantKey' ? 'peptide' : 'antibody_tcr';
   }, { retentive: true })
 
   // Combined filter config - options and defaults together for atomic updates
@@ -107,6 +121,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
       defaults: result.meta.defaultFilters,
       inVivoDefaults: result.meta.inVivoDefaults.filters,
       inVitroDefaults: result.meta.inVitroDefaults.filters,
+      inPeptideDefaults: result.meta.inPeptideDefaults.filters,
     };
   }, { retentive: true })
 
@@ -150,6 +165,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
       defaults: result.meta.defaultRankingOrder,
       inVivoDefaults: result.meta.inVivoDefaults.rankingOrder,
       inVitroDefaults: result.meta.inVitroDefaults.rankingOrder,
+      inPeptideDefaults: result.meta.inPeptideDefaults.rankingOrder,
     };
   }, { retentive: true })
 
@@ -252,7 +268,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
     // Verify sampledRows belong to current inputAnchor by checking axes
     const samplingCol = sampledRows.find(
-      (col) => col.spec.name === 'pl7.app/vdj/lead-selection',
+      (col) => col.spec.name === 'pl7.app/lead-selection',
     );
     if (samplingCol !== undefined) {
       const clonotypeAxisMatches = samplingCol.spec.axesSpec.some(
@@ -286,7 +302,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     // Use lead-selection column as anchor — it has [clonotypeKey] axis only,
     // so the inner join core is keyed by clonotypeKey (no sampleId duplication).
     const leadSelectionCol = sampledRows.find(
-      (col) => col.spec.name === 'pl7.app/vdj/lead-selection',
+      (col) => col.spec.name === 'pl7.app/lead-selection',
     );
     if (!leadSelectionCol) return undefined;
 
@@ -322,7 +338,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
     // Sort by ranking-order column (from sampledRows). V3 remaps the ID via originalId.
     const rankingOrderCol = sampledRows.find(
-      (col) => col.spec.name === 'pl7.app/vdj/ranking-order',
+      (col) => col.spec.name === 'pl7.app/ranking-order',
     );
     const sorting: PTableSorting[] | undefined = rankingOrderCol
       ? [{
@@ -344,7 +360,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
       labelsOptions: {
         formatters: {
           linker: (labels, spec) =>
-            (spec as PColumnSpec).axesSpec.some((a) => a.name === 'pl7.app/vdj/clusterId')
+            (spec as PColumnSpec).axesSpec.some((a) => a.name === 'pl7.app/clusterId')
               ? undefined
               : `via ${labels.join(' > ')}`,
         },
@@ -355,14 +371,19 @@ export const platforma = BlockModelV3.create(blockDataModel)
             match: (spec) => spec.name === Annotation.Label
               && spec.axesSpec.length === 1
               && (spec.axesSpec[0].name === 'pl7.app/vdj/clonotypeKey'
-                || spec.axesSpec[0].name === 'pl7.app/vdj/scClonotypeKey'),
+                || spec.axesSpec[0].name === 'pl7.app/vdj/scClonotypeKey'
+                || spec.axesSpec[0].name === 'pl7.app/variantKey'),
             priority: 1000000,
           },
           {
-            match: (spec) =>
-              spec.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'
-              && spec.annotations?.['pl7.app/vdj/isMainSequence'] === 'true'
-              && spec.domain?.['pl7.app/alphabet'] === 'aminoacid',
+            match: (spec) => {
+              const isAa = spec.domain?.['pl7.app/alphabet'] === 'aminoacid';
+              const isVdj = spec.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'
+                && spec.annotations?.['pl7.app/vdj/isMainSequence'] === 'true';
+              const isPeptide = spec.annotations?.['pl7.app/isAssemblingFeature'] === 'true'
+                && spec.annotations?.['pl7.app/isMainSequence'] === 'true';
+              return isAa && (isVdj || isPeptide);
+            },
             priority: 999000,
           },
           {
@@ -373,19 +394,22 @@ export const platforma = BlockModelV3.create(blockDataModel)
         visibility: [
           {
             match: (spec) =>
-              spec.name === 'pl7.app/vdj/ranking-order'
+              spec.name === 'pl7.app/ranking-order'
               || spec.name === 'pl7.app/vdj/inVivoScore'
               || isFilterOrRank(spec)
               || (spec.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'
                 && spec.annotations?.['pl7.app/vdj/isMainSequence'] === 'true'
                 && spec.domain?.['pl7.app/alphabet'] === 'aminoacid')
+              || (spec.annotations?.['pl7.app/isAssemblingFeature'] === 'true'
+                && spec.annotations?.['pl7.app/isMainSequence'] === 'true'
+                && spec.domain?.['pl7.app/alphabet'] === 'aminoacid')
               || (kabatEnabled && spec.name.startsWith('pl7.app/vdj/kabatSequence')),
             visibility: 'default',
           },
-          // Clone-to-cluster mapping (name: pl7.app/vdj/clusterId, axes: [clonotypeKey])
+          // Clone-to-cluster mapping (name: pl7.app/clusterId, axes: [clonotypeKey])
           // is always hidden — it duplicates the clusterId axis label column.
           {
-            match: (spec) => spec.name === 'pl7.app/vdj/clusterId',
+            match: (spec) => spec.name === 'pl7.app/clusterId',
             visibility: 'hidden',
           },
           // Catch-all: everything else optional (except linkers — V3 manages those)
@@ -421,7 +445,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
       [
         {
           axes: [{ anchor: 'main', idx: 1 }],
-          namePattern: '^pl7\\.app/vdj/umap[12]$',
+          namePattern: '^pl7\\.app/umap[12]$',
         },
       ],
     );
@@ -444,7 +468,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
       [
         {
           axes: [{ anchor: 'main', idx: 1 }],
-          namePattern: '^pl7\\.app/vdj/umap[12]$',
+          namePattern: '^pl7\\.app/umap[12]$',
         },
       ],
     );
@@ -468,7 +492,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     if (!result) return false;
 
     return result.meta.allMatches.some((m) =>
-      m.column.spec.axesSpec.some((a) => a.name === 'pl7.app/vdj/clusterId'),
+      m.column.spec.axesSpec.some((a) => a.name === 'pl7.app/clusterId'),
     );
   })
 
@@ -505,7 +529,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
       for (const link of linkers) {
         const linkerSpec = ctx.resultPool.getPColumnSpecByRef(link.ref);
-        if (!linkerSpec?.axesSpec.some((axis) => axis.name === 'pl7.app/vdj/clusterId')) {
+        if (!linkerSpec?.axesSpec.some((axis) => axis.name === 'pl7.app/clusterId')) {
           continue;
         }
         // Extract clustering trace element label directly to avoid verbose
@@ -535,17 +559,26 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
   .output('isRunning', (ctx) => ctx.outputs?.getIsReadyOrError() === false)
 
-  .title(() => 'Antibody/TCR Leads')
+  .title(() => 'Lead Selection')
 
   .subtitle((ctx) => ctx.data.customBlockLabel || ctx.data.defaultBlockLabel)
 
-  .sections((_) => {
-    return [
+  .sections((ctx) => {
+    const ref = ctx.data?.inputAnchor;
+    const isPeptide = ref !== undefined
+      && ctx.resultPool.getPColumnSpecByRef(ref)?.axesSpec[1]?.name === 'pl7.app/variantKey';
+
+    const sections: Array<{ type: 'link'; href: `/${string}`; label: string }> = [
       { type: 'link', href: '/', label: strings.titles.main },
-      { type: 'link', href: '/umap', label: 'Clonotype Space' },
-      { type: 'link', href: '/spectratype', label: 'CDR3 V Spectratype' },
-      { type: 'link', href: '/usage', label: 'V/J Gene Usage' },
+      { type: 'link', href: '/umap', label: isPeptide ? 'Peptide Space' : 'Clonotype Space' },
     ];
+    if (!isPeptide) {
+      sections.push(
+        { type: 'link', href: '/spectratype', label: 'CDR3 V Spectratype' },
+        { type: 'link', href: '/usage', label: 'V/J Gene Usage' },
+      );
+    }
+    return sections;
   })
 
   .done();

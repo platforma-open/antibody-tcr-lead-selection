@@ -4,11 +4,12 @@ import {
   type AnchoredFindColumnsOptions,
   type AxisSpec,
   type ColumnMatch,
+  type PColumnSpec,
   type PlRef,
   type RenderCtx,
   type SUniversalPColumnId,
 } from '@platforma-sdk/model';
-import type { ScopedColumnId, BlockArgs, BlockData, ColumnsMeta, PlTableFiltersDefault, RankingOrder } from './types';
+import type { BlockArgs, BlockData, ColumnsMeta, PlTableFiltersDefault, RankingOrder, ScopedColumnId, WorkflowPreset } from './types';
 
 /** Common WASM exclude selectors shared across filter/rank/table discovery. */
 export const commonExcludeSelectors: NonNullable<AnchoredFindColumnsOptions['exclude']> = [
@@ -20,7 +21,7 @@ export const commonExcludeSelectors: NonNullable<AnchoredFindColumnsOptions['exc
  *  and columns produced by this block. */
 export function isSelectableMatch(m: ColumnMatch, sampleAxisName: string): boolean {
   return !m.column.spec.axesSpec.some((a) => a.name === sampleAxisName)
-    && m.column.spec.name !== 'pl7.app/vdj/clusterId'
+    && m.column.spec.name !== 'pl7.app/clusterId'
     && m.column.spec.name !== 'pl7.app/label'
     && !m.column.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection');
 }
@@ -79,7 +80,7 @@ export const IN_VITRO_RANKING_SPEC_NAMES = new Set([
  * Used to identify which specific cluster axis is being used.
  */
 export function clusterAxisDomainsMatch(axis1: AxisSpec, axis2: AxisSpec): boolean {
-  if (axis1.name !== 'pl7.app/vdj/clusterId' || axis2.name !== 'pl7.app/vdj/clusterId') {
+  if (axis1.name !== 'pl7.app/clusterId' || axis2.name !== 'pl7.app/clusterId') {
     return false;
   }
 
@@ -110,7 +111,7 @@ export function getVisibleClusterAxes<T extends { id: unknown; spec: { axesSpec:
     if (!isFilterOrRankColumn) continue;
 
     for (const axis of col.spec.axesSpec) {
-      if (axis.name === 'pl7.app/vdj/clusterId') {
+      if (axis.name === 'pl7.app/clusterId') {
         const alreadyAdded = visibleClusterAxes.some((existingAxis) =>
           clusterAxisDomainsMatch(existingAxis, axis),
         );
@@ -172,7 +173,7 @@ export function buildCollection(
 
   // Compute defaults and presets
   const defaultFilters = computeDefaultFilters(scores, inputAnchor);
-  const presets = computePresets(scores, defaultFilters, inputAnchor);
+  const presets = computePresets(scores, defaultFilters, inputAnchor, anchorSpec);
 
   return {
     collection,
@@ -254,20 +255,26 @@ function computePresets(
   scores: ColumnMatch[],
   defaultFilters: PlTableFiltersDefault[],
   anchorRef: PlRef,
+  anchorSpec: PColumnSpec,
 ): Omit<ColumnsMeta, 'allMatches' | 'scores' | 'defaultFilters'> {
+  const isPeptide = anchorSpec.axesSpec[1]?.name === 'pl7.app/variantKey';
+
   const hasInVivoScore = [...IN_VIVO_MUTATION_COLUMNS].every(
     (name) => scores.some((s) => s.column.spec.name === name),
   );
 
-  const ENRICHMENT_COLUMN_PREFIX = 'pl7.app/vdj/enrichment';
-  const isEnrichmentColumn = (name: string) => name.startsWith(ENRICHMENT_COLUMN_PREFIX);
+  const isEnrichmentColumn = (name: string) => name.startsWith('pl7.app/enrichment') || name.startsWith('pl7.app/vdj/enrichment');
   const hasEnrichmentScores = scores.some((s) => isEnrichmentColumn(s.column.spec.name));
 
-  const detectedPreset = hasInVivoScore
-    ? 'in-vivo' as const
-    : hasEnrichmentScores
-      ? 'in-vitro' as const
-      : undefined;
+  // Peptide anchors always auto-select the peptide preset, regardless of which
+  // score columns are upstream.
+  const detectedPreset: WorkflowPreset | undefined = isPeptide
+    ? 'peptide'
+    : hasInVivoScore
+      ? 'in-vivo'
+      : hasEnrichmentScores
+        ? 'in-vitro'
+        : undefined;
 
   // Default ranking: all non-String scores, excluding mutation columns when In Vivo Score replaces them
   const defaultRankingOrder: RankingOrder[] = scores
@@ -351,6 +358,17 @@ function computePresets(
     filters: inVivoFilters,
   };
 
+  // Peptide defaults: all numeric score columns; no SHM exclusions.
+  const inPeptideDefaults = {
+    rankingOrder: scores
+      .filter((s) => s.column.spec.valueType !== 'String')
+      .map((s) => ({
+        value: matchToColumnId(s, anchorRef),
+        rankingOrder: (s.column.spec.annotations?.['pl7.app/score/rankingOrder'] as 'increasing' | 'decreasing') ?? 'decreasing',
+      })),
+    filters: defaultFilters,
+  };
+
   return {
     defaultRankingOrder,
     hasInVivoScore,
@@ -358,6 +376,7 @@ function computePresets(
     detectedPreset,
     inVivoDefaults,
     inVitroDefaults,
+    inPeptideDefaults,
   };
 }
 

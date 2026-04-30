@@ -123,7 +123,7 @@ export type PlTableFiltersDefault = {
   default: PlTableFilter | DiscreteFilter;
 };
 
-export type WorkflowPreset = 'in-vivo' | 'in-vitro';
+export type WorkflowPreset = 'in-vivo' | 'in-vitro' | 'peptide';
 
 export type PresetDefaults = {
   rankingOrder: RankingOrder[];
@@ -147,4 +147,6 @@ export type ColumnsMeta = {
   inVivoDefaults: PresetDefaults;
   /** Default ranking and filter settings for in-vitro workflow */
   inVitroDefaults: PresetDefaults;
+  /** Default ranking and filter settings for peptide workflow */
+  inPeptideDefaults: PresetDefaults;
 };

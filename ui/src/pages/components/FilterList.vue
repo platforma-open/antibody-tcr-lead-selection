@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { ScopedColumnId, DiscreteFilter, FilterUI, PlTableFilter } from '@platforma-open/milaboratories.top-antibodies.model';
+import type { DiscreteFilter, FilterUI, PlTableFilter, ScopedColumnId } from '@platforma-open/milaboratories.top-antibodies.model';
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from '@platforma-sdk/ui-vue';
 import { ref } from 'vue';
 import { useApp } from '../../app';
@@ -44,6 +44,7 @@ const getPresetDefaults = () => {
   const preset = app.model.data.preset;
   if (preset === 'in-vivo') return config.inVivoDefaults;
   if (preset === 'in-vitro') return config.inVitroDefaults;
+  if (preset === 'peptide') return config.inPeptideDefaults;
   return undefined;
 };
 
@@ -104,10 +105,10 @@ useAnchorSyncedDefaults({
 <template>
   <div class="d-flex flex-column gap-6">
     <PlRow>
-      Keep clonotypes that:
+      Keep sequences that:
       <PlTooltip>
         <PlIcon16 name="info" />
-        <template #tooltip> Only clonotypes that satisfy these conditions will be kept. All others will be excluded. </template>
+        <template #tooltip> Only sequences that satisfy these conditions will be kept. All others will be excluded. </template>
       </PlTooltip>
     </PlRow>
 

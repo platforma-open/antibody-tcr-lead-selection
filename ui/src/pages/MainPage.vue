@@ -77,7 +77,7 @@ const NO_DIVERSIFICATION_VALUE = '__no_diversification__';
 const clusterColumnOptionsWithNone = computed(() => {
   const options = app.model.outputs.clusterColumnOptions ?? [];
   return [
-    { label: 'No diversification (allow similar clonotypes)', value: NO_DIVERSIFICATION_VALUE },
+    { label: 'No diversification (allow similar sequences)', value: NO_DIVERSIFICATION_VALUE },
     ...options.map((o) => ({
       label: o.label,
       value: JSON.stringify(o.ref),
@@ -121,22 +121,32 @@ watch(
 // Preset options for workflow type
 const NO_PRESET_VALUE = '__no_preset__';
 
-const presetOptions = [
-  { label: 'None', value: NO_PRESET_VALUE },
-  { label: 'In Vivo', value: 'in-vivo' },
-  { label: 'In Vitro', value: 'in-vitro' },
-];
+const isPeptideModality = computed(() => app.model.outputs.modality === 'peptide');
+
+const presetOptions = computed(() => {
+  if (isPeptideModality.value) {
+    return [
+      { label: 'None', value: NO_PRESET_VALUE },
+      { label: 'Peptide', value: 'peptide' },
+    ];
+  }
+  return [
+    { label: 'None', value: NO_PRESET_VALUE },
+    { label: 'In Vivo', value: 'in-vivo' },
+    { label: 'In Vitro', value: 'in-vitro' },
+  ];
+});
 
 const selectedPresetValue = computed<string>({
   get: () => app.model.data.preset ?? NO_PRESET_VALUE,
   set: (v: string) => {
-    app.model.data.preset = v === NO_PRESET_VALUE ? undefined : v as 'in-vivo' | 'in-vitro';
+    app.model.data.preset = v === NO_PRESET_VALUE ? undefined : v as 'in-vivo' | 'in-vitro' | 'peptide';
   },
 });
 
-// Reset preset when inputAnchor changes
+// Reset preset when inputAnchor or modality changes (clears stale presets when
 watch(
-  () => app.model.data.inputAnchor,
+  [() => app.model.data.inputAnchor, () => app.model.outputs.modality],
   () => {
     app.model.data.preset = undefined;
   },
@@ -185,7 +195,7 @@ watch(() => [app.model.data.inputAnchor, app.model.data.kabatNumbering], () => {
   <PlBlockPage
     v-model:subtitle="app.model.data.customBlockLabel"
     :subtitle-placeholder="app.model.data.defaultBlockLabel"
-    title="Antibody/TCR Leads"
+    title="Lead Selection"
   >
     <template #append>
       <PlBtnGhost
@@ -226,16 +236,16 @@ watch(() => [app.model.data.inputAnchor, app.model.data.kabatNumbering], () => {
         required
       />
 
-      <!-- Number of clonotypes to select -->
+      <!-- Number of leads to select -->
       <PlNumberField
         v-model="app.model.data.topClonotypes"
         :style="{ width: '320px' }"
-        label="Number of clonotypes to select"
+        label="Number of sequences to select"
         :step="1"
         :error-message="validateTopClonotypes(app.model.data.topClonotypes)"
       >
         <template #tooltip>
-          Total number of clonotypes that will be selected.
+          Total number of lead sequences that will be selected.
         </template>
       </PlNumberField>
 
@@ -255,16 +265,16 @@ watch(() => [app.model.data.inputAnchor, app.model.data.kabatNumbering], () => {
         </template>
       </PlDropdown>
 
-      <!-- Clonotype filtering section -->
+      <!-- Lead filtering section -->
       <FilterList />
 
-      <!-- Clonotype sampling section -->
+      <!-- Lead sampling section -->
       <template v-if="isSamplingConfigured && app.model.outputs.clusterColumnOptions && app.model.outputs.clusterColumnOptions.length > 0">
         <PlRow>
           Diversify by:
           <PlTooltip>
             <PlIcon16 name="info" />
-            <template #tooltip>Defines how clonotypes are grouped to ensure diversity in the selected panel.</template>
+            <template #tooltip>Defines how sequences are grouped to ensure diversity in the selected panel.</template>
           </PlTooltip>
         </PlRow>
 
@@ -278,7 +288,7 @@ watch(() => [app.model.data.inputAnchor, app.model.data.kabatNumbering], () => {
 
       <RankList />
 
-      <template v-if="isSamplingConfigured && isIGDataset">
+      <template v-if="isSamplingConfigured && isIGDataset && !isPeptideModality">
         <PlCheckbox v-model="kabatNumbering">
           Apply Kabat numbering
           <PlTooltip class="info" position="top">

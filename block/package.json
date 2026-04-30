@@ -5,7 +5,7 @@
     "build": "shx rm -rf block-pack/* && block-tools pack",
     "do-pack": "shx rm -f *.tgz && pnpm pack && shx mv *.tgz package.tgz",
     "mark-stable": "block-tools mark-stable -r 's3://milab-euce1-prod-pkgs-s3-block-registry/pub/releases/?region=eu-central-1'",
-    "prepublishOnly": "block-tools pack && block-tools publish -r 's3://milab-euce1-prod-pkgs-s3-block-registry/pub/releases/?region=eu-central-1'"
+    "prepublishOnly": "block-tools pack && block-tools publish --unstable -r 's3://milab-euce1-prod-pkgs-s3-block-registry/pub/releases/?region=eu-central-1'"
   },
   "files": [
     "index.d.ts",
@@ -23,17 +23,18 @@
       "ui": "@platforma-open/milaboratories.top-antibodies.ui/dist"
     },
     "meta": {
-      "title": "Antibody/TCR Lead Selection",
+      "title": "Lead Selection",
       "logo": "file:../logos/block-logo.png",
       "url": "https://github.com/platforma-open/antibody-tcr-lead-selection",
       "docs": "https://docs.platforma.bio/guides/antibody-discovery/lead-selection/",
       "support": "mailto:support@milaboratories.com",
-      "description": "Ranks and selects top antibody or TCR lead candidates using configurable scoring, filtering, and diversified ranking with built-in In Vivo and In Vitro workflow presets.",
+      "description": "Ranks and selects top lead candidates (antibodies, TCRs, or peptides) using configurable scoring, filtering, and diversified ranking with built-in workflow presets.",
       "longDescription": "file:../docs/description.md",
       "changelog": "file:../CHANGELOG.md",
       "tags": [
         "airr",
-        "downstream"
+        "downstream",
+        "peptide"
       ],
       "organization": {
         "name": "MiLaboratories Inc",

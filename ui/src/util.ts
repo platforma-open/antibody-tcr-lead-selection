@@ -1,19 +1,30 @@
 import type { PlTableFilter } from '@platforma-open/milaboratories.top-antibodies.model';
-import type { PColumnIdAndSpec, PColumnSpec, PTableColumnSpec } from '@platforma-sdk/model';
+import type { PColumnIdAndSpec, PTableColumnSpec } from '@platforma-sdk/model';
 
 export const isSequenceColumn = (column: PColumnIdAndSpec) => {
-  if (!(column.spec.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'))
+  const spec = column.spec;
+
+  // MSA runs on amino acid sequences only.
+  if (spec.domain?.['pl7.app/alphabet'] !== 'aminoacid') return false;
+
+  // Require assembling-feature annotation. VDJ uses 'pl7.app/vdj/isAssemblingFeature';
+  // peptide-extraction emits the modality-neutral 'pl7.app/isAssemblingFeature'.
+  const isAssemblingFeature
+    = spec.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'
+      || spec.annotations?.['pl7.app/isAssemblingFeature'] === 'true';
+  if (!isAssemblingFeature) return false;
+
+  // Single-cell: only the primary chain participates. Reject secondary-chain
+  // SC sequences. (The previous bulk-OR-singleCell shape let these through
+  // because the bulk branch had no chain-index check.)
+  if (
+    spec.axesSpec[0]?.name === 'pl7.app/vdj/scClonotypeKey'
+    && spec.domain?.['pl7.app/vdj/scClonotypeChain/index'] !== 'primary'
+  ) {
     return false;
+  }
 
-  const isBulkSequence = (column: PColumnSpec) =>
-    column.domain?.['pl7.app/alphabet'] === 'aminoacid';
-  const isSingleCellSequence = (column: PColumnSpec) =>
-    column.domain?.['pl7.app/vdj/scClonotypeChain/index'] === 'primary'
-    && column.domain?.['pl7.app/alphabet'] === 'aminoacid'
-    // && column.axesSpec.length >= 1
-    && column.axesSpec[0].name === 'pl7.app/vdj/scClonotypeKey';
-
-  return isBulkSequence(column.spec) || isSingleCellSequence(column.spec);
+  return true;
 };
 
 export function defaultFilters(tSpec: PTableColumnSpec): (PlTableFilter | undefined) {

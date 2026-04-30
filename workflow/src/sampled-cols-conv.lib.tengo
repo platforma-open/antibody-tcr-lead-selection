@@ -6,7 +6,7 @@ getColumns := func(datasetSpec, addRanking, addInVivoScore) {
         id: "link",
         allowNA: false,
         spec: {
-          name: "pl7.app/vdj/lead-selection",
+          name: "pl7.app/lead-selection",
           valueType: "Int",
           domain: {},
           annotations: {
@@ -21,7 +21,7 @@ getColumns := func(datasetSpec, addRanking, addInVivoScore) {
     columns = columns + [{
         column: "ranked_order",
         spec: {
-          name: "pl7.app/vdj/ranking-order",
+          name: "pl7.app/ranking-order",
           valueType: "Int",
           domain: {},
           annotations: {
