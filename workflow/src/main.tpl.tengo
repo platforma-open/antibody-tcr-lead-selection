@@ -115,6 +115,17 @@ wf.prepare(func(args){
 		annotations: { "pl7.app/vdj/isAssemblingFeature": "true" },
 		domain: { "pl7.app/alphabet": "aminoacid" }
 	}, "assemblingAaSeqs")
+
+	// Peptide main sequence — single-axis column on variantKey, used as
+	// modality-aware fallback when no filter/ranking columns load.
+	bundleBuilder.addMulti({
+		axes: [{ anchor: "main", idx: 1 }],
+		annotations: {
+			"pl7.app/isAssemblingFeature": "true",
+			"pl7.app/isMainSequence": "true"
+		},
+		domain: { "pl7.app/alphabet": "aminoacid" }
+	}, "peptideMainSeqs")
     
     return {
         columns: bundleBuilder.build()

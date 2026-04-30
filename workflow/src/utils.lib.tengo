@@ -458,12 +458,19 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec) {
         }
     }
 
-    // Fallback: if no columns added, add at least one CDR3 sequence column
+    // Fallback: if no columns added, add a single-axis trunk-keyed sequence
+    // column. Try VDJ CDR3 first
     if !addedCols {
         cdr3Sequences := columns.getColumns("cdr3Sequences")
         if len(cdr3Sequences) > 0 {
-            cloneTable.add(cdr3Sequences[0], {header: "cdr3_fallback"})
+            cloneTable.add(cdr3Sequences[0], {header: "sequence_fallback"})
             addedCols = true
+        } else {
+            peptideMainSeqs := columns.getColumns("peptideMainSeqs")
+            if len(peptideMainSeqs) > 0 {
+                cloneTable.add(peptideMainSeqs[0], {header: "sequence_fallback"})
+                addedCols = true
+            }
         }
     }
 
