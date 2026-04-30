@@ -15,7 +15,7 @@ export const blockDataModel = new DataModelBuilder()
     filters: uiState?.filters ?? [],
     tableState: uiState?.tableState ?? createPlDataTableStateV2(),
     graphStateUMAP: uiState?.graphStateUMAP ?? {
-      title: 'Clonotype Space UMAP',
+      title: 'Sequence Space UMAP',
       template: 'dots',
       currentTab: null,
       layersSettings: { dots: { dotFill: '#5d32c6' } },
@@ -45,7 +45,7 @@ export const blockDataModel = new DataModelBuilder()
     diversificationColumn: undefined,
     tableState: createPlDataTableStateV2(),
     graphStateUMAP: {
-      title: 'Clonotype Space UMAP',
+      title: 'Sequence Space UMAP',
       template: 'dots',
       currentTab: null,
       layersSettings: { dots: { dotFill: '#5d32c6' } },

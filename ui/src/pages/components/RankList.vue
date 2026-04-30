@@ -105,10 +105,10 @@ useAnchorSyncedDefaults({
 <template>
   <div class="d-flex flex-column gap-6">
     <PlRow>
-      Choose the best clonotypes by:
+      Choose the best sequences by:
       <PlTooltip>
         <PlIcon16 name="info" />
-        <template #tooltip> Select the criteria used to prioritize clonotypes during selection.</template>
+        <template #tooltip> Select the criteria used to prioritize lead sequences during selection.</template>
       </PlTooltip>
     </PlRow>
 
