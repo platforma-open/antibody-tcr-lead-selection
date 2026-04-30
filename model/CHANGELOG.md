@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 3.1.1
+
+### Patch Changes
+
+- 9faee69: Ensure that presets contain only expected filters and ranking columns
+
 ## 3.1.0
 
 ### Minor Changes
