@@ -1,5 +1,17 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 2.2.0
+
+### Minor Changes
+
+- 2963224: Show table with partial data
+
+### Patch Changes
+
+- Updated dependencies [2963224]
+  - @platforma-open/milaboratories.top-antibodies.model@3.2.0
+  - @platforma-open/milaboratories.top-antibodies.ui@3.0.7
+
 ## 2.1.10
 
 ### Patch Changes
