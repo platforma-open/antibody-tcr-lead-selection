@@ -9,7 +9,7 @@ import {
   type RenderCtx,
   type SUniversalPColumnId,
 } from '@platforma-sdk/model';
-import type { ScopedColumnId, BlockArgs, BlockData, ColumnsMeta, PlTableFiltersDefault, RankingOrder, WorkflowPreset } from './types';
+import type { BlockArgs, BlockData, ColumnsMeta, PlTableFiltersDefault, RankingOrder, ScopedColumnId, WorkflowPreset } from './types';
 
 /** Common WASM exclude selectors shared across filter/rank/table discovery. */
 export const commonExcludeSelectors: NonNullable<AnchoredFindColumnsOptions['exclude']> = [
@@ -263,8 +263,7 @@ function computePresets(
     (name) => scores.some((s) => s.column.spec.name === name),
   );
 
-  const ENRICHMENT_COLUMN_PREFIX = 'pl7.app/enrichment';
-  const isEnrichmentColumn = (name: string) => name.startsWith(ENRICHMENT_COLUMN_PREFIX);
+  const isEnrichmentColumn = (name: string) => name.startsWith('pl7.app/enrichment') || name.startsWith('pl7.app/vdj/enrichment');
   const hasEnrichmentScores = scores.some((s) => isEnrichmentColumn(s.column.spec.name));
 
   // Peptide anchors always auto-select the peptide preset, regardless of which
