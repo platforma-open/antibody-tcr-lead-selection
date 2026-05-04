@@ -75,9 +75,11 @@ wf.prepare(func(args){
         bundleBuilder.addAnchor("selectedCluster", args.diversificationColumn)
     }
 
-    // Add cluster size columns from clustering blocks
+    // Add cluster size columns from clustering blocks. The namePattern matches
+    // both the post-peptide-adaptation name and the pre-peptide `pl7.app/vdj/`
+    // variant so older clonotype-clustering instances remain usable.
     bundleBuilder.addMulti({
-        name: "pl7.app/vdj/clustering/clusterSize",
+        namePattern: "^pl7\\.app/(vdj/)?clustering/clusterSize$",
         partialAxesMatch: true
     }, "clusterSizes")
 

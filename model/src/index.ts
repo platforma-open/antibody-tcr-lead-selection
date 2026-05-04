@@ -21,7 +21,7 @@ import {
   isHiddenFromGraphColumn,
   isHiddenFromUIColumn,
 } from '@platforma-sdk/model';
-import { buildCollection, commonExcludeSelectors, IN_VIVO_SCORE_COLUMN_ID, isSelectableMatch, matchToColumnId } from './util';
+import { buildCollection, commonExcludeSelectors, IN_VIVO_SCORE_COLUMN_ID, isClusterIdAxisName, isSelectableMatch, matchToColumnId } from './util';
 import { convertFilterUI, convertRankingOrderUI } from './converters';
 import { blockDataModel } from './dataModel';
 import type { BlockArgs } from './types';
@@ -360,7 +360,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
       labelsOptions: {
         formatters: {
           linker: (labels, spec) =>
-            (spec as PColumnSpec).axesSpec.some((a) => a.name === 'pl7.app/clusterId')
+            (spec as PColumnSpec).axesSpec.some((a) => isClusterIdAxisName(a.name))
               ? undefined
               : `via ${labels.join(' > ')}`,
         },
@@ -409,7 +409,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
           // Clone-to-cluster mapping (name: pl7.app/clusterId, axes: [clonotypeKey])
           // is always hidden — it duplicates the clusterId axis label column.
           {
-            match: (spec) => spec.name === 'pl7.app/clusterId',
+            match: (spec) => isClusterIdAxisName(spec.name),
             visibility: 'hidden',
           },
           // Catch-all: everything else optional (except linkers — V3 manages those)
@@ -492,7 +492,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     if (!result) return false;
 
     return result.meta.allMatches.some((m) =>
-      m.column.spec.axesSpec.some((a) => a.name === 'pl7.app/clusterId'),
+      m.column.spec.axesSpec.some((a) => isClusterIdAxisName(a.name)),
     );
   })
 
@@ -529,7 +529,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
       for (const link of linkers) {
         const linkerSpec = ctx.resultPool.getPColumnSpecByRef(link.ref);
-        if (!linkerSpec?.axesSpec.some((axis) => axis.name === 'pl7.app/clusterId')) {
+        if (!linkerSpec?.axesSpec.some((axis) => isClusterIdAxisName(axis.name))) {
           continue;
         }
         // Extract clustering trace element label directly to avoid verbose
