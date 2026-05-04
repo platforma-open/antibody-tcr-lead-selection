@@ -17,11 +17,20 @@ export const commonExcludeSelectors: NonNullable<AnchoredFindColumnsOptions['exc
   { annotations: { 'pl7.app/sequence/isAnnotation': 'true' } },
 ];
 
+/** Cluster-id axis / column names. Both unprefixed (post-peptide-adaptation)
+ *  and `pl7.app/vdj/`-prefixed (pre-peptide) names are recognized so older
+ *  clonotype-clustering instances remain selectable. */
+export const CLUSTER_ID_AXIS_NAMES: ReadonlySet<string> = new Set([
+  'pl7.app/clusterId',
+  'pl7.app/vdj/clusterId',
+]);
+export const isClusterIdAxisName = (name: string): boolean => CLUSTER_ID_AXIS_NAMES.has(name);
+
 /** JS post-filter for column matches — excludes sampleId-axis, cluster mapping, label,
  *  and columns produced by this block. */
 export function isSelectableMatch(m: ColumnMatch, sampleAxisName: string): boolean {
   return !m.column.spec.axesSpec.some((a) => a.name === sampleAxisName)
-    && m.column.spec.name !== 'pl7.app/clusterId'
+    && !isClusterIdAxisName(m.column.spec.name)
     && m.column.spec.name !== 'pl7.app/label'
     && !m.column.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection');
 }
@@ -46,32 +55,45 @@ export const IN_VIVO_MUTATION_COLUMNS = new Set([
 // can contribute discovery-driven defaults to the in-vivo filter list.
 // Mutation cutoffs (fractionCDRMutations, nMutations) are added separately with
 // preset-specific overrides.
+// Both unprefixed (post-peptide-adaptation) and `pl7.app/vdj/` (pre-peptide)
+// spec names are listed so projects using either upstream block version still
+// get defaults.
 export const IN_VIVO_FILTER_SPEC_NAMES = new Set([
   'pl7.app/vdj/isProductive',
+  'pl7.app/developabilityRisk',
   'pl7.app/vdj/developabilityRisk',
 ]);
 
 // In Vivo preset allowlist for ranking. The In Vivo Score sentinel is added
 // separately when mutation columns are present.
 export const IN_VIVO_RANKING_SPEC_NAMES = new Set([
+  'pl7.app/developabilityScore',
   'pl7.app/vdj/developabilityScore',
 ]);
 
 // In Vitro preset allowlists. Same intersection-with-discovery approach as
 // in-vivo: only score columns with these spec names contribute defaults, so
 // new upstream score columns can't bloat the preset. Max Log2FC and Overall
-// Log2FC share the spec name `pl7.app/vdj/enrichment` — only Max carries
+// Log2FC share the spec name `pl7.app/enrichment` — only Max carries
 // isScore=true upstream, so the discovery pipeline already excludes Overall.
+// Both unprefixed (post-peptide-adaptation) and `pl7.app/vdj/` (pre-peptide)
+// spec names are listed so projects using either upstream block version still
+// get defaults.
 export const IN_VITRO_FILTER_SPEC_NAMES = new Set([
   'pl7.app/vdj/isProductive',
+  'pl7.app/developabilityRisk',
   'pl7.app/vdj/developabilityRisk',
+  'pl7.app/enrichmentQuality',
   'pl7.app/vdj/enrichmentQuality',
   'pl7.app/vdj/bindingSpecificity',
+  'pl7.app/enrichment',
   'pl7.app/vdj/enrichment',
 ]);
 
 export const IN_VITRO_RANKING_SPEC_NAMES = new Set([
+  'pl7.app/developabilityScore',
   'pl7.app/vdj/developabilityScore',
+  'pl7.app/enrichment',
   'pl7.app/vdj/enrichment',
 ]);
 
@@ -80,7 +102,10 @@ export const IN_VITRO_RANKING_SPEC_NAMES = new Set([
  * Used to identify which specific cluster axis is being used.
  */
 export function clusterAxisDomainsMatch(axis1: AxisSpec, axis2: AxisSpec): boolean {
-  if (axis1.name !== 'pl7.app/clusterId' || axis2.name !== 'pl7.app/clusterId') {
+  // Two axes from different clustering-block versions (one prefixed, one not)
+  // can never refer to the same clustering run, so require the names to be
+  // identical and both be cluster-id axes.
+  if (axis1.name !== axis2.name || !isClusterIdAxisName(axis1.name)) {
     return false;
   }
 
@@ -111,7 +136,7 @@ export function getVisibleClusterAxes<T extends { id: unknown; spec: { axesSpec:
     if (!isFilterOrRankColumn) continue;
 
     for (const axis of col.spec.axesSpec) {
-      if (axis.name === 'pl7.app/clusterId') {
+      if (isClusterIdAxisName(axis.name)) {
         const alreadyAdded = visibleClusterAxes.some((existingAxis) =>
           clusterAxisDomainsMatch(existingAxis, axis),
         );
