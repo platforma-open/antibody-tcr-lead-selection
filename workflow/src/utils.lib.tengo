@@ -1,5 +1,6 @@
 // Utility functions for antibody-tcr-lead-selection workflow
 
+ll := import("@platforma-sdk/workflow-tengo:ll")
 slices := import("@platforma-sdk/workflow-tengo:slices")
 json := import("json")
 
@@ -594,18 +595,35 @@ detectBulkChain := func(seqCols) {
 
 /**
  * Initializes and builds assembling sequence table with assembling AA sequences.
- * 
+
  * @param pframes - PFrames import
  * @param columns - PBundle containing all columns
  * @param datasetSpec - Dataset specification with axes
  * @param isSingleCell - Whether the data is single cell
+ * @param isScFv - Whether the input is scFv data
  * @return Map with keys: assemSeqTable (built table), bulkChain, seqCols
  */
-initializeAssemSeqTable := func(pframes, columns, datasetSpec, isSingleCell) {
+initializeAssemSeqTable := func(pframes, columns, datasetSpec, isSingleCell, isScFv) {
     assemSeqTable := pframes.parquetFileBuilder()
     assemSeqTable.setAxisHeader(datasetSpec.axesSpec[1].name, "clonotypeKey")
 
-    seqCols := columns.getColumns("assemblingAaSeqs")
+    seqCols := undefined
+    if isScFv {
+        allowedFeatures := { "VDJRegion": true, "VDJRegionInFrame": true }
+        byChain := {}
+        for col in columns.getColumns("scFvPerChainSeqs") {
+            if is_undefined(allowedFeatures[col.spec.domain["pl7.app/vdj/feature"]]) { continue }
+            if col.spec.domain["pl7.app/vdj/scClonotypeChain/index"] != "primary" { continue }
+            sc := col.spec.domain["pl7.app/vdj/scClonotypeChain"]
+            if sc != "A" && sc != "B" { continue }
+            if is_undefined(byChain[sc]) { byChain[sc] = col }
+        }
+        seqCols = []
+        for _, c in byChain { seqCols = append(seqCols, c) }
+    } else {
+        seqCols = columns.getColumns("assemblingAaSeqs")
+    }
+
     for col in seqCols {
         headerName := makeHeaderName(col, "assemblingFeature", isSingleCell)
         assemSeqTable.add(col, {header: headerName})
@@ -613,7 +631,7 @@ initializeAssemSeqTable := func(pframes, columns, datasetSpec, isSingleCell) {
 
     assemSeqTable.mem("16GiB")
     assemSeqTable.cpu(1)
-    
+
     // Detect bulk chain if needed
     bulkChain := undefined
     if !isSingleCell {
