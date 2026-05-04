@@ -48,31 +48,31 @@ export const IN_VIVO_MUTATION_COLUMNS = new Set([
 // preset-specific overrides.
 export const IN_VIVO_FILTER_SPEC_NAMES = new Set([
   'pl7.app/vdj/isProductive',
-  'pl7.app/vdj/developabilityRisk',
+  'pl7.app/developabilityRisk',
 ]);
 
 // In Vivo preset allowlist for ranking. The In Vivo Score sentinel is added
 // separately when mutation columns are present.
 export const IN_VIVO_RANKING_SPEC_NAMES = new Set([
-  'pl7.app/vdj/developabilityScore',
+  'pl7.app/developabilityScore',
 ]);
 
 // In Vitro preset allowlists. Same intersection-with-discovery approach as
 // in-vivo: only score columns with these spec names contribute defaults, so
 // new upstream score columns can't bloat the preset. Max Log2FC and Overall
-// Log2FC share the spec name `pl7.app/vdj/enrichment` — only Max carries
+// Log2FC share the spec name `pl7.app/enrichment` — only Max carries
 // isScore=true upstream, so the discovery pipeline already excludes Overall.
 export const IN_VITRO_FILTER_SPEC_NAMES = new Set([
   'pl7.app/vdj/isProductive',
-  'pl7.app/vdj/developabilityRisk',
-  'pl7.app/vdj/enrichmentQuality',
+  'pl7.app/developabilityRisk',
+  'pl7.app/enrichmentQuality',
   'pl7.app/vdj/bindingSpecificity',
-  'pl7.app/vdj/enrichment',
+  'pl7.app/enrichment',
 ]);
 
 export const IN_VITRO_RANKING_SPEC_NAMES = new Set([
-  'pl7.app/vdj/developabilityScore',
-  'pl7.app/vdj/enrichment',
+  'pl7.app/developabilityScore',
+  'pl7.app/enrichment',
 ]);
 
 /**
