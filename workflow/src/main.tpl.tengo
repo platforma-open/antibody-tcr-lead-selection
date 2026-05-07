@@ -111,12 +111,37 @@ wf.prepare(func(args){
 		}
 	}, "JGenes")
 
-	// Add assembling feature aminoacid sequences (bulk, sc, scFv)
+	// Add assembling feature aminoacid sequences (bulk, sc).
 	bundleBuilder.addMulti({
 		axes: [{ anchor: "main", idx: 1 }], // Clonotype axis
+		name: "pl7.app/vdj/sequence",
 		annotations: { "pl7.app/vdj/isAssemblingFeature": "true" },
 		domain: { "pl7.app/alphabet": "aminoacid" }
 	}, "assemblingAaSeqs")
+
+	// Detect scFv mode by presence of the combined construct column.
+	bundleBuilder.addMulti({
+		axes: [{ anchor: "main", idx: 1 }],
+		name: "pl7.app/vdj/scFv-sequence"
+	}, "scFvDetect")
+
+	// Per-chain VDJRegion AA sequences for ANARCI/Kabat in scFv mode.
+	bundleBuilder.addMulti({
+		axes: [{ anchor: "main", idx: 1 }],
+		name: "pl7.app/vdj/sequence",
+		domain: { "pl7.app/alphabet": "aminoacid" }
+	}, "scFvPerChainSeqs")
+
+	// Peptide main sequence — single-axis column on variantKey, used as
+	// modality-aware fallback when no filter/ranking columns load.
+	bundleBuilder.addMulti({
+		axes: [{ anchor: "main", idx: 1 }],
+		annotations: {
+			"pl7.app/isAssemblingFeature": "true",
+			"pl7.app/isMainSequence": "true"
+		},
+		domain: { "pl7.app/alphabet": "aminoacid" }
+	}, "peptideMainSeqs")
     
     return {
         columns: bundleBuilder.build()
@@ -226,7 +251,8 @@ wf.body(func(args) {
                 if args.kabatNumbering == true {
                     ////////// Assembling AA sequences //////////
                     // Initialize and build assembling sequence table
-                    assemInit := utils.initializeAssemSeqTable(pframes, columns, datasetSpec, isSingleCell)
+                    isScFv := len(columns.getColumns("scFvDetect")) > 0
+                    assemInit := utils.initializeAssemSeqTable(pframes, columns, datasetSpec, isSingleCell, isScFv)
                     assemSeqTableBuilt := assemInit.assemSeqTable
                     bulkChain := assemInit.bulkChain
                     seqCols := assemInit.seqCols
