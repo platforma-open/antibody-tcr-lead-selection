@@ -1,5 +1,14 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 4.0.2
+
+### Patch Changes
+
+- 461999c: Fix minor issues
+- Updated dependencies [2a2533d]
+- Updated dependencies [461999c]
+  - @platforma-open/milaboratories.top-antibodies.model@4.0.2
+
 ## 4.0.1
 
 ### Patch Changes

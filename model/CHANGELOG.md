@@ -1,5 +1,12 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 4.0.2
+
+### Patch Changes
+
+- 2a2533d: Fix minor issues
+- 461999c: Fix minor issues
+
 ## 4.0.1
 
 ### Patch Changes

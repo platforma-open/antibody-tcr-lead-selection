@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 4.0.2
+
+### Patch Changes
+
+- 2a2533d: Fix minor issues
+- 6042e4a: Minor fix
+- 461999c: Fix minor issues
+
 ## 4.0.1
 
 ### Patch Changes
