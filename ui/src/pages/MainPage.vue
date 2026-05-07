@@ -262,6 +262,8 @@ watch(() => [app.model.data.inputAnchor, app.model.data.kabatNumbering], () => {
           <b>In Vivo (immunization/infection):</b> Ranks by In Vivo Score, calculated from clonal expansion, CDR mutations and germinal center selection metrics. Identifies immune-refined candidates.
           <br /><br />
           <b>In Vitro (display/panning):</b> — Ranks by enrichment across selection rounds. Identifies clones selected for target binding.
+          <br /><br />
+          <b>Peptide:</b> Ranks by all available numeric score columns (e.g., enrichment, sequence properties, liabilities). For peptide selection campaigns.
         </template>
       </PlDropdown>
 
