@@ -1,5 +1,17 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 4.0.3
+
+### Patch Changes
+
+- 4855fff: dont show column header linker postfix and update sdk
+- Updated dependencies [4855fff]
+  - @platforma-open/milaboratories.top-antibodies.anarci-kabat@1.4.4
+  - @platforma-open/milaboratories.top-antibodies.assembling-fasta@1.3.3
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@2.1.3
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.8.4
+  - @platforma-open/milaboratories.top-antibodies.umap@1.2.4
+
 ## 4.0.2
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.spectratype
 
+## 1.8.4
+
+### Patch Changes
+
+- 4855fff: dont show column header linker postfix and update sdk
+
 ## 1.8.3
 
 ### Patch Changes

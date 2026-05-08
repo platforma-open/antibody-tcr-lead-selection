@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.anarci-kabat
 
+## 1.4.4
+
+### Patch Changes
+
+- 4855fff: dont show column header linker postfix and update sdk
+
 ## 1.4.3
 
 ### Patch Changes

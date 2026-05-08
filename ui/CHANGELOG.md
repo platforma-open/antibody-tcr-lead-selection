@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 4.0.3
+
+### Patch Changes
+
+- 4855fff: dont show column header linker postfix and update sdk
+- Updated dependencies [4855fff]
+  - @platforma-open/milaboratories.top-antibodies.model@4.0.3
+
 ## 4.0.2
 
 ### Patch Changes

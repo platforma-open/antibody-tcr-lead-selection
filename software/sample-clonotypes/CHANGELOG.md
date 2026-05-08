@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 2.1.3
+
+### Patch Changes
+
+- 4855fff: dont show column header linker postfix and update sdk
+
 ## 2.1.2
 
 ### Patch Changes
