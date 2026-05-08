@@ -1,5 +1,20 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 4.1.0
+
+### Minor Changes
+
+- b812c7d: Track which filter step eliminated each clonotype (or marks it as a
+  survivor) and visualize the attrition in a new Selection page. The
+  sample-clonotypes script emits a selectionStage column per clone; the
+  workflow exposes it as selectionStagePf, and the block UI renders it
+  via GraphMaker's selection chart type.
+
+### Patch Changes
+
+- Updated dependencies [b812c7d]
+  - @platforma-open/milaboratories.top-antibodies.model@4.1.0
+
 ## 4.0.3
 
 ### Patch Changes
