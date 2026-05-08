@@ -32,7 +32,7 @@ export type LegacyUiState = {
   preset?: WorkflowPreset;
 };
 
-export type BlockData = {
+export type BlockData_Ver_2026_02_25 = {
   defaultBlockLabel: string;
   customBlockLabel: string;
   inputAnchor?: PlRef;
@@ -53,6 +53,10 @@ export type BlockData = {
   rankingsInitializedForAnchor?: string;
   /** Selected workflow preset (in-vivo or in-vitro) */
   preset?: WorkflowPreset;
+};
+
+export type BlockData = BlockData_Ver_2026_02_25 & {
+  selectionPlotState: GraphMakerState;
 };
 
 export type BlockArgs = {
