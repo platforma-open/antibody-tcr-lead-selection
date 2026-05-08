@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 2.1.4
+
+### Patch Changes
+
+- c85f63a: SDK update
+
 ## 2.1.3
 
 ### Patch Changes

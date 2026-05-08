@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.spectratype
 
+## 1.8.5
+
+### Patch Changes
+
+- c85f63a: SDK update
+
 ## 1.8.4
 
 ### Patch Changes

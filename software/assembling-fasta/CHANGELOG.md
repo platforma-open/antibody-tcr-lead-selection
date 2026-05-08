@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.assembling-fasta
 
+## 1.3.4
+
+### Patch Changes
+
+- c85f63a: SDK update
+
 ## 1.3.3
 
 ### Patch Changes

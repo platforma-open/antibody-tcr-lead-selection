@@ -1,5 +1,17 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 4.1.1
+
+### Patch Changes
+
+- c85f63a: SDK update
+- Updated dependencies [c85f63a]
+  - @platforma-open/milaboratories.top-antibodies.anarci-kabat@1.4.5
+  - @platforma-open/milaboratories.top-antibodies.assembling-fasta@1.3.4
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@2.1.4
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.8.5
+  - @platforma-open/milaboratories.top-antibodies.umap@1.2.5
+
 ## 4.1.0
 
 ### Minor Changes

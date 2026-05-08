@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.anarci-kabat
 
+## 1.4.5
+
+### Patch Changes
+
+- c85f63a: SDK update
+
 ## 1.4.4
 
 ### Patch Changes
