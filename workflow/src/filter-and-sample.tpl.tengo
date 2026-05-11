@@ -137,12 +137,12 @@ self.body(func(inputs) {
 
     // Create trace with filter descriptions and inject into exported columns
     traceLabel := inputs.filterTraceLabel
+    customBlockLabel := inputs.customBlockLabel
+    if !is_undefined(customBlockLabel) {
+        traceLabel = customBlockLabel
+    }
     if is_undefined(traceLabel) || traceLabel == "" {
         traceLabel = "Selected Leads"
-    }
-    customBlockLabel := inputs.customBlockLabel
-    if !is_undefined(customBlockLabel) && customBlockLabel != "" {
-        traceLabel = customBlockLabel + " / " + traceLabel
     }
     trace := pSpec.makeTrace(datasetSpec,
         {
