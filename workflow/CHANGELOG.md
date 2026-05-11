@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 4.1.2
+
+### Patch Changes
+
+- 6920645: Keep only subtitle in trace
+
 ## 4.1.1
 
 ### Patch Changes
