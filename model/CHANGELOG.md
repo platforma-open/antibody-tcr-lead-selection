@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 4.1.4
+
+### Patch Changes
+
+- f4fb49e: Update SDK
+
 ## 4.1.3
 
 ### Patch Changes
