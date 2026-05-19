@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 4.1.3
+
+### Patch Changes
+
+- c1cdb27: Revert udpate
+- Updated dependencies [c1cdb27]
+  - @platforma-open/milaboratories.top-antibodies.model@4.1.3
+
 ## 4.1.2
 
 ### Patch Changes
