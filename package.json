@@ -21,11 +21,11 @@
     "shx": "catalog:"
   },
   "packageManager": "pnpm@9.14.4",
-  "//pnpm": {
+  "pnpm": {
     "overrides": {
-      "@platforma-sdk/workflow-tengo": "file:../platforma/sdk/workflow-tengo/package.tgz",
-      "@platforma-sdk/model": "file:../platforma/sdk/model/package.tgz",
-      "@platforma-sdk/ui-vue": "file:../platforma/sdk/ui-vue/package.tgz"
+      "@platforma-sdk/workflow-tengo": "file:../../core/platforma/sdk/workflow-tengo/package.tgz",
+      "@platforma-sdk/model": "file:../../core/platforma/sdk/model/package.tgz",
+      "@platforma-sdk/ui-vue": "file:../../core/platforma/sdk/ui-vue/package.tgz"
     }
   }
 }
