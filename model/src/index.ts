@@ -33,6 +33,14 @@ export { blockDataModel } from './dataModel';
 export type Href = InferHrefType<typeof platforma>;
 export type BlockOutputs = InferOutputsType<typeof platforma>;
 
+// Trace element types emitted by upstream clustering blocks. Lead-selection
+// pulls each linker's clustering label from these types when populating the
+// cluster-column dropdown; any new clustering producer must be added here.
+const CLUSTERING_TRACE_TYPES = [
+  'milaboratories.clonotype-clustering.clustering',
+  'milaboratories.3d-structure-clustering.clustering',
+];
+
 export const platforma = BlockModelV3.create(blockDataModel)
 
   .args<BlockArgs>((data) => {
@@ -408,13 +416,18 @@ export const platforma = BlockModelV3.create(blockDataModel)
               spec.name === 'pl7.app/ranking-order'
               || spec.name === 'pl7.app/vdj/inVivoScore'
               || isFilterOrRank(spec)
-              || (spec.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'
-                && spec.annotations?.['pl7.app/vdj/isMainSequence'] === 'true'
-                && spec.domain?.['pl7.app/alphabet'] === 'aminoacid')
-              || (spec.annotations?.['pl7.app/isAssemblingFeature'] === 'true'
-                && spec.annotations?.['pl7.app/isMainSequence'] === 'true'
-                && spec.domain?.['pl7.app/alphabet'] === 'aminoacid')
-              || (kabatEnabled && spec.name.startsWith('pl7.app/vdj/kabatSequence')),
+              || (spec.name === Annotation.Label
+                && spec.axesSpec.length === 1
+                && (spec.axesSpec[0].name === 'pl7.app/vdj/clonotypeKey'
+                  || spec.axesSpec[0].name === 'pl7.app/vdj/scClonotypeKey'
+                  || spec.axesSpec[0].name === 'pl7.app/variantKey'))
+                || (spec.annotations?.['pl7.app/vdj/isAssemblingFeature'] === 'true'
+                  && spec.annotations?.['pl7.app/vdj/isMainSequence'] === 'true'
+                  && spec.domain?.['pl7.app/alphabet'] === 'aminoacid')
+                || (spec.annotations?.['pl7.app/isAssemblingFeature'] === 'true'
+                  && spec.annotations?.['pl7.app/isMainSequence'] === 'true'
+                  && spec.domain?.['pl7.app/alphabet'] === 'aminoacid')
+                || (kabatEnabled && spec.name.startsWith('pl7.app/vdj/kabatSequence')),
             visibility: 'default',
           },
           // Clone-to-cluster mapping (name: pl7.app/clusterId, axes: [clonotypeKey])
@@ -534,7 +547,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
         },
       ], {
         label: {
-          forceTraceElements: ['milaboratories.clonotype-clustering.clustering'],
+          forceTraceElements: CLUSTERING_TRACE_TYPES,
         },
       });
 
@@ -548,7 +561,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
         let label = 'Cluster';
         try {
           const trace = JSON.parse(linkerSpec.annotations?.['pl7.app/trace'] ?? '[]') as { type?: string; label?: string }[];
-          const clusteringElement = trace.find((t) => t.type === 'milaboratories.clonotype-clustering.clustering');
+          const clusteringElement = trace.find((t) => CLUSTERING_TRACE_TYPES.includes(t.type ?? ''));
           if (clusteringElement?.label) label = clusteringElement.label;
         } catch { /* use default */ }
         options.push({ label, ref: link.ref });
