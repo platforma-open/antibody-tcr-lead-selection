@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { DiscreteFilter, FilterUI, PlTableFilter, ScopedColumnId } from '@platforma-open/milaboratories.top-antibodies.model';
+import { getInputAnchorRef } from '@platforma-open/milaboratories.top-antibodies.model';
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from '@platforma-sdk/ui-vue';
 import { ref } from 'vue';
 import { useApp } from '../../app';
@@ -60,7 +61,7 @@ const resetToDefaults = () => {
 
 // Use shared anchor sync logic
 useAnchorSyncedDefaults({
-  getAnchor: () => app.model.data.inputAnchor,
+  getAnchor: () => getInputAnchorRef(app.model.data),
   getConfig: () => app.model.outputs.filterConfig,
   clearState: () => {
     app.model.data.filters = [];

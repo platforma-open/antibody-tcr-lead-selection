@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { PlMultiSequenceAlignment } from '@milaboratories/multi-sequence-alignment';
 import strings from '@milaboratories/strings';
+import { getInputAnchorRef } from '@platforma-open/milaboratories.top-antibodies.model';
 import type { PlRef, PlSelectionModel } from '@platforma-sdk/model';
 import { createPlDataTableStateV2 } from '@platforma-sdk/model';
 import {
@@ -9,8 +10,8 @@ import {
   PlBlockPage,
   PlBtnGhost,
   PlCheckbox,
+  PlDatasetSelector,
   PlDropdown,
-  PlDropdownRef,
   PlIcon16,
   PlNumberField,
   PlRow,
@@ -28,7 +29,12 @@ import RankList from './components/RankList.vue';
 
 const app = useApp();
 
-const settingsOpen = ref(app.model.data.inputAnchor === undefined);
+// Current primary anchor PlRef extracted from the DatasetSelection. Watchers
+// and downstream lookups all key off this — `data.input` is the opaque payload,
+// but the existing block logic still thinks in terms of "the anchor".
+const inputAnchorRef = computed(() => getInputAnchorRef(app.model.data));
+
+const settingsOpen = ref(inputAnchorRef.value === undefined);
 const multipleSequenceAlignmentOpen = ref(false);
 
 // Watch for when the workflow starts running and close settings
@@ -99,7 +105,7 @@ const selectedClusterColumnValue = computed<string | undefined>({
 
 // Clear diversificationColumn when inputAnchor changes (old value is invalid for new dataset)
 watch(
-  () => app.model.data.inputAnchor,
+  inputAnchorRef,
   (newAnchor, oldAnchor) => {
     if (oldAnchor && newAnchor && JSON.stringify(oldAnchor) !== JSON.stringify(newAnchor)) {
       app.model.data.diversificationColumn = undefined;
@@ -146,7 +152,7 @@ const selectedPresetValue = computed<string>({
 
 // Reset preset when inputAnchor or modality changes (clears stale presets when
 watch(
-  [() => app.model.data.inputAnchor, () => app.model.outputs.modality],
+  [inputAnchorRef, () => app.model.outputs.modality],
   () => {
     app.model.data.preset = undefined;
   },
@@ -186,7 +192,7 @@ watch(() => app.model.data.topClonotypes, (newVal) => {
 });
 
 // Reset table state when dataset or Kabat toggle changes to re-apply defaults (like optional visibility)
-watch(() => [app.model.data.inputAnchor, app.model.data.kabatNumbering], () => {
+watch(() => [inputAnchorRef.value, app.model.data.kabatNumbering], () => {
   app.model.data.tableState = createPlDataTableStateV2();
 });
 </script>
@@ -226,10 +232,10 @@ watch(() => [app.model.data.inputAnchor, app.model.data.kabatNumbering], () => {
     <PlSlideModal v-model="settingsOpen" :close-on-outside-click="true">
       <template #title>Settings</template>
 
-      <!-- First element: Select dataset -->
-      <PlDropdownRef
-        v-model="app.model.data.inputAnchor"
-        :options="app.model.outputs.inputOptions"
+      <!-- First element: Select dataset (with optional filter dropdown) -->
+      <PlDatasetSelector
+        v-model="app.model.data.input"
+        :options="app.model.outputs.datasetOptions"
         :style="{ width: '320px' }"
         label="Select dataset"
         clearable

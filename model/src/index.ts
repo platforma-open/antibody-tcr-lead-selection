@@ -8,27 +8,30 @@ import type {
   PColumnIdAndSpec,
   PColumnSpec,
   PlRef,
+  PObjectSpec,
   PTableSorting,
 } from '@platforma-sdk/model';
 import {
   Annotation,
   ArrayColumnProvider,
   BlockModelV3,
+  buildDatasetOptions,
   canonicalizeJson,
   createPFrameForGraphs,
   createPlDataTableV3,
   deriveLabels,
   isHiddenFromGraphColumn,
   isHiddenFromUIColumn,
+  isPColumnSpec,
 } from '@platforma-sdk/model';
-import { buildCollection, commonExcludeSelectors, IN_VIVO_SCORE_COLUMN_ID, isClusterIdAxisName, isSelectableMatch, matchToColumnId } from './util';
+import { buildCollection, commonExcludeSelectors, getInputAnchorRef, getInputFilterRef, IN_VIVO_SCORE_COLUMN_ID, isClusterIdAxisName, isSelectableMatch, matchToColumnId } from './util';
 import { convertFilterUI, convertRankingOrderUI } from './converters';
 import { blockDataModel } from './dataModel';
 import type { BlockArgs } from './types';
 
 export * from './types';
 export * from './converters';
-export { getDefaultBlockLabel } from './util';
+export { getDefaultBlockLabel, getInputAnchorRef, getInputFilterRef } from './util';
 export { blockDataModel } from './dataModel';
 export type Href = InferHrefType<typeof platforma>;
 export type BlockOutputs = InferOutputsType<typeof platforma>;
@@ -44,7 +47,8 @@ const CLUSTERING_TRACE_TYPES = [
 export const platforma = BlockModelV3.create(blockDataModel)
 
   .args<BlockArgs>((data) => {
-    if (data.inputAnchor === undefined) throw new Error('No input anchor');
+    const inputAnchor = getInputAnchorRef(data);
+    if (inputAnchor === undefined) throw new Error('No input anchor');
     if (data.topClonotypes === undefined) throw new Error('No top clonotypes');
 
     const rankingOrder = convertRankingOrderUI(data.rankingOrder);
@@ -57,7 +61,8 @@ export const platforma = BlockModelV3.create(blockDataModel)
     return {
       defaultBlockLabel: data.defaultBlockLabel,
       customBlockLabel: data.customBlockLabel,
-      inputAnchor: data.inputAnchor,
+      inputAnchor,
+      inputFilter: getInputFilterRef(data),
       topClonotypes: data.topClonotypes,
       rankingOrder,
       filters,
@@ -66,36 +71,54 @@ export const platforma = BlockModelV3.create(blockDataModel)
     };
   })
 
-  .output('inputOptions', (ctx) =>
-    ctx.resultPool.getOptions([{
-      axes: [
-        { name: 'pl7.app/sampleId' },
-        { name: 'pl7.app/vdj/clonotypeKey' },
-      ],
-      annotations: { 'pl7.app/isAnchor': 'true' },
-    }, {
-      axes: [
-        { name: 'pl7.app/sampleId' },
-        { name: 'pl7.app/vdj/scClonotypeKey' },
-      ],
-      annotations: { 'pl7.app/isAnchor': 'true' },
-    }, {
-      axes: [
-        { name: 'pl7.app/sampleId' },
-        { name: 'pl7.app/variantKey' },
-      ],
-      annotations: { 'pl7.app/isAnchor': 'true' },
-    }], { refsWithEnrichments: true }),
-  )
+  // Dataset picker entries. Primary accepts any anchor column whose row axis
+  // is clonotypeKey, scClonotypeKey, or variantKey — the three modalities
+  // this block supports. After building, drop filter entries that came from
+  // *this* block instance (matched by `ref.blockId` against the
+  // workflow-exposed `selfBlockId`) — otherwise every completed run would
+  // surface its own sampled subset as a filter on the next configuration.
+  // Filter entries from *other* lead-selection instances are kept.
+  .output('datasetOptions', (ctx) => {
+    const opts = buildDatasetOptions(ctx, {
+      primary: (spec: PObjectSpec): boolean => {
+        if (!isPColumnSpec(spec)) return false;
+        if (spec.annotations?.['pl7.app/isAnchor'] !== 'true') return false;
+        if (spec.axesSpec.length < 2) return false;
+        if (spec.axesSpec[0]?.name !== 'pl7.app/sampleId') return false;
+        const rowAxis = spec.axesSpec[1]?.name;
+        return rowAxis === 'pl7.app/vdj/clonotypeKey'
+          || rowAxis === 'pl7.app/vdj/scClonotypeKey'
+          || rowAxis === 'pl7.app/variantKey';
+      },
+    });
+    if (!opts) return opts;
+
+    // selfBlockId only exists once the block has produced outputs at least
+    // once. Before that there are no self-filter entries to drop anyway.
+    const selfBlockId = ctx.outputs?.resolve({
+      field: 'selfBlockId',
+      assertFieldType: 'Input',
+      allowPermanentAbsence: true,
+    })?.getDataAsJson<string>();
+    if (selfBlockId === undefined) return opts;
+
+    return opts.map((opt) => {
+      const filtered = opt.filters?.filter((f) => f.ref.blockId !== selfBlockId);
+      return {
+        ...opt,
+        filters: filtered && filtered.length > 0 ? filtered : undefined,
+      };
+    });
+  })
 
   .output('inputAnchorSpec', (ctx) => {
-    const ref = ctx.data.inputAnchor;
+    const ref = getInputAnchorRef(ctx.data);
     if (ref === undefined) return undefined;
     return ctx.resultPool.getPColumnSpecByRef(ref);
   }, { retentive: true })
 
   .output('modality', (ctx) => {
-    const ref = ctx.data.inputAnchor;
+    const ref = getInputAnchorRef(ctx.data);
     if (ref === undefined) return undefined;
     const spec = ctx.resultPool.getPColumnSpecByRef(ref);
     if (!spec) return undefined;
@@ -104,7 +127,8 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
   // Combined filter config - options and defaults together for atomic updates
   .output('filterConfig', (ctx) => {
-    const result = buildCollection(ctx, ctx.data.inputAnchor);
+    const inputAnchor = getInputAnchorRef(ctx.data);
+    const result = buildCollection(ctx, inputAnchor);
     if (!result) return undefined;
 
     const filterableMatches = result.collection.findColumns({
@@ -120,7 +144,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     );
     const options = labeled.map(({ value, label }) => ({
       label,
-      value: matchToColumnId(value, ctx.data.inputAnchor!),
+      value: matchToColumnId(value, inputAnchor!),
       column: value.column,
     }));
 
@@ -135,7 +159,8 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
   // Combined ranking config - options and defaults together for atomic updates
   .output('rankingConfig', (ctx) => {
-    const result = buildCollection(ctx, ctx.data.inputAnchor);
+    const inputAnchor = getInputAnchorRef(ctx.data);
+    const result = buildCollection(ctx, inputAnchor);
     if (!result) return undefined;
 
     const rankableMatches = result.collection.findColumns({
@@ -153,7 +178,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     );
     const options = labeled.map(({ value, label }) => ({
       label,
-      value: matchToColumnId(value, ctx.data.inputAnchor!),
+      value: matchToColumnId(value, inputAnchor!),
     }));
 
     // Add synthetic In Vivo Score option when mutation columns are present
@@ -161,7 +186,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
       options.unshift({
         label: 'In Vivo Score',
         value: {
-          anchorRef: ctx.data.inputAnchor!,
+          anchorRef: inputAnchor!,
           anchorName: 'main',
           column: IN_VIVO_SCORE_COLUMN_ID,
         },
@@ -178,7 +203,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
   }, { retentive: true })
 
   .output('presetConfig', (ctx) => {
-    const result = buildCollection(ctx, ctx.data.inputAnchor);
+    const result = buildCollection(ctx, getInputAnchorRef(ctx.data));
     if (!result) return undefined;
 
     return {
@@ -189,7 +214,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
   }, { retentive: true })
 
   .outputWithStatus('pf', (ctx) => {
-    const anchor = ctx.data.inputAnchor;
+    const anchor = getInputAnchorRef(ctx.data);
     if (!anchor) return undefined;
 
     const result = buildCollection(ctx, anchor);
@@ -447,7 +472,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
   })
 
   .output('calculating', (ctx) => {
-    if (ctx.data.inputAnchor === undefined)
+    if (getInputAnchorRef(ctx.data) === undefined)
       return false;
 
     if (!ctx.outputs) return false;
@@ -460,7 +485,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
   // Use UMAP output from ctx from clonotype-space block
   .outputWithStatus('umapPf', (ctx) => {
-    const anchor = ctx.data.inputAnchor;
+    const anchor = getInputAnchorRef(ctx.data);
     if (anchor === undefined)
       return undefined;
 
@@ -483,7 +508,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
   })
 
   .outputWithStatus('umapPcols', (ctx) => {
-    const anchor = ctx.data.inputAnchor;
+    const anchor = getInputAnchorRef(ctx.data);
     if (anchor === undefined)
       return undefined;
 
@@ -512,7 +537,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
   })
 
   .output('hasClusterData', (ctx) => {
-    const result = buildCollection(ctx, ctx.data.inputAnchor);
+    const result = buildCollection(ctx, getInputAnchorRef(ctx.data));
     if (!result) return false;
 
     return result.meta.allMatches.some((m) =>
@@ -521,7 +546,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
   })
 
   .output('clusterColumnOptions', (ctx) => {
-    const anchor = ctx.data.inputAnchor;
+    const anchor = getInputAnchorRef(ctx.data);
     if (anchor === undefined)
       return undefined;
 
@@ -588,7 +613,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
   .subtitle((ctx) => ctx.data.customBlockLabel || ctx.data.defaultBlockLabel)
 
   .sections((ctx) => {
-    const ref = ctx.data?.inputAnchor;
+    const ref = getInputAnchorRef(ctx.data);
     const isPeptide = ref !== undefined
       && ctx.resultPool.getPColumnSpecByRef(ref)?.axesSpec[1]?.name === 'pl7.app/variantKey';
 

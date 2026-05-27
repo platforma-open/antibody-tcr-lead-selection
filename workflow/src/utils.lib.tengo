@@ -232,27 +232,39 @@ resolveClusterColumnHeader := func(args, columns, sortedLinkers) {
 /**
  * Initializes and builds complete clone table with all columns.
  * Handles filters, ranking columns, linkers, cluster sizes, and fallback columns.
- * 
+ *
  * @param pframes - PFrames import
  * @param columns - PBundle containing all columns
  * @param args - Arguments containing filters, rankingOrder, diversificationColumn
  * @param datasetSpec - Dataset specification with axes
+ * @param inputFilterColumn - Optional resolved column from the primary filter
+ *        (PlDatasetSelector). Added with an inner join so missing keys are
+ *        dropped from the clone table — narrows every downstream stage.
  * @return Map with keys: cloneTable, filterMap, rankingMap, sortedLinkers, clusterColumnHeader, addedCols
  */
-initializeCloneTable := func(pframes, columns, args, datasetSpec) {
+initializeCloneTable := func(pframes, columns, args, datasetSpec, inputFilterColumn) {
     // Build clonotype table
     cloneTable := pframes.parquetFileBuilder()
     cloneTable.setAxisHeader(datasetSpec.axesSpec[1], "clonotypeKey")
-    
+
     // Build linker list in SAME ORDER as model
     sortedLinkers := buildSortedLinkers(columns, datasetSpec)
-    
+
     // Add Filters to table
     addedAxes := []
     filterMap := {}
     rankingMap := {}
     addedCols := false
-    
+
+    // Apply the optional primary filter from PlDatasetSelector first. The
+    // builder's inner-join keeps the rows where every added column has a
+    // value, so once this column is present rows missing from the filter are
+    // dropped from the entire pipeline.
+    if !is_undefined(inputFilterColumn) {
+        cloneTable.add(inputFilterColumn, {header: "primary_filter"})
+        addedCols = true
+    }
+
     if len(args.filters) > 0 {
         for i, filter in args.filters {
             // we check for value presence and for actual pcolumn (cases where upstream block is deleted)
