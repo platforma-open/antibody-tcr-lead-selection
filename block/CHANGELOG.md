@@ -1,5 +1,18 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 3.1.0
+
+### Minor Changes
+
+- 8edddd1: Add dataset selector with optional filter dropdown. Replaces the plain dataset dropdown with `PlDatasetSelector`, and inner-joins the selected filter column into the clone table so it narrows every downstream stage (final clonotypes, spectratype, Kabat).
+
+### Patch Changes
+
+- Updated dependencies [8edddd1]
+  - @platforma-open/milaboratories.top-antibodies.model@4.2.0
+  - @platforma-open/milaboratories.top-antibodies.ui@4.2.0
+  - @platforma-open/milaboratories.top-antibodies.workflow@4.2.0
+
 ## 3.0.10
 
 ### Patch Changes
