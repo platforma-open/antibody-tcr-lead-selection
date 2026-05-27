@@ -7,6 +7,7 @@ pframes := import("@platforma-sdk/workflow-tengo:pframes")
 slices := import("@platforma-sdk/workflow-tengo:slices")
 render := import("@platforma-sdk/workflow-tengo:render")
 pSpec := import("@platforma-sdk/workflow-tengo:pframes.spec")
+smart := import("@platforma-sdk/workflow-tengo:smart")
 ll := import("@platforma-sdk/workflow-tengo:ll")
 kabatConv := import(":pf-kabat-conv")
 
@@ -156,9 +157,14 @@ wf.prepare(func(args){
 })
 
 wf.body(func(args) {
-	// output containers 
+	// output containers
 	outputs := {}
     exports := {}
+
+    // Expose this block's own id so the model can drop self-produced filter
+    // entries from the dataset selector — without this the just-finished
+    // sampled subset shows up as a filter option on the next configuration.
+    outputs["selfBlockId"] = smart.createJsonResource(wf.getBlockId())
 
     if !is_undefined(args.inputAnchor) {
         // Input arguments

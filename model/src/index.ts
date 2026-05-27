@@ -71,12 +71,15 @@ export const platforma = BlockModelV3.create(blockDataModel)
     };
   })
 
-  // Dataset picker entries. Predicate accepts any anchor column whose row axis
-  // is clonotypeKey, scClonotypeKey, or variantKey — the three modalities this
-  // block supports. Filter slot is unrestricted: any subset column with a
-  // compatible axis spec qualifies (e.g. lead-selection links, custom subsets).
-  .output('datasetOptions', (ctx) =>
-    buildDatasetOptions(ctx, {
+  // Dataset picker entries. Primary accepts any anchor column whose row axis
+  // is clonotypeKey, scClonotypeKey, or variantKey — the three modalities
+  // this block supports. After building, drop filter entries that came from
+  // *this* block instance (matched by `ref.blockId` against the
+  // workflow-exposed `selfBlockId`) — otherwise every completed run would
+  // surface its own sampled subset as a filter on the next configuration.
+  // Filter entries from *other* lead-selection instances are kept.
+  .output('datasetOptions', (ctx) => {
+    const opts = buildDatasetOptions(ctx, {
       primary: (spec: PObjectSpec): boolean => {
         if (!isPColumnSpec(spec)) return false;
         if (spec.annotations?.['pl7.app/isAnchor'] !== 'true') return false;
@@ -87,8 +90,26 @@ export const platforma = BlockModelV3.create(blockDataModel)
           || rowAxis === 'pl7.app/vdj/scClonotypeKey'
           || rowAxis === 'pl7.app/variantKey';
       },
-    }),
-  )
+    });
+    if (!opts) return opts;
+
+    // selfBlockId only exists once the block has produced outputs at least
+    // once. Before that there are no self-filter entries to drop anyway.
+    const selfBlockId = ctx.outputs?.resolve({
+      field: 'selfBlockId',
+      assertFieldType: 'Input',
+      allowPermanentAbsence: true,
+    })?.getDataAsJson<string>();
+    if (selfBlockId === undefined) return opts;
+
+    return opts.map((opt) => {
+      const filtered = opt.filters?.filter((f) => f.ref.blockId !== selfBlockId);
+      return {
+        ...opt,
+        filters: filtered && filtered.length > 0 ? filtered : undefined,
+      };
+    });
+  })
 
   .output('inputAnchorSpec', (ctx) => {
     const ref = getInputAnchorRef(ctx.data);
