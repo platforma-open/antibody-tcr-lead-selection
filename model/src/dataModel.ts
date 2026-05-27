@@ -1,5 +1,16 @@
-import { createPlDataTableStateV2, DataModelBuilder } from '@platforma-sdk/model';
-import type { BlockData, BlockData_Ver_2026_02_25, LegacyBlockArgs, LegacyUiState } from './types';
+import {
+  createDatasetSelection,
+  createPlDataTableStateV2,
+  createPrimaryRef,
+  DataModelBuilder,
+} from '@platforma-sdk/model';
+import type {
+  BlockData,
+  BlockData_Ver_2026_02_25,
+  BlockData_Ver_2026_05_08,
+  LegacyBlockArgs,
+  LegacyUiState,
+} from './types';
 import { getDefaultBlockLabel } from './util';
 
 const defaultSelectionPlotState = (): BlockData['selectionPlotState'] => ({
@@ -42,10 +53,19 @@ export const blockDataModel = new DataModelBuilder()
     rankingsInitializedForAnchor: uiState?.rankingsInitializedForAnchor,
     preset: uiState?.preset,
   }))
-  .migrate<BlockData>('Ver_2026_05_08', (prev) => ({
+  .migrate<BlockData_Ver_2026_05_08>('Ver_2026_05_08', (prev) => ({
     ...prev,
     selectionPlotState: defaultSelectionPlotState(),
   }))
+  .migrate<BlockData>('Ver_2026_05_21', (prev) => {
+    const { inputAnchor, ...rest } = prev;
+    return {
+      ...rest,
+      input: inputAnchor !== undefined
+        ? createDatasetSelection(createPrimaryRef(inputAnchor))
+        : undefined,
+    };
+  })
   .init(() => ({
     defaultBlockLabel: getDefaultBlockLabel({}),
     customBlockLabel: '',

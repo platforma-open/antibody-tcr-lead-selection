@@ -1,4 +1,4 @@
-import { getDefaultBlockLabel, platforma } from '@platforma-open/milaboratories.top-antibodies.model';
+import { getDefaultBlockLabel, getInputAnchorRef, platforma } from '@platforma-open/milaboratories.top-antibodies.model';
 import { plRefsEqual } from '@platforma-sdk/model';
 import { defineAppV3 } from '@platforma-sdk/ui-vue';
 import { watchEffect } from 'vue';
@@ -31,10 +31,11 @@ type AppModel = ReturnType<typeof useApp>['model'];
 
 function syncDefaultBlockLabel(model: AppModel) {
   watchEffect(() => {
-    const datasetLabel = model.data.inputAnchor
-      ? model.outputs.inputOptions
-        ?.find((option) => plRefsEqual(option.ref, model.data.inputAnchor!))
-        ?.label
+    const anchorRef = getInputAnchorRef(model.data);
+    const datasetLabel = anchorRef
+      ? model.outputs.datasetOptions
+        ?.find((option) => plRefsEqual(option.primary.ref, anchorRef))
+        ?.primary.label
       : undefined;
 
     model.data.defaultBlockLabel = getDefaultBlockLabel({

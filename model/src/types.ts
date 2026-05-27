@@ -1,5 +1,5 @@
 import type { GraphMakerState } from '@milaboratories/graph-maker';
-import type { ColumnMatch, DataInfo, PColumn, PColumnValues, PlDataTableStateV2, PlMultiSequenceAlignmentModel, PlRef, PObjectId, TreeNodeAccessor } from '@platforma-sdk/model';
+import type { ColumnMatch, DatasetSelection, DataInfo, PColumn, PColumnValues, PlDataTableStateV2, PlMultiSequenceAlignmentModel, PlRef, PObjectId, TreeNodeAccessor } from '@platforma-sdk/model';
 import type { PlTableFilter } from './typesFilters';
 
 export * from './typesFilters';
@@ -55,14 +55,29 @@ export type BlockData_Ver_2026_02_25 = {
   preset?: WorkflowPreset;
 };
 
-export type BlockData = BlockData_Ver_2026_02_25 & {
+export type BlockData_Ver_2026_05_08 = BlockData_Ver_2026_02_25 & {
   selectionPlotState: GraphMakerState;
+};
+
+export type BlockData = Omit<BlockData_Ver_2026_05_08, 'inputAnchor'> & {
+  /**
+   * Dataset selection emitted by `PlDatasetSelector` (primary anchor + optional
+   * filter). Replaces the previous `inputAnchor: PlRef`; the args lambda
+   * unpacks it into the workflow's `inputAnchor` + `inputFilter`.
+   */
+  input?: DatasetSelection;
 };
 
 export type BlockArgs = {
   defaultBlockLabel: string;
   customBlockLabel: string;
   inputAnchor?: PlRef;
+  /**
+   * Optional filter column the user picked alongside the dataset in
+   * `PlDatasetSelector`. The workflow inner-joins this column into the clone
+   * table so all downstream stages see only the filtered clonotypes.
+   */
+  inputFilter?: PlRef;
   topClonotypes: number;
   rankingOrder: RankingOrder[];
   filters: Filter[];

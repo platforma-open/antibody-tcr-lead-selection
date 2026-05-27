@@ -25,8 +25,15 @@ wf.prepare(func(args){
 	// We need a table with cluster ID (optional) | clonotype id | selected ranking columns
     bundleBuilder := wf.createPBundleBuilder()
     bundleBuilder.ignoreMissingDomains() // to make query work for both bulk and single cell data
-    bundleBuilder.addAnchor("main", args.inputAnchor) 
-    
+    bundleBuilder.addAnchor("main", args.inputAnchor)
+
+    // Optional primary filter from PlDatasetSelector — inner-joined into the
+    // clone table below so the filter narrows every downstream stage
+    // (finalClonotypes, spectratype, Kabat, etc.).
+    if !is_undefined(args.inputFilter) {
+        bundleBuilder.addRef(args.inputFilter)
+    }
+
     validRanks := false
     if len(args.rankingOrder) > 0 {
         for col in args.rankingOrder {
@@ -164,8 +171,14 @@ wf.body(func(args) {
 	    isPeptide := datasetSpec.axesSpec[1].name == "pl7.app/variantKey"
     
         ////////// Clonotype Filtering //////////
-        // Initialize and build clone table with all columns
-        tableInit := utils.initializeCloneTable(pframes, columns, args, datasetSpec)
+        // Initialize and build clone table with all columns. When the user
+        // picked an optional primary filter in PlDatasetSelector, fetch the
+        // resolved column so initializeCloneTable can inner-join it.
+        inputFilterColumn := undefined
+        if !is_undefined(args.inputFilter) {
+            inputFilterColumn = columns.getColumn(args.inputFilter)
+        }
+        tableInit := utils.initializeCloneTable(pframes, columns, args, datasetSpec, inputFilterColumn)
         cloneTable := tableInit.cloneTable
         filterMap := tableInit.filterMap
         rankingMap := tableInit.rankingMap

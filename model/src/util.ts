@@ -11,6 +11,16 @@ import {
 } from '@platforma-sdk/model';
 import type { BlockArgs, BlockData, ColumnsMeta, PlTableFiltersDefault, RankingOrder, ScopedColumnId, WorkflowPreset } from './types';
 
+/** Underlying primary `PlRef` from `data.input` — undefined when no dataset is picked. */
+export function getInputAnchorRef(data: Pick<BlockData, 'input'>): PlRef | undefined {
+  return data.input?.primary.column;
+}
+
+/** Optional filter `PlRef` the user picked alongside the primary in `PlDatasetSelector`. */
+export function getInputFilterRef(data: Pick<BlockData, 'input'>): PlRef | undefined {
+  return data.input?.primary.filter;
+}
+
 /** Common WASM exclude selectors shared across filter/rank/table discovery. */
 export const commonExcludeSelectors: NonNullable<AnchoredFindColumnsOptions['exclude']> = [
   { annotations: { 'pl7.app/isLinkerColumn': 'true' } },
