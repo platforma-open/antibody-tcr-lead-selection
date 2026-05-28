@@ -20,10 +20,10 @@ import {
   createPFrameForGraphs,
   createPlDataTableV3,
   deriveColumnOptions,
-  deriveLabels,
-  isColumnLazy,
+  deriveDistinctLabels, isColumnLazy,
   isHiddenFromGraphColumn,
   isHiddenFromUIColumn,
+  isLeafColumn,
   isPColumnSpec,
 } from '@platforma-sdk/model';
 import {
@@ -181,14 +181,11 @@ export const platforma = BlockModelV3.create(blockDataModel)
     const result = buildCollection(ctx, anchorId);
     if (!result || anchorId === undefined) return undefined;
 
-    const labeled = deriveLabels(
-      result.meta.allMatches,
-      (c) => c.getSpec(),
-      { includeNativeLabel: true },
-    );
-    const options = labeled.map(({ value, label }) => ({
+    const columns = result.meta.allMatches;
+    const labeled = deriveDistinctLabels(columns.map((c) => c.getSpec()), { includeNativeLabel: true });
+    const options = labeled.map((label, i) => ({
       label,
-      value: recipeToColumnId(value, anchorId),
+      value: recipeToColumnId(columns[i], anchorId),
     }));
 
     return {
@@ -209,15 +206,10 @@ export const platforma = BlockModelV3.create(blockDataModel)
     const rankable = result.meta.allMatches.filter(
       (c) => c.getSpec().valueType !== 'String',
     );
-
-    const labeled = deriveLabels(
-      rankable,
-      (c) => c.getSpec(),
-      { includeNativeLabel: true },
-    );
-    const options = labeled.map(({ value, label }) => ({
+    const labeled = deriveDistinctLabels(rankable.map((c) => c.getSpec()), { includeNativeLabel: true });
+    const options = labeled.map((label, i) => ({
       label,
-      value: recipeToColumnId(value, anchorId),
+      value: recipeToColumnId(rankable[i], anchorId),
     }));
 
     if (result.meta.hasInVivoScore) {
@@ -354,7 +346,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     const leadSelectionCol = sampledRowsCollection
       .filter({ include: { name: [{ type: 'exact', value: 'pl7.app/lead-selection' }] } })
       .getColumns()[0];
-    if (!leadSelectionCol || !isColumnLazy(leadSelectionCol)) return undefined;
+    if (!leadSelectionCol || !isLeafColumn(leadSelectionCol)) return undefined;
 
     // Verify sampledRows belong to current inputAnchor by checking axes
     const leadSelectionSpec = leadSelectionCol.getSpec();
@@ -396,33 +388,23 @@ export const platforma = BlockModelV3.create(blockDataModel)
       .discover({
         anchors: { main: leadSelectionCol.getSpec() },
         mode: 'enrichment',
-        exclude: [
-          { annotations: { [Annotation.Trace]: '.*antibody-tcr-lead-selection.*' } },
-        ],
+        exclude: [{ annotations: { [Annotation.Trace]: '.*antibody-tcr-lead-selection.*' } }],
       })
-      .getColumns()
-      // Sandbox-side: File valueType and the "axes.length > 2 linker" rule
-      // can't be expressed as selectors — File is not in the ColumnValueType
-      // union. Every survivor pays one getSpec round-trip.
-      .filter((c) => {
-        const spec = c.getSpec();
-        if ((spec.valueType as string) === 'File') return false;
-        return !(spec.annotations?.['pl7.app/isLinkerColumn'] === 'true' && spec.axesSpec.length > 2);
-      });
+      .getColumns();
 
-    // Primary must be leaves only — multi-axis Discovered hits would break the
-    // engine join (`axes sets are disjoint`). Prefer the lead-selection recipe
-    // surfaced by discover; fall back to the original lazy leaf otherwise.
-    const leadSelectionId = leadSelectionCol.id as string;
+    // Primary must be leaf-form only — multi-axis Discovered hits would break
+    // the engine join (`axes sets are disjoint`). Prefer the lead-selection
+    // recipe surfaced by discover; fall back to the original leaf otherwise.
+    const leadSelectionId = leadSelectionCol.id;
     const primaryFromDiscover = discoveredCols.filter(
-      (c) => (c.id as string) === leadSelectionId && isColumnLazy(c),
+      (c) => c.id === leadSelectionId && isLeafColumn(c),
     );
     const primary: ColumnRecipe[] = primaryFromDiscover.length > 0
       ? primaryFromDiscover
       : [leadSelectionCol];
 
-    const primaryIds = new Set(primary.map((c) => c.id as string));
-    const secondary = discoveredCols.filter((c) => !primaryIds.has(c.id as string));
+    const primaryIds = new Set(primary.map((c) => c.id));
+    const secondary = discoveredCols.filter((c) => !primaryIds.has(c.id));
 
     // Build filter/rank id sets and lift them to selector form for the V3
     // display rules — `match` is ColumnSelector, not a lambda.
@@ -617,8 +599,6 @@ export const platforma = BlockModelV3.create(blockDataModel)
       ? ColumnsCollection([sampledRowsAccessor]).getColumns()
       : [];
 
-    // isColumnLazy required because PColumnIdAndSpec.columnId is PObjectId —
-    // only leaves carry that. Wrappers expose ColumnUniversalId only.
     return [...umap, ...sampledRows]
       .map((c) =>
         ({
