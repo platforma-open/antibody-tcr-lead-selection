@@ -1,5 +1,6 @@
 import {
   createDatasetSelection,
+  createGlobalPObjectId,
   createPlDataTableStateV2,
   createPrimaryRef,
   DataModelBuilder,
@@ -8,6 +9,7 @@ import type {
   BlockData,
   BlockData_Ver_2026_02_25,
   BlockData_Ver_2026_05_08,
+  BlockData_Ver_2026_05_21,
   LegacyBlockArgs,
   LegacyUiState,
 } from './types';
@@ -22,6 +24,9 @@ const defaultSelectionPlotState = (): BlockData['selectionPlotState'] => ({
 export const blockDataModel = new DataModelBuilder()
   .from<BlockData_Ver_2026_02_25>('Ver_2026_02_25')
   .upgradeLegacy<LegacyBlockArgs, LegacyUiState>(({ args, uiState }) => ({
+    // upgradeLegacy returns the v1 shape — inputAnchor / diversificationColumn
+    // are still PlRef here. The PlRef → ColumnUniversalId conversion happens in
+    // the dedicated Ver_2026_05_28 step so stored-v1 data takes the same path.
     defaultBlockLabel: args.defaultBlockLabel,
     customBlockLabel: args.customBlockLabel,
     inputAnchor: args.inputAnchor,
@@ -57,12 +62,21 @@ export const blockDataModel = new DataModelBuilder()
     ...prev,
     selectionPlotState: defaultSelectionPlotState(),
   }))
-  .migrate<BlockData>('Ver_2026_05_21', (prev) => {
+  .migrate<BlockData_Ver_2026_05_21>('Ver_2026_05_21', (prev) => {
     const { inputAnchor, ...rest } = prev;
     return {
       ...rest,
       input: inputAnchor !== undefined
         ? createDatasetSelection(createPrimaryRef(inputAnchor))
+        : undefined,
+    };
+  })
+  .migrate<BlockData>('Ver_2026_05_28', (prev) => {
+    const { diversificationColumn, ...rest } = prev;
+    return {
+      ...rest,
+      diversificationColumn: diversificationColumn !== undefined
+        ? createGlobalPObjectId(diversificationColumn.blockId, diversificationColumn.name)
         : undefined,
     };
   })

@@ -1,5 +1,5 @@
 import type { GraphMakerState } from '@milaboratories/graph-maker';
-import type { ColumnMatch, DatasetSelection, DataInfo, PColumn, PColumnValues, PlDataTableStateV2, PlMultiSequenceAlignmentModel, PlRef, PObjectId, TreeNodeAccessor } from '@platforma-sdk/model';
+import type { ColumnRecipe, ColumnUniversalId, DatasetSelection, PlDataTableStateV2, PlMultiSequenceAlignmentModel, PlRef } from '@platforma-sdk/model';
 import type { PlTableFilter } from './typesFilters';
 
 export * from './typesFilters';
@@ -32,6 +32,10 @@ export type LegacyUiState = {
   preset?: WorkflowPreset;
 };
 
+/** Stored shape at Ver_2026_02_25 — `inputAnchor` / `diversificationColumn` are
+ *  `PlRef`, mirroring what's on disk for projects saved at that version.
+ *  Do not retype these fields when the current `BlockData` changes — historical
+ *  steps must match what was actually persisted. */
 export type BlockData_Ver_2026_02_25 = {
   defaultBlockLabel: string;
   customBlockLabel: string;
@@ -55,50 +59,59 @@ export type BlockData_Ver_2026_02_25 = {
   preset?: WorkflowPreset;
 };
 
+/** Stored shape at Ver_2026_05_08 — adds `selectionPlotState`. Frozen so the
+ *  current `BlockData` can change without dragging historical aliases with it. */
 export type BlockData_Ver_2026_05_08 = BlockData_Ver_2026_02_25 & {
   selectionPlotState: GraphMakerState;
 };
 
-export type BlockData = Omit<BlockData_Ver_2026_05_08, 'inputAnchor'> & {
-  /**
-   * Dataset selection emitted by `PlDatasetSelector` (primary anchor + optional
-   * filter). Replaces the previous `inputAnchor: PlRef`; the args lambda
-   * unpacks it into the workflow's `inputAnchor` + `inputFilter`.
-   */
+/** Stored shape at Ver_2026_05_21 — `inputAnchor: PlRef` becomes
+ *  `input: DatasetSelection`. `diversificationColumn` is still a `PlRef`
+ *  at this version. */
+export type BlockData_Ver_2026_05_21 = Omit<BlockData_Ver_2026_05_08, 'inputAnchor'> & {
+  /** Dataset selection emitted by `PlDatasetSelector` (primary anchor + optional filter). */
   input?: DatasetSelection;
+};
+
+export type BlockData = Omit<BlockData_Ver_2026_05_21, 'diversificationColumn'> & {
+  /**
+   * Selected linker column for diversified ranking (grouping by cluster).
+   * Migrated from `PlRef` to `ColumnUniversalId` at Ver_2026_05_28.
+   * undefined = no diversification.
+   */
+  diversificationColumn?: ColumnUniversalId;
 };
 
 export type BlockArgs = {
   defaultBlockLabel: string;
   customBlockLabel: string;
-  inputAnchor?: PlRef;
+  /** Extracted from `data.input?.primary.column` (PlRef) at the args boundary
+   *  and converted via `createGlobalPObjectId`. */
+  inputAnchor?: ColumnUniversalId;
   /**
    * Optional filter column the user picked alongside the dataset in
-   * `PlDatasetSelector`. The workflow inner-joins this column into the clone
-   * table so all downstream stages see only the filtered clonotypes.
+   * `PlDatasetSelector`. Extracted from `data.input?.primary.filter` and
+   * converted to a `ColumnUniversalId`.
    */
-  inputFilter?: PlRef;
+  inputFilter?: ColumnUniversalId;
   topClonotypes: number;
   rankingOrder: RankingOrder[];
   filters: Filter[];
   kabatNumbering?: boolean;
   /** Selected linker column for diversified ranking (grouping by cluster). undefined = no diversification */
-  diversificationColumn?: PlRef;
+  diversificationColumn?: ColumnUniversalId;
 };
 
-// @todo: move this type to SDK
-export type Column = PColumn<DataInfo<TreeNodeAccessor> | TreeNodeAccessor | PColumnValues>;
-
 export type ScopedColumn = {
-  anchorRef: PlRef;
+  anchorRef: ColumnUniversalId;
   anchorName: string;
-  column: Column;
+  column: ColumnRecipe;
 };
 
 export type ScopedColumnId = {
-  anchorRef: PlRef;
+  anchorRef: ColumnUniversalId;
   anchorName: string;
-  column: PObjectId; // SUniversalPColumnId
+  column: ColumnUniversalId;
 };
 
 export type RankingOrder = {
@@ -151,9 +164,9 @@ export type PresetDefaults = {
 
 export type ColumnsMeta = {
   /** All discovered columns (direct + linked via linker traversal) */
-  allMatches: ColumnMatch[];
+  allMatches: ColumnRecipe[];
   /** Score columns (subset of allMatches with pl7.app/isScore annotation) */
-  scores: ColumnMatch[];
+  scores: ColumnRecipe[];
   defaultFilters: PlTableFiltersDefault[];
   defaultRankingOrder: RankingOrder[];
   /** True when SHM mutation columns are present and In Vivo Score should replace them in ranking */
