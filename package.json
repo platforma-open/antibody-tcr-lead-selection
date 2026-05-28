@@ -21,6 +21,14 @@
     "shx": "catalog:"
   },
   "packageManager": "pnpm@9.14.4",
+  "pnpm": {
+    "overrides": {
+      "@platforma-sdk/model": "file:../platforma_1/sdk/model/package.tgz",
+      "@platforma-sdk/ui-vue": "file:../platforma_1/sdk/ui-vue/package.tgz",
+      "@platforma-sdk/workflow-tengo": "file:../platforma_1/sdk/workflow-tengo/package.tgz",
+      "@milaboratories/columns-collection-driver": "file:../platforma_1/lib/model/columns-collection-driver/package.tgz"
+    }
+  },
   "//pnpm": {
     "overrides": {
       "@platforma-sdk/workflow-tengo": "file:../platforma/sdk/workflow-tengo/package.tgz",
