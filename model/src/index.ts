@@ -44,24 +44,6 @@ const CLUSTERING_TRACE_TYPES = [
   'milaboratories.3d-structure-clustering.clustering',
 ];
 
-const PREDICTION_TRACE_TYPE = 'milaboratories.3d-structure-prediction';
-
-function hasPredictionTrace(annotations: Record<string, string> | undefined): boolean {
-  const raw = annotations?.['pl7.app/trace'];
-  if (!raw) return false;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    return Array.isArray(parsed)
-      && parsed.some(
-        (e) => typeof e === 'object'
-          && e !== null
-          && (e as { type?: unknown }).type === PREDICTION_TRACE_TYPE,
-      );
-  } catch {
-    return false;
-  }
-}
-
 export const platforma = BlockModelV3.create(blockDataModel)
 
   .args<BlockArgs>((data) => {
@@ -91,17 +73,11 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
   // Dataset picker entries. Primary accepts any anchor column whose row axis
   // is clonotypeKey, scClonotypeKey, or variantKey — the three modalities
-  // this block supports. After building, post-process the filter slots:
-  //   1) Drop entries produced by *this* block instance (matched by
-  //      `ref.blockId` against the workflow-exposed `selfBlockId`) so the
-  //      block doesn't list its own sampled subset as a self-filter.
-  //      Filter entries from *other* lead-selection instances are kept.
-  //   2) Override each filter's label with the column's own `pl7.app/label`.
-  //      The SDK's filter discovery suppresses native labels
-  //      (filter_discovery.ts:80-83 hardcodes `formatters.native` to
-  //      undefined), so columns sharing a trace collide on identical
-  //      "Bulk / X" labels. Mirrors 3d-structure-clustering's post-process
-  //      in `blocks/3d-structure-clustering/model/src/index.ts:113-152`.
+  // this block supports. Post-process the filter slots to drop entries
+  // produced by *this* block instance (matched by `ref.blockId` against the
+  // workflow-exposed `selfBlockId`) so the block doesn't list its own
+  // sampled subset as a self-filter. Filter entries from *other*
+  // lead-selection instances are kept.
   .output('datasetOptions', (ctx) => {
     const opts = buildDatasetOptions(ctx, {
       primary: (spec: PObjectSpec): boolean => {
@@ -124,19 +100,10 @@ export const platforma = BlockModelV3.create(blockDataModel)
       assertFieldType: 'Input',
       allowPermanentAbsence: true,
     })?.getDataAsJson<string>();
+    if (selfBlockId === undefined) return opts;
 
     return opts.map((opt) => {
-      const filters = opt.filters
-        ?.filter((f) => selfBlockId === undefined || f.ref.blockId !== selfBlockId)
-        .map((f) => {
-          // Override the SDK-derived label only for 3D-structure-prediction
-          // subsets — see comment on `hasPredictionTrace` above.
-          const filterSpec = ctx.resultPool.getPColumnSpecByRef(f.ref);
-          if (filterSpec === undefined || !isPColumnSpec(filterSpec)) return f;
-          if (!hasPredictionTrace(filterSpec.annotations)) return f;
-          const native = filterSpec.annotations?.['pl7.app/label'];
-          return native ? { ...f, label: native } : f;
-        });
+      const filters = opt.filters?.filter((f) => f.ref.blockId !== selfBlockId);
       return {
         ...opt,
         filters: filters !== undefined && filters.length > 0 ? filters : undefined,
