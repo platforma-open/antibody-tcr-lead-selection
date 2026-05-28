@@ -79,6 +79,7 @@ export const IN_VIVO_FILTER_SPEC_NAMES = new Set([
 export const IN_VIVO_RANKING_SPEC_NAMES = new Set([
   'pl7.app/developabilityScore',
   'pl7.app/vdj/developabilityScore',
+  'pl7.app/humannessScore',
 ]);
 
 // In Vitro preset allowlists. Same intersection-with-discovery approach as
@@ -105,6 +106,7 @@ export const IN_VITRO_RANKING_SPEC_NAMES = new Set([
   'pl7.app/vdj/developabilityScore',
   'pl7.app/enrichment',
   'pl7.app/vdj/enrichment',
+  'pl7.app/humannessScore',
 ]);
 
 /**
