@@ -1,8 +1,8 @@
 <script setup lang="ts">
 import { PlMultiSequenceAlignment } from '@milaboratories/multi-sequence-alignment';
 import strings from '@milaboratories/strings';
-import { getInputAnchorRef } from '@platforma-open/milaboratories.top-antibodies.model';
-import type { PlRef, PlSelectionModel } from '@platforma-sdk/model';
+import { getInputAnchorId } from '@platforma-open/milaboratories.top-antibodies.model';
+import type { ColumnUniversalId, PlSelectionModel } from '@platforma-sdk/model';
 import { createPlDataTableStateV2 } from '@platforma-sdk/model';
 import {
   PlAgDataTableV2,
@@ -29,12 +29,12 @@ import RankList from './components/RankList.vue';
 
 const app = useApp();
 
-// Current primary anchor PlRef extracted from the DatasetSelection. Watchers
-// and downstream lookups all key off this — `data.input` is the opaque payload,
+// Canonical ColumnUniversalId for the current primary anchor. Watchers and
+// downstream lookups all key off this — `data.input` is the opaque payload,
 // but the existing block logic still thinks in terms of "the anchor".
-const inputAnchorRef = computed(() => getInputAnchorRef(app.model.data));
+const inputAnchorId = computed(() => getInputAnchorId(app.model.data));
 
-const settingsOpen = ref(inputAnchorRef.value === undefined);
+const settingsOpen = ref(inputAnchorId.value === undefined);
 const multipleSequenceAlignmentOpen = ref(false);
 
 // Watch for when the workflow starts running and close settings
@@ -78,36 +78,36 @@ const kabatNumbering = computed<boolean>({
 // Special value for "No diversification" option
 const NO_DIVERSIFICATION_VALUE = '__no_diversification__';
 
-// Cluster column options with "No diversification" prepended
-// Transform ref-based options to value-based options using JSON.stringify
+// Cluster column options with "No diversification" prepended. Each option's
+// `id` is already a `ColumnUniversalId` (string), so it can be used directly
+// as the dropdown value — no JSON dance needed.
 const clusterColumnOptionsWithNone = computed(() => {
   const options = app.model.outputs.clusterColumnOptions ?? [];
   return [
     { label: 'No diversification (allow similar sequences)', value: NO_DIVERSIFICATION_VALUE },
     ...options.map((o) => ({
       label: o.label,
-      value: JSON.stringify(o.ref),
+      value: o.id,
     })),
   ];
 });
 
-// Selected cluster column value for the dropdown
+// Selected cluster column value for the dropdown. The dropdown sentinel is a
+// plain string; real cluster IDs come from `clusterColumnOptions` and are
+// already typed as `ColumnUniversalId`.
 const selectedClusterColumnValue = computed<string | undefined>({
-  get: () => {
-    if (!app.model.data.diversificationColumn) return NO_DIVERSIFICATION_VALUE;
-    return JSON.stringify(app.model.data.diversificationColumn);
-  },
+  get: () => app.model.data.diversificationColumn ?? NO_DIVERSIFICATION_VALUE,
   set: (v: string | undefined) => {
     app.model.data.diversificationColumn
-        = (v === NO_DIVERSIFICATION_VALUE || v === undefined) ? undefined : JSON.parse(v) as PlRef;
+        = (v === NO_DIVERSIFICATION_VALUE || v === undefined) ? undefined : (v as ColumnUniversalId);
   },
 });
 
 // Clear diversificationColumn when inputAnchor changes (old value is invalid for new dataset)
 watch(
-  inputAnchorRef,
+  inputAnchorId,
   (newAnchor, oldAnchor) => {
-    if (oldAnchor && newAnchor && JSON.stringify(oldAnchor) !== JSON.stringify(newAnchor)) {
+    if (oldAnchor && newAnchor && oldAnchor !== newAnchor) {
       app.model.data.diversificationColumn = undefined;
     }
   },
@@ -118,7 +118,7 @@ watch(
   () => app.model.outputs.clusterColumnOptions,
   (options) => {
     if (options && options.length > 0 && !app.model.data.diversificationColumn) {
-      app.model.data.diversificationColumn = options[0].ref;
+      app.model.data.diversificationColumn = options[0].id;
     }
   },
   { immediate: true },
@@ -152,7 +152,7 @@ const selectedPresetValue = computed<string>({
 
 // Reset preset when inputAnchor or modality changes (clears stale presets when
 watch(
-  [inputAnchorRef, () => app.model.outputs.modality],
+  [inputAnchorId, () => app.model.outputs.modality],
   () => {
     app.model.data.preset = undefined;
   },
@@ -192,7 +192,7 @@ watch(() => app.model.data.topClonotypes, (newVal) => {
 });
 
 // Reset table state when dataset or Kabat toggle changes to re-apply defaults (like optional visibility)
-watch(() => [inputAnchorRef.value, app.model.data.kabatNumbering], () => {
+watch(() => [inputAnchorId.value, app.model.data.kabatNumbering], () => {
   app.model.data.tableState = createPlDataTableStateV2();
 });
 </script>
