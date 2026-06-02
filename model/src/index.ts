@@ -95,16 +95,14 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
     // selfBlockId only exists once the block has produced outputs at least
     // once. Before that there are no self-filter entries to drop anyway.
-    // Use getDataAsString (not getDataAsJson): a resolved-but-not-yet-fetched
-    // selfBlockId yields undefined instead of throwing "Resource has no
-    // content." mid-run, which flashes a transient block error (MILAB-6318).
-    const selfBlockIdContent = ctx.outputs?.resolve({
+    // getDataAsJsonOrUndefined returns undefined while the resource is not ready,
+    // instead of throwing "Resource has no content." mid-run (MILAB-6318).
+    const selfBlockId = ctx.outputs?.resolve({
       field: 'selfBlockId',
       assertFieldType: 'Input',
       allowPermanentAbsence: true,
-    })?.getDataAsString();
-    if (selfBlockIdContent === undefined) return opts;
-    const selfBlockId = JSON.parse(selfBlockIdContent) as string;
+    })?.getDataAsJsonOrUndefined<string>();
+    if (selfBlockId === undefined) return opts;
 
     return opts.map((opt) => {
       const filtered = opt.filters?.filter((f) => f.ref.blockId !== selfBlockId);
