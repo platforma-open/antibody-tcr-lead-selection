@@ -72,8 +72,11 @@ export const platforma = BlockModelV3.create(blockDataModel)
   })
 
   // Dataset picker entries. Primary accepts any anchor column whose row axis
-  // is clonotypeKey, scClonotypeKey, or variantKey — the three modalities
-  // this block supports. After building, drop filter entries that came from
+  // is clonotypeKey, scClonotypeKey, variantKey — the three modalities this
+  // block supports — or clustering/centroidId, the per-cluster centroid dataset
+  // from clonotype-clustering (a clonotype-shaped dataset where one row is one
+  // cluster centroid; treated as antibody_tcr, ranked/filtered/sampled like any
+  // bulk clonotype set). After building, drop filter entries that came from
   // *this* block instance (matched by `ref.blockId` against the
   // workflow-exposed `selfBlockId`) — otherwise every completed run would
   // surface its own sampled subset as a filter on the next configuration.
@@ -88,7 +91,8 @@ export const platforma = BlockModelV3.create(blockDataModel)
         const rowAxis = spec.axesSpec[1]?.name;
         return rowAxis === 'pl7.app/vdj/clonotypeKey'
           || rowAxis === 'pl7.app/vdj/scClonotypeKey'
-          || rowAxis === 'pl7.app/variantKey';
+          || rowAxis === 'pl7.app/variantKey'
+          || rowAxis === 'pl7.app/clustering/centroidId';
       },
     });
     if (!opts) return opts;
