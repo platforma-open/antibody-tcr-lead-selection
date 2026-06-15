@@ -21,6 +21,16 @@
     "shx": "catalog:"
   },
   "packageManager": "pnpm@9.14.4",
+  "pnpm": {
+    "overrides": {
+      "@platforma-sdk/model": "file:../platforma_1/sdk/model/package.tgz",
+      "@platforma-sdk/ui-vue": "file:../platforma_1/sdk/ui-vue/package.tgz",
+      "@platforma-sdk/workflow-tengo": "file:../platforma_1/sdk/workflow-tengo/package.tgz",
+      "@milaboratories/columns-collection-driver": "file:../platforma_1/lib/model/columns-collection-driver/package.tgz",
+      "@milaboratories/pl-model-common": "file:../platforma_1/lib/model/common/package.tgz",
+      "@milaboratories/helpers": "file:../platforma_1/lib/util/helpers/package.tgz"
+    }
+  },
   "//pnpm": {
     "overrides": {
       "@platforma-sdk/workflow-tengo": "file:../platforma/sdk/workflow-tengo/package.tgz",
