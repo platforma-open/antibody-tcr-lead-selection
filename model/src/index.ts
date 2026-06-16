@@ -126,7 +126,12 @@ export const platforma = BlockModelV3.create(blockDataModel)
     if (ref === undefined) return undefined;
     const spec = ctx.resultPool.getPColumnSpecByRef(ref);
     if (!spec) return undefined;
-    return spec.axesSpec[1]?.name === 'pl7.app/variantKey' ? 'peptide' : 'antibody_tcr';
+    // The clonotype-clustering centroid dataset (pl7.app/clustering/centroidId) is
+    // peptide-only — treat it as peptide alongside the native variantKey axis.
+    const axis1 = spec.axesSpec[1]?.name;
+    return (axis1 === 'pl7.app/variantKey' || axis1 === 'pl7.app/clustering/centroidId')
+      ? 'peptide'
+      : 'antibody_tcr';
   }, { retentive: true })
 
   // Combined filter config - options and defaults together for atomic updates
@@ -618,8 +623,11 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
   .sections((ctx) => {
     const ref = getInputAnchorRef(ctx.data);
-    const isPeptide = ref !== undefined
-      && ctx.resultPool.getPColumnSpecByRef(ref)?.axesSpec[1]?.name === 'pl7.app/variantKey';
+    // centroidId = peptide-only centroid dataset from clonotype-clustering; treat as peptide.
+    const axis1 = ref !== undefined
+      ? ctx.resultPool.getPColumnSpecByRef(ref)?.axesSpec[1]?.name
+      : undefined;
+    const isPeptide = axis1 === 'pl7.app/variantKey' || axis1 === 'pl7.app/clustering/centroidId';
 
     const sections: Array<{ type: 'link'; href: `/${string}`; label: string }> = [
       { type: 'link', href: '/', label: strings.titles.main },

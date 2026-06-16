@@ -174,7 +174,9 @@ wf.body(func(args) {
 
         // Needed conditional variable
 	    isSingleCell := datasetSpec.axesSpec[1].name == "pl7.app/vdj/scClonotypeKey"
-	    isPeptide := datasetSpec.axesSpec[1].name == "pl7.app/variantKey"
+	    // centroidId = peptide-only centroid dataset from clonotype-clustering; treat as peptide
+	    // so the VDJ-only extras (CDR3 spectratype, V/J usage, Kabat) are skipped.
+	    isPeptide := datasetSpec.axesSpec[1].name == "pl7.app/variantKey" || datasetSpec.axesSpec[1].name == "pl7.app/clustering/centroidId"
     
         ////////// Clonotype Filtering //////////
         // Initialize and build clone table with all columns. When the user

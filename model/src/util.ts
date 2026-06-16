@@ -292,7 +292,9 @@ function computePresets(
   anchorRef: PlRef,
   anchorSpec: PColumnSpec,
 ): Omit<ColumnsMeta, 'allMatches' | 'scores' | 'defaultFilters'> {
-  const isPeptide = anchorSpec.axesSpec[1]?.name === 'pl7.app/variantKey';
+  // centroidId = peptide-only centroid dataset from clonotype-clustering; treat as peptide.
+  const axis1 = anchorSpec.axesSpec[1]?.name;
+  const isPeptide = axis1 === 'pl7.app/variantKey' || axis1 === 'pl7.app/clustering/centroidId';
 
   const hasInVivoScore = [...IN_VIVO_MUTATION_COLUMNS].every(
     (name) => scores.some((s) => s.column.spec.name === name),
