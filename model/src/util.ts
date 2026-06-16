@@ -72,6 +72,8 @@ export const IN_VIVO_FILTER_SPEC_NAMES = new Set([
   'pl7.app/vdj/isProductive',
   'pl7.app/developabilityRisk',
   'pl7.app/vdj/developabilityRisk',
+  // Convergent hit (clonotype-convergence) — default "keep only Hit" filter.
+  'pl7.app/vdj/convergence/fastStar',
 ]);
 
 // In Vivo preset allowlist for ranking. The In Vivo Score sentinel is added
@@ -79,6 +81,8 @@ export const IN_VIVO_FILTER_SPEC_NAMES = new Set([
 export const IN_VIVO_RANKING_SPEC_NAMES = new Set([
   'pl7.app/developabilityScore',
   'pl7.app/vdj/developabilityScore',
+  // Convergent neighbour frequency (clonotype-convergence) — ranked descending.
+  'pl7.app/vdj/convergence/nbFreq',
 ]);
 
 // In Vitro preset allowlists. Same intersection-with-discovery approach as
