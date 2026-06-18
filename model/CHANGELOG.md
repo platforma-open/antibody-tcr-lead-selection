@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 4.2.2
+
+### Patch Changes
+
+- 25fc14f: Include embedding clustering trace
+
 ## 4.2.1
 
 ### Patch Changes
