@@ -42,6 +42,7 @@ export type BlockOutputs = InferOutputsType<typeof platforma>;
 const CLUSTERING_TRACE_TYPES = [
   'milaboratories.clonotype-clustering.clustering',
   'milaboratories.3d-structure-clustering.clustering',
+  'milaboratories.embedding-clustering.clustering',
 ];
 
 export const platforma = BlockModelV3.create(blockDataModel)
