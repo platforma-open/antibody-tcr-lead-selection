@@ -145,6 +145,21 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
             except Exception as e:
                 print(f"Warning: Could not convert column '{col}' to numeric: {e}")
 
+    # A null in a column actively used for ranking or diversification means the
+    # clonotype can't be placed by that criterion, so it is not eligible for
+    # selection — drop it before selecting (it still appears in the funnel at its
+    # "passed filters" stage; it is simply never sampled). This mirrors filter.py,
+    # which already drops nulls at each filter stage. Without this, polars' default
+    # nulls-first sort would float null-ranked clonotypes to the top and select them.
+    null_check_cols = [col for col in all_ranking_cols if col in df.columns]
+    if diversification_column and diversification_column in df.columns:
+        null_check_cols.append(diversification_column)
+    if null_check_cols:
+        before_null_drop = df.height
+        df = df.drop_nulls(subset=null_check_cols)
+        print(f"Dropped null ranking/diversification rows: {before_null_drop} -> {df.height} "
+              f"(checked: {null_check_cols})")
+
     # Build sort criteria from ranking_map
     if all_ranking_cols:
         sort_columns = all_ranking_cols + ['clonotypeKey']
