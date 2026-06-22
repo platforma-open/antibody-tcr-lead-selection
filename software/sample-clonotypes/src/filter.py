@@ -254,6 +254,17 @@ def main():
                 # Most tommon case is that zero values are represented as ""
                 df = df.with_columns(pl.col(column).replace("", float("NaN")).cast(dtype))
 
+    # Optional primary filter (PlDatasetSelector): a pre-condition, not a tracked
+    # stage. The Full join keeps all clonotypes (null/empty for those outside the
+    # filter), so narrow here, before stage tracking — not via join semantics.
+    if "primary_filter" in df.columns:
+        before_primary = df.height
+        df = df.filter(
+            pl.col("primary_filter").is_not_null()
+            & (pl.col("primary_filter").cast(pl.Utf8) != "")
+        )
+        print(f"Primary filter pre-drop: {before_primary} -> {df.height} rows")
+
     # Collapse sample dimension if present (In Vivo Score case)
     df = aggregate_across_samples(df)
 

@@ -2,6 +2,9 @@
 
 ll := import("@platforma-sdk/workflow-tengo:ll")
 slices := import("@platforma-sdk/workflow-tengo:slices")
+pt := import("@platforma-sdk/workflow-tengo:pt")
+pSpec := import("@platforma-sdk/workflow-tengo:pframes.spec")
+pUtil := import("@platforma-sdk/workflow-tengo:pframes.util")
 json := import("json")
 
 // PColumn names used as source columns for In Vivo Score computation.
@@ -230,6 +233,56 @@ resolveClusterColumnHeader := func(args, columns, sortedLinkers) {
 }
 
 /**
+ * Derives a lightweight, dense, per-clonotype presence column from a "main
+ * sequence" column. The clone table is built with a Full join, which keeps only
+ * the union of keys across added columns; sparse columns (e.g. enrichment, which
+ * upstream emits only for clusters passing its pre-filter) would otherwise leave
+ * whole clonotypes out of the funnel. A main-sequence column exists once per
+ * clonotype across the entire dataset, so it defines the complete keyset.
+ *
+ * @param mainSeqsCol - A main-sequence PColumn {spec, data}
+ * @param datasetSpec - Dataset specification; axesSpec[1] is the clonotype axis
+ * @return The derived presence PColumn {spec, data}, or undefined if unavailable
+ */
+deriveClonotypePresence := func(mainSeqsCol, datasetSpec) {
+    if is_undefined(mainSeqsCol) || is_undefined(mainSeqsCol.spec) || is_undefined(mainSeqsCol.data) {
+        return undefined
+    }
+
+    clonotypeAxisName := datasetSpec.axesSpec[1].name
+    clonotypeAxis := undefined
+    for axis in mainSeqsCol.spec.axesSpec {
+        if axis.name == clonotypeAxisName {
+            clonotypeAxis = axis
+            break
+        }
+    }
+    if is_undefined(clonotypeAxis) {
+        return undefined
+    }
+
+    axisId := pSpec.getAxisId(clonotypeAxis)
+    presenceSpec := {
+        kind: "PColumn",
+        name: "clonotypePresence",
+        valueType: "Int"
+    }
+
+    wf := pt.workflow().cpu(1).mem("4GiB")
+    wf.frame(pt.p.column("presenceSource", { spec: mainSeqsCol.spec, data: mainSeqsCol.data })).
+        select(pt.sc.axis(clonotypeAxis).alias(axisId)).
+        withColumns(pt.lit(1).cast("Int").alias("clonotypePresence")).
+        saveFrameDirect("presenceFrame", {
+            axes: [{ column: axisId, spec: clonotypeAxis }],
+            columns: [{ column: "clonotypePresence", spec: presenceSpec }],
+            partitionKeyLength: 0
+        })
+
+    presenceColumns := pUtil.pFrameToColumnsMap(wf.run().getFrameDirect("presenceFrame"))
+    return presenceColumns["clonotypePresence"]
+}
+
+/**
  * Initializes and builds complete clone table with all columns.
  * Handles filters, ranking columns, linkers, cluster sizes, and fallback columns.
  *
@@ -238,8 +291,9 @@ resolveClusterColumnHeader := func(args, columns, sortedLinkers) {
  * @param args - Arguments containing filters, rankingOrder, diversificationColumn
  * @param datasetSpec - Dataset specification with axes
  * @param inputFilterColumn - Optional resolved column from the primary filter
- *        (PlDatasetSelector). Added with an inner join so missing keys are
- *        dropped from the clone table — narrows every downstream stage.
+ *        (PlDatasetSelector). Added to the clone table; clonotypes missing from it
+ *        are dropped as a pre-condition in the filter software (see filter.py),
+ *        not via the join, so the Full join can keep all clonotypes for the funnel.
  * @return Map with keys: cloneTable, filterMap, rankingMap, sortedLinkers, clusterColumnHeader, addedCols
  */
 initializeCloneTable := func(pframes, columns, args, datasetSpec, inputFilterColumn) {
@@ -256,10 +310,10 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec, inputFilterCol
     rankingMap := {}
     addedCols := false
 
-    // Apply the optional primary filter from PlDatasetSelector first. The
-    // builder's inner-join keeps the rows where every added column has a
-    // value, so once this column is present rows missing from the filter are
-    // dropped from the entire pipeline.
+    // Add the optional primary filter from PlDatasetSelector. The clone table is
+    // built with a Full join (below), so this column no longer narrows the keyset
+    // via join semantics; clonotypes outside the filter are dropped as a
+    // pre-condition in the filter software (filter.py), before stage tracking.
     if !is_undefined(inputFilterColumn) {
         cloneTable.add(inputFilterColumn, {header: "primary_filter"})
         addedCols = true
@@ -478,30 +532,42 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec, inputFilterCol
         }
     }
 
-    // Fallback: if no columns added, add a single-axis trunk-keyed sequence
-    // column. Try VDJ CDR3 first
+    // Dense per-clonotype presence column: guarantees the Full join below keeps
+    // every clonotype, so the Selection Plot funnel total matches the whole dataset.
+    // Clonotypes that lack sparse columns (e.g. an enrichment row) now carry null
+    // for those columns and are dropped at the relevant FILTER stage instead of
+    // being silently dropped before stage tracking. The presence column is a light
+    // Int marker — adding the heavy main-sequence column itself would blow up the join.
+    mainSeqCols := append(
+        columns.getColumns("mainSeqs"),
+        columns.getColumns("mainSeqsVdj")...)
+    if len(mainSeqCols) > 0 {
+        presenceCol := deriveClonotypePresence(mainSeqCols[0], datasetSpec)
+        if !is_undefined(presenceCol) {
+            cloneTable.add(presenceCol, {header: "clonotype_presence"})
+            addedCols = true
+        }
+    }
+
+    // Fallback: if still no columns (no presence column, no filters/ranking),
+    // add the VDJ CDR3 sequence as a single-axis trunk-keyed column.
     if !addedCols {
         cdr3Sequences := columns.getColumns("cdr3Sequences")
         if len(cdr3Sequences) > 0 {
             cloneTable.add(cdr3Sequences[0], {header: "sequence_fallback"})
             addedCols = true
-        } else {
-            peptideMainSeqs := columns.getColumns("peptideMainSeqs")
-            if len(peptideMainSeqs) > 0 {
-                cloneTable.add(peptideMainSeqs[0], {header: "sequence_fallback"})
-                addedCols = true
-            }
         }
     }
 
-    // Build the table if we have columns
+    // Build the table if we have columns. Full (outer) join so sparse columns
+    // never drop clonotypes; the dense presence column above defines the complete keyset.
     builtTable := undefined
     clusterColumnHeader := undefined
     if addedCols {
         cloneTable.mem("16GiB")
         cloneTable.cpu(1)
-        builtTable = cloneTable.build({joinType: "Inner"})
-        
+        builtTable = cloneTable.build({joinType: "Full"})
+
         // Resolve diversificationColumn ref to header name
         clusterColumnHeader = resolveClusterColumnHeader(args, columns, sortedLinkers)
     }
