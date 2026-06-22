@@ -116,10 +116,7 @@ self.body(func(inputs) {
     }
 
     if topClonotypes != undefined {
-        valueLabels[string(stageIdx)] = "Filtered"
-        valueLabels[string(stageIdx + 1)] = "Selected"
-    } else {
-        valueLabels[string(stageIdx)] = "Passed Filters"
+        valueLabels[string(stageIdx)] = "Selection"
     }
 
     // Import selection stage parquet as selectionStage PColumn

@@ -28,9 +28,9 @@ wf.prepare(func(args){
     bundleBuilder.ignoreMissingDomains() // to make query work for both bulk and single cell data
     bundleBuilder.addAnchor("main", args.inputAnchor)
 
-    // Optional primary filter from PlDatasetSelector — inner-joined into the
-    // clone table below so the filter narrows every downstream stage
-    // (finalClonotypes, spectratype, Kabat, etc.).
+    // Optional primary filter from PlDatasetSelector — added to the clone table
+    // below. Under the Full join it no longer narrows via join semantics; the
+    // filter software drops clonotypes outside it as a pre-condition (filter.py).
     if !is_undefined(args.inputFilter) {
         bundleBuilder.addRef(args.inputFilter)
     }
@@ -140,8 +140,7 @@ wf.prepare(func(args){
 		domain: { "pl7.app/alphabet": "aminoacid" }
 	}, "scFvPerChainSeqs")
 
-	// Peptide main sequence — single-axis column on variantKey, used as
-	// modality-aware fallback when no filter/ranking columns load.
+	// Main sequence column
 	bundleBuilder.addMulti({
 		axes: [{ anchor: "main", idx: 1 }],
 		annotations: {
@@ -149,8 +148,16 @@ wf.prepare(func(args){
 			"pl7.app/isMainSequence": "true"
 		},
 		domain: { "pl7.app/alphabet": "aminoacid" }
-	}, "peptideMainSeqs")
-    
+	}, "mainSeqs")
+	bundleBuilder.addMulti({
+		axes: [{ anchor: "main", idx: 1 }],
+		annotations: {
+			"pl7.app/vdj/isAssemblingFeature": "true",
+			"pl7.app/vdj/isMainSequence": "true"
+		},
+		domain: { "pl7.app/alphabet": "aminoacid" }
+	}, "mainSeqsVdj")
+
     return {
         columns: bundleBuilder.build()
     }
