@@ -268,7 +268,7 @@ function computeDefaultFilters(scores: ColumnMatch[], anchorRef: PlRef): PlTable
             default: { type: "string_equals", reference: value[0] },
           });
         }
-      } catch (_e) {
+      } catch {
         // invalid string filter — skip silently (console unavailable in model sandbox)
         continue;
       }
@@ -297,7 +297,7 @@ function computeDefaultFilters(scores: ColumnMatch[], anchorRef: PlRef): PlTable
             reference: numericValue,
           },
         });
-      } catch (_e) {
+      } catch {
         // invalid numeric value — skip silently (console unavailable in model sandbox)
         continue;
       }
