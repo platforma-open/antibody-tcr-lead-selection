@@ -96,11 +96,12 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
     // selfBlockId only exists once the block has produced outputs at least
     // once. Before that there are no self-filter entries to drop anyway.
+    // Not-ready-safe read — getDataAsJson throws mid-run here on remote backends (MILAB-6318).
     const selfBlockId = ctx.outputs?.resolve({
       field: 'selfBlockId',
       assertFieldType: 'Input',
       allowPermanentAbsence: true,
-    })?.getDataAsJson<string>();
+    })?.getDataAsJsonOrUndefined<string>();
     if (selfBlockId === undefined) return opts;
 
     return opts.map((opt) => {
