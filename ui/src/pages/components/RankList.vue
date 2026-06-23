@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import type { ScopedColumnId } from '@platforma-open/milaboratories.top-antibodies.model';
-import { getInputAnchorRef } from '@platforma-open/milaboratories.top-antibodies.model';
-import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from '@platforma-sdk/ui-vue';
-import { ref } from 'vue';
-import { useApp } from '../../app';
-import { useAnchorSyncedDefaults } from '../../composables/useAnchorSyncedDefaults';
-import RankCard from './RankCard.vue';
+import type { ScopedColumnId } from "@platforma-open/milaboratories.top-antibodies.model";
+import { getInputAnchorRef } from "@platforma-open/milaboratories.top-antibodies.model";
+import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from "@platforma-sdk/ui-vue";
+import { ref } from "vue";
+import { useApp } from "../../app";
+import { useAnchorSyncedDefaults } from "../../composables/useAnchorSyncedDefaults";
+import RankCard from "./RankCard.vue";
 
 const app = useApp();
 
@@ -21,7 +21,7 @@ const getMetricLabel = (value: ScopedColumnId | undefined) => {
   const column = app.model.outputs.rankingConfig?.options?.find(
     (option) => option && option.value.column === value?.column,
   );
-  return column?.label ?? 'Set rank';
+  return column?.label ?? "Set rank";
 };
 
 const addRankColumn = () => {
@@ -34,7 +34,7 @@ const addRankColumn = () => {
   ui.rankingOrder.push({
     id: generateUniqueId(),
     value: undefined,
-    rankingOrder: 'decreasing',
+    rankingOrder: "decreasing",
     isExpanded: true, // Auto-expand new items
   });
 };
@@ -43,20 +43,23 @@ const getPresetDefaults = () => {
   const config = app.model.outputs.rankingConfig;
   if (!config) return undefined;
   const preset = app.model.data.preset;
-  if (preset === 'in-vivo') return config.inVivoDefaults;
-  if (preset === 'in-vitro') return config.inVitroDefaults;
-  if (preset === 'peptide') return config.inPeptideDefaults;
+  if (preset === "in-vivo") return config.inVivoDefaults;
+  if (preset === "in-vitro") return config.inVitroDefaults;
+  if (preset === "peptide") return config.inPeptideDefaults;
   return undefined;
 };
 
 const resetToDefaults = () => {
   const defaults = getPresetDefaults();
-  app.model.data.rankingOrder = defaults?.map((defaultRank: { value?: ScopedColumnId; rankingOrder: 'increasing' | 'decreasing' }) => ({
-    id: generateUniqueId(),
-    value: defaultRank.value,
-    rankingOrder: defaultRank.rankingOrder,
-    isExpanded: false,
-  })) ?? [];
+  app.model.data.rankingOrder =
+    defaults?.map(
+      (defaultRank: { value?: ScopedColumnId; rankingOrder: "increasing" | "decreasing" }) => ({
+        id: generateUniqueId(),
+        value: defaultRank.value,
+        rankingOrder: defaultRank.rankingOrder,
+        isExpanded: false,
+      }),
+    ) ?? [];
 };
 
 // Use shared anchor sync logic
@@ -109,7 +112,9 @@ useAnchorSyncedDefaults({
       Choose the best sequences by:
       <PlTooltip>
         <PlIcon16 name="info" />
-        <template #tooltip> Select the criteria used to prioritize lead sequences during selection.</template>
+        <template #tooltip>
+          Select the criteria used to prioritize lead sequences during selection.</template
+        >
       </PlTooltip>
     </PlRow>
 
@@ -117,10 +122,10 @@ useAnchorSyncedDefaults({
       v-model:items="app.model.data.rankingOrder"
       :get-item-key="(item) => item.id ?? 0"
       :is-expanded="(item) => item.isExpanded === true"
-      :on-expand="(item) => item.isExpanded = !item.isExpanded"
+      :on-expand="(item) => (item.isExpanded = !item.isExpanded)"
     >
       <template #item-title="{ item }">
-        {{ item.value ? getMetricLabel(item.value) : 'Add Rank' }}
+        {{ item.value ? getMetricLabel(item.value) : "Add Rank" }}
       </template>
       <template #item-content="{ index }">
         <RankCard
@@ -131,13 +136,9 @@ useAnchorSyncedDefaults({
     </PlElementList>
 
     <div class="d-flex flex-column gap-6">
-      <PlBtnSecondary icon="add" @click="addRankColumn">
-        Add Ranking Column
-      </PlBtnSecondary>
+      <PlBtnSecondary icon="add" @click="addRankColumn"> Add Ranking Column </PlBtnSecondary>
 
-      <PlBtnSecondary icon="reverse" @click="resetToDefaults">
-        Reset to defaults
-      </PlBtnSecondary>
+      <PlBtnSecondary icon="reverse" @click="resetToDefaults"> Reset to defaults </PlBtnSecondary>
     </div>
   </div>
 </template>

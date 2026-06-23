@@ -1,8 +1,19 @@
-import type { GraphMakerState } from '@milaboratories/graph-maker';
-import type { ColumnMatch, DatasetSelection, DataInfo, PColumn, PColumnValues, PlDataTableStateV2, PlMultiSequenceAlignmentModel, PlRef, PObjectId, TreeNodeAccessor } from '@platforma-sdk/model';
-import type { PlTableFilter } from './typesFilters';
+import type { GraphMakerState } from "@milaboratories/graph-maker";
+import type {
+  ColumnMatch,
+  DatasetSelection,
+  DataInfo,
+  PColumn,
+  PColumnValues,
+  PlDataTableStateV2,
+  PlMultiSequenceAlignmentModel,
+  PlRef,
+  PObjectId,
+  TreeNodeAccessor,
+} from "@platforma-sdk/model";
+import type { PlTableFilter } from "./typesFilters";
 
-export * from './typesFilters';
+export * from "./typesFilters";
 
 export type LegacyBlockArgs = {
   defaultBlockLabel: string;
@@ -59,7 +70,7 @@ export type BlockData_Ver_2026_05_08 = BlockData_Ver_2026_02_25 & {
   selectionPlotState: GraphMakerState;
 };
 
-export type BlockData = Omit<BlockData_Ver_2026_05_08, 'inputAnchor'> & {
+export type BlockData = Omit<BlockData_Ver_2026_05_08, "inputAnchor"> & {
   /**
    * Dataset selection emitted by `PlDatasetSelector` (primary anchor + optional
    * filter). Replaces the previous `inputAnchor: PlRef`; the args lambda
@@ -103,7 +114,7 @@ export type ScopedColumnId = {
 
 export type RankingOrder = {
   value?: ScopedColumnId;
-  rankingOrder: 'increasing' | 'decreasing';
+  rankingOrder: "increasing" | "decreasing";
 };
 
 export type RankingOrderUI = RankingOrder & {
@@ -113,14 +124,14 @@ export type RankingOrderUI = RankingOrder & {
 
 /** Filter for matching any of a set of discrete string values */
 export type StringInFilter = {
-  type: 'string_in';
+  type: "string_in";
   /** JSON-encoded string array, e.g. '["Yes","No"]' */
   reference: string;
 };
 
 /** Filter for excluding a set of discrete string values */
 export type StringNotInFilter = {
-  type: 'string_notIn';
+  type: "string_notIn";
   /** JSON-encoded string array, e.g. '["Yes","No"]' */
   reference: string;
 };
@@ -142,7 +153,7 @@ export type PlTableFiltersDefault = {
   default: PlTableFilter | DiscreteFilter;
 };
 
-export type WorkflowPreset = 'in-vivo' | 'in-vitro' | 'peptide';
+export type WorkflowPreset = "in-vivo" | "in-vitro" | "peptide";
 
 export type PresetDefaults = {
   rankingOrder: RankingOrder[];

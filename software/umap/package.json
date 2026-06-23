@@ -1,6 +1,10 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies.umap",
   "version": "1.2.5",
+  "files": [
+    "./dist/**/*"
+  ],
+  "type": "module",
   "scripts": {
     "build": "pl-pkg build",
     "prepublishOnly": "pl-pkg prepublish",
@@ -8,13 +12,10 @@
     "changeset": "changeset",
     "version-packages": "changeset version"
   },
-  "files": [
-    "./dist/**/*"
-  ],
   "dependencies": {},
   "devDependencies": {
-    "@platforma-sdk/package-builder": "catalog:",
-    "@platforma-open/milaboratories.runenv-python-3": "catalog:"
+    "@platforma-open/milaboratories.runenv-python-3": "catalog:",
+    "@platforma-sdk/package-builder": "catalog:"
   },
   "block-software": {
     "entrypoints": {

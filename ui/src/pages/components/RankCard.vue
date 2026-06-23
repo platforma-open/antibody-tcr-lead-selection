@@ -1,19 +1,21 @@
-<script setup lang="ts" >
-import type { ScopedColumnId, RankingOrder } from '@platforma-open/milaboratories.top-antibodies.model';
-import type { ListOption } from '@platforma-sdk/ui-vue';
-import { PlDropdown } from '@platforma-sdk/ui-vue';
+<script setup lang="ts">
+import type {
+  ScopedColumnId,
+  RankingOrder,
+} from "@platforma-open/milaboratories.top-antibodies.model";
+import type { ListOption } from "@platforma-sdk/ui-vue";
+import { PlDropdown } from "@platforma-sdk/ui-vue";
 
 const rankingOrderOptions = [
-  { value: 'increasing', label: 'Lowest' },
-  { value: 'decreasing', label: 'Highest' },
+  { value: "increasing", label: "Lowest" },
+  { value: "decreasing", label: "Highest" },
 ];
 
-const model = defineModel<RankingOrder>(
-  {
-    default: {
-      rankingOrder: 'increasing',
-    },
-  });
+const model = defineModel<RankingOrder>({
+  default: {
+    rankingOrder: "increasing",
+  },
+});
 
 const props = defineProps<{
   options?: ListOption<ScopedColumnId>[];
@@ -21,14 +23,11 @@ const props = defineProps<{
 </script>
 
 <template>
-  <PlDropdown
-    v-model="model.value" :options="props.options"
-    label="Rank by"
-    required
-  />
+  <PlDropdown v-model="model.value" :options="props.options" label="Rank by" required />
 
   <PlDropdown
-    v-model="model.rankingOrder" :options="rankingOrderOptions"
+    v-model="model.rankingOrder"
+    :options="rankingOrderOptions"
     label="Take from"
     required
   >

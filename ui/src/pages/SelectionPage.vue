@@ -1,21 +1,21 @@
 <script setup lang="ts">
-import type { PredefinedGraphOption } from '@milaboratories/graph-maker';
-import { GraphMaker } from '@milaboratories/graph-maker';
-import { PlBlockPage } from '@platforma-sdk/ui-vue';
-import strings from '@milaboratories/strings';
-import { computed } from 'vue';
-import { useApp } from '../app';
+import type { PredefinedGraphOption } from "@milaboratories/graph-maker";
+import { GraphMaker } from "@milaboratories/graph-maker";
+import { PlBlockPage } from "@platforma-sdk/ui-vue";
+import strings from "@milaboratories/strings";
+import { computed } from "vue";
+import { useApp } from "../app";
 
 const app = useApp();
 
-const defaultOptions = computed((): PredefinedGraphOption<'selection'>[] => {
+const defaultOptions = computed((): PredefinedGraphOption<"selection">[] => {
   return [
     {
-      inputName: 'selectionStage',
+      inputName: "selectionStage",
       selectedSource: {
-        kind: 'PColumn',
-        valueType: 'Int',
-        name: 'pl7.app/selectionStage',
+        kind: "PColumn",
+        valueType: "Int",
+        name: "pl7.app/selectionStage",
         axesSpec: [],
       },
     },

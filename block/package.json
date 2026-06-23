@@ -1,21 +1,26 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies",
   "version": "3.1.3",
-  "scripts": {
-    "build": "shx rm -rf block-pack/* && block-tools pack",
-    "do-pack": "shx rm -f *.tgz && pnpm pack && shx mv *.tgz package.tgz",
-    "mark-stable": "block-tools mark-stable -r 's3://milab-euce1-prod-pkgs-s3-block-registry/pub/releases/?region=eu-central-1'",
-    "prepublishOnly": "block-tools pack && block-tools publish -r 's3://milab-euce1-prod-pkgs-s3-block-registry/pub/releases/?region=eu-central-1'"
-  },
   "files": [
     "index.d.ts",
     "index.js"
   ],
-  "dependencies": {
-    "@platforma-open/milaboratories.top-antibodies.workflow": "workspace:*",
-    "@platforma-open/milaboratories.top-antibodies.model": "workspace:*",
-    "@platforma-open/milaboratories.top-antibodies.ui": "workspace:*"
+  "scripts": {
+    "build": "shx rm -rf ./block-pack && block-tools pack",
+    "do-pack": "shx rm -f *.tgz && block-tools pack && pnpm pack && shx mv *.tgz package.tgz",
+    "mark-stable": "block-tools mark-stable -r 's3://milab-euce1-prod-pkgs-s3-block-registry/pub/releases/?region=eu-central-1'",
+    "prepublishOnly": "block-tools pack && block-tools publish -r 's3://milab-euce1-prod-pkgs-s3-block-registry/pub/releases/?region=eu-central-1'"
   },
+  "dependencies": {
+    "@platforma-open/milaboratories.top-antibodies.model": "workspace:*",
+    "@platforma-open/milaboratories.top-antibodies.ui": "workspace:*",
+    "@platforma-open/milaboratories.top-antibodies.workflow": "workspace:*"
+  },
+  "devDependencies": {
+    "@platforma-sdk/block-tools": "catalog:",
+    "shx": "catalog:"
+  },
+  "packageManager": "pnpm@9.14.4",
   "block": {
     "components": {
       "workflow": "@platforma-open/milaboratories.top-antibodies.workflow/dist/tengo/tpl/main.plj.gz",
@@ -42,9 +47,5 @@
         "logo": "file:../logos/organization-logo.png"
       }
     }
-  },
-  "devDependencies": {
-    "@platforma-sdk/block-tools": "catalog:"
-  },
-  "packageManager": "pnpm@9.14.4"
+  }
 }
