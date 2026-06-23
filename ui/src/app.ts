@@ -1,41 +1,44 @@
-import { getDefaultBlockLabel, getInputAnchorRef, platforma } from '@platforma-open/milaboratories.top-antibodies.model';
-import { plRefsEqual } from '@platforma-sdk/model';
-import { defineAppV3 } from '@platforma-sdk/ui-vue';
-import { watchEffect } from 'vue';
-import MainPage from './pages/MainPage.vue';
-import SelectionPage from './pages/SelectionPage.vue';
-import SpectratypePage from './pages/SpectratypePage.vue';
-import UmapPage from './pages/UmapPage.vue';
-import UsagePage from './pages/UsagePage.vue';
+import {
+  getDefaultBlockLabel,
+  getInputAnchorRef,
+  platforma,
+} from "@platforma-open/milaboratories.top-antibodies.model";
+import { plRefsEqual } from "@platforma-sdk/model";
+import { defineAppV3 } from "@platforma-sdk/ui-vue";
+import { watchEffect } from "vue";
+import MainPage from "./pages/MainPage.vue";
+import SelectionPage from "./pages/SelectionPage.vue";
+import SpectratypePage from "./pages/SpectratypePage.vue";
+import UmapPage from "./pages/UmapPage.vue";
+import UsagePage from "./pages/UsagePage.vue";
 
 export const sdkPlugin = defineAppV3(platforma, (app) => {
-  app.model.data.customBlockLabel ??= '';
+  app.model.data.customBlockLabel ??= "";
 
   syncDefaultBlockLabel(app.model);
 
   return {
     progress: () => app.model.outputs.calculating,
     routes: {
-      '/': () => MainPage,
-      '/umap': () => UmapPage,
-      '/spectratype': () => SpectratypePage,
-      '/usage': () => UsagePage,
-      '/selection': () => SelectionPage,
+      "/": () => MainPage,
+      "/umap": () => UmapPage,
+      "/spectratype": () => SpectratypePage,
+      "/usage": () => UsagePage,
+      "/selection": () => SelectionPage,
     },
   };
 });
 
 export const useApp = sdkPlugin.useApp;
 
-type AppModel = ReturnType<typeof useApp>['model'];
+type AppModel = ReturnType<typeof useApp>["model"];
 
 function syncDefaultBlockLabel(model: AppModel) {
   watchEffect(() => {
     const anchorRef = getInputAnchorRef(model.data);
     const datasetLabel = anchorRef
-      ? model.outputs.datasetOptions
-        ?.find((option) => plRefsEqual(option.primary.ref, anchorRef))
-        ?.primary.label
+      ? model.outputs.datasetOptions?.find((option) => plRefsEqual(option.primary.ref, anchorRef))
+          ?.primary.label
       : undefined;
 
     model.data.defaultBlockLabel = getDefaultBlockLabel({

@@ -1,6 +1,7 @@
 import {
   Annotation,
-  ColumnCollectionBuilder, type AnchoredColumnCollection,
+  ColumnCollectionBuilder,
+  type AnchoredColumnCollection,
   type AnchoredFindColumnsOptions,
   type AxisSpec,
   type ColumnMatch,
@@ -8,57 +9,67 @@ import {
   type PlRef,
   type RenderCtx,
   type SUniversalPColumnId,
-} from '@platforma-sdk/model';
-import type { BlockArgs, BlockData, ColumnsMeta, PlTableFiltersDefault, RankingOrder, ScopedColumnId, WorkflowPreset } from './types';
+} from "@platforma-sdk/model";
+import type {
+  BlockArgs,
+  BlockData,
+  ColumnsMeta,
+  PlTableFiltersDefault,
+  RankingOrder,
+  ScopedColumnId,
+  WorkflowPreset,
+} from "./types";
 
 /** Underlying primary `PlRef` from `data.input` — undefined when no dataset is picked. */
-export function getInputAnchorRef(data: Pick<BlockData, 'input'>): PlRef | undefined {
+export function getInputAnchorRef(data: Pick<BlockData, "input">): PlRef | undefined {
   return data.input?.primary.column;
 }
 
 /** Optional filter `PlRef` the user picked alongside the primary in `PlDatasetSelector`. */
-export function getInputFilterRef(data: Pick<BlockData, 'input'>): PlRef | undefined {
+export function getInputFilterRef(data: Pick<BlockData, "input">): PlRef | undefined {
   return data.input?.primary.filter;
 }
 
 /** Common WASM exclude selectors shared across filter/rank/table discovery. */
-export const commonExcludeSelectors: NonNullable<AnchoredFindColumnsOptions['exclude']> = [
-  { annotations: { 'pl7.app/isLinkerColumn': 'true' } },
-  { annotations: { 'pl7.app/sequence/isAnnotation': 'true' } },
+export const commonExcludeSelectors: NonNullable<AnchoredFindColumnsOptions["exclude"]> = [
+  { annotations: { "pl7.app/isLinkerColumn": "true" } },
+  { annotations: { "pl7.app/sequence/isAnnotation": "true" } },
 ];
 
 /** Cluster-id axis / column names. Both unprefixed (post-peptide-adaptation)
  *  and `pl7.app/vdj/`-prefixed (pre-peptide) names are recognized so older
  *  clonotype-clustering instances remain selectable. */
 export const CLUSTER_ID_AXIS_NAMES: ReadonlySet<string> = new Set([
-  'pl7.app/clusterId',
-  'pl7.app/vdj/clusterId',
+  "pl7.app/clusterId",
+  "pl7.app/vdj/clusterId",
 ]);
 export const isClusterIdAxisName = (name: string): boolean => CLUSTER_ID_AXIS_NAMES.has(name);
 
 /** JS post-filter for column matches — excludes sampleId-axis, cluster mapping, label,
  *  and columns produced by this block. */
 export function isSelectableMatch(m: ColumnMatch, sampleAxisName: string): boolean {
-  return !m.column.spec.axesSpec.some((a) => a.name === sampleAxisName)
-    && !isClusterIdAxisName(m.column.spec.name)
-    && m.column.spec.name !== 'pl7.app/label'
-    && !m.column.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection');
+  return (
+    !m.column.spec.axesSpec.some((a) => a.name === sampleAxisName) &&
+    !isClusterIdAxisName(m.column.spec.name) &&
+    m.column.spec.name !== "pl7.app/label" &&
+    !m.column.spec.annotations?.[Annotation.Trace]?.includes("antibody-tcr-lead-selection")
+  );
 }
 
 /** Converts a ColumnMatch to a ScopedColumnId for the workflow wire format. */
 export function matchToColumnId(match: ColumnMatch, anchorRef: PlRef): ScopedColumnId {
-  return { anchorRef, anchorName: 'main', column: match.column.id };
+  return { anchorRef, anchorName: "main", column: match.column.id };
 }
 
 // Sentinel column ID for the computed In Vivo Score ranking
-export const IN_VIVO_SCORE_COLUMN_ID = 'pl7.app/vdj/inVivoScore' as SUniversalPColumnId;
+export const IN_VIVO_SCORE_COLUMN_ID = "pl7.app/vdj/inVivoScore" as SUniversalPColumnId;
 
 // SHM mutation columns that are replaced by In Vivo Score in ranking.
 export const IN_VIVO_MUTATION_COLUMNS = new Set([
-  'pl7.app/vdj/sequence/fractionCDRMutations',
-  'pl7.app/vdj/sequence/nMutations',
-  'pl7.app/vdj/sequence/nAAMutationsCDR',
-  'pl7.app/vdj/sequence/nAAMutationsFWR',
+  "pl7.app/vdj/sequence/fractionCDRMutations",
+  "pl7.app/vdj/sequence/nMutations",
+  "pl7.app/vdj/sequence/nAAMutationsCDR",
+  "pl7.app/vdj/sequence/nAAMutationsFWR",
 ]);
 
 // In Vivo preset allowlist: only score columns whose spec.name is in this set
@@ -69,20 +80,20 @@ export const IN_VIVO_MUTATION_COLUMNS = new Set([
 // spec names are listed so projects using either upstream block version still
 // get defaults.
 export const IN_VIVO_FILTER_SPEC_NAMES = new Set([
-  'pl7.app/vdj/isProductive',
-  'pl7.app/developabilityRisk',
-  'pl7.app/vdj/developabilityRisk',
+  "pl7.app/vdj/isProductive",
+  "pl7.app/developabilityRisk",
+  "pl7.app/vdj/developabilityRisk",
   // Convergent hit (clonotype-convergence) — default "keep only Hit" filter.
-  'pl7.app/vdj/convergence/fastStar',
+  "pl7.app/vdj/convergence/fastStar",
 ]);
 
 // In Vivo preset allowlist for ranking. The In Vivo Score sentinel is added
 // separately when mutation columns are present.
 export const IN_VIVO_RANKING_SPEC_NAMES = new Set([
-  'pl7.app/developabilityScore',
-  'pl7.app/vdj/developabilityScore',
+  "pl7.app/developabilityScore",
+  "pl7.app/vdj/developabilityScore",
   // Convergent neighbour frequency (clonotype-convergence) — ranked descending.
-  'pl7.app/vdj/convergence/nbFreq',
+  "pl7.app/vdj/convergence/nbFreq",
 ]);
 
 // In Vitro preset allowlists. Same intersection-with-discovery approach as
@@ -94,21 +105,21 @@ export const IN_VIVO_RANKING_SPEC_NAMES = new Set([
 // spec names are listed so projects using either upstream block version still
 // get defaults.
 export const IN_VITRO_FILTER_SPEC_NAMES = new Set([
-  'pl7.app/vdj/isProductive',
-  'pl7.app/developabilityRisk',
-  'pl7.app/vdj/developabilityRisk',
-  'pl7.app/enrichmentQuality',
-  'pl7.app/vdj/enrichmentQuality',
-  'pl7.app/vdj/bindingSpecificity',
-  'pl7.app/enrichment',
-  'pl7.app/vdj/enrichment',
+  "pl7.app/vdj/isProductive",
+  "pl7.app/developabilityRisk",
+  "pl7.app/vdj/developabilityRisk",
+  "pl7.app/enrichmentQuality",
+  "pl7.app/vdj/enrichmentQuality",
+  "pl7.app/vdj/bindingSpecificity",
+  "pl7.app/enrichment",
+  "pl7.app/vdj/enrichment",
 ]);
 
 export const IN_VITRO_RANKING_SPEC_NAMES = new Set([
-  'pl7.app/developabilityScore',
-  'pl7.app/vdj/developabilityScore',
-  'pl7.app/enrichment',
-  'pl7.app/vdj/enrichment',
+  "pl7.app/developabilityScore",
+  "pl7.app/vdj/developabilityScore",
+  "pl7.app/enrichment",
+  "pl7.app/vdj/enrichment",
 ]);
 
 /**
@@ -181,8 +192,9 @@ export function buildCollection(
   // - File value type is not recognized
   // - Linker columns with >2 axes have >2 connected components, which the spec frame rejects
   const resultPoolColumns = ctx.resultPool.selectColumns(
-    (spec) => (spec.valueType as string) !== 'File'
-      && !(spec.annotations?.['pl7.app/isLinkerColumn'] === 'true' && spec.axesSpec.length > 2),
+    (spec) =>
+      (spec.valueType as string) !== "File" &&
+      !(spec.annotations?.["pl7.app/isLinkerColumn"] === "true" && spec.axesSpec.length > 2),
   );
   // Use the full 2-axis input anchor as PColumnSpec.
   // This makes the anchored ID deriver use idx:0=sampleId, idx:1=clonotypeKey,
@@ -190,7 +202,7 @@ export function buildCollection(
   // so column IDs from model discovery resolve correctly in bundleBuilder.
   // Discovery scope is restricted via JS post-filter below: sampleId-axis columns
   // are dropped to avoid ambiguous literal AxisIds in workflow's anchoredQuery.
-  const collection = new ColumnCollectionBuilder(ctx.getService('pframeSpec'))
+  const collection = new ColumnCollectionBuilder(ctx.getService("pframeSpec"))
     .addSource(resultPoolColumns)
     .build({ anchors: { main: anchorSpec } });
   if (!collection) return undefined;
@@ -199,15 +211,17 @@ export function buildCollection(
   // The 'enrichment' mode ensures only columns whose axes are satisfiable
   // by the trunk (clonotypeKey) — directly or via linker traversal — are returned.
   const sampleAxisName = anchorSpec.axesSpec[0].name;
-  const allMatches = collection.findColumns({
-    mode: 'related',
-    exclude: commonExcludeSelectors,
-    maxHops: 2,
-  }).filter((m) => isSelectableMatch(m, sampleAxisName));
+  const allMatches = collection
+    .findColumns({
+      mode: "related",
+      exclude: commonExcludeSelectors,
+      maxHops: 2,
+    })
+    .filter((m) => isSelectableMatch(m, sampleAxisName));
 
   // Extract scores
   const scores = allMatches.filter(
-    (m) => m.column.spec.annotations?.['pl7.app/isScore'] === 'true',
+    (m) => m.column.spec.annotations?.["pl7.app/isScore"] === "true",
   );
 
   // Compute defaults and presets
@@ -230,28 +244,28 @@ function computeDefaultFilters(scores: ColumnMatch[], anchorRef: PlRef): PlTable
   const defaultFilters: PlTableFiltersDefault[] = [];
 
   for (const score of scores) {
-    const valueString = score.column.spec.annotations?.['pl7.app/score/defaultCutoff'];
+    const valueString = score.column.spec.annotations?.["pl7.app/score/defaultCutoff"];
     if (valueString === undefined) continue;
 
     const spec = score.column.spec;
-    if (spec.valueType === 'String') {
+    if (spec.valueType === "String") {
       try {
         const value = JSON.parse(valueString) as string[];
         if (!Array.isArray(value)) {
           // invalid string filter — skip silently (console unavailable in model sandbox)
           continue;
         }
-        const isDiscreteFilter = spec.annotations?.['pl7.app/isDiscreteFilter'] === 'true';
-        const hasDiscreteValues = !!spec.annotations?.['pl7.app/discreteValues'];
+        const isDiscreteFilter = spec.annotations?.["pl7.app/isDiscreteFilter"] === "true";
+        const hasDiscreteValues = !!spec.annotations?.["pl7.app/discreteValues"];
         if (isDiscreteFilter && hasDiscreteValues && value.length > 0) {
           defaultFilters.push({
             column: matchToColumnId(score, anchorRef),
-            default: { type: 'string_in', reference: JSON.stringify(value) },
+            default: { type: "string_in", reference: JSON.stringify(value) },
           });
         } else {
           defaultFilters.push({
             column: matchToColumnId(score, anchorRef),
-            default: { type: 'string_equals', reference: value[0] },
+            default: { type: "string_equals", reference: value[0] },
           });
         }
       } catch (_e) {
@@ -267,8 +281,8 @@ function computeDefaultFilters(scores: ColumnMatch[], anchorRef: PlRef): PlTable
           continue;
         }
 
-        const direction = spec.annotations?.['pl7.app/score/rankingOrder'] ?? 'increasing';
-        if (direction !== 'increasing' && direction !== 'decreasing') {
+        const direction = spec.annotations?.["pl7.app/score/rankingOrder"] ?? "increasing";
+        if (direction !== "increasing" && direction !== "decreasing") {
           // invalid ranking order — skip silently (console unavailable in model sandbox)
           continue;
         }
@@ -276,7 +290,10 @@ function computeDefaultFilters(scores: ColumnMatch[], anchorRef: PlRef): PlTable
         defaultFilters.push({
           column: matchToColumnId(score, anchorRef),
           default: {
-            type: direction === 'increasing' ? 'number_greaterThanOrEqualTo' : 'number_lessThanOrEqualTo',
+            type:
+              direction === "increasing"
+                ? "number_greaterThanOrEqualTo"
+                : "number_lessThanOrEqualTo",
             reference: numericValue,
           },
         });
@@ -295,41 +312,45 @@ function computePresets(
   defaultFilters: PlTableFiltersDefault[],
   anchorRef: PlRef,
   anchorSpec: PColumnSpec,
-): Omit<ColumnsMeta, 'allMatches' | 'scores' | 'defaultFilters'> {
-  const isPeptide = anchorSpec.axesSpec[1]?.name === 'pl7.app/variantKey';
+): Omit<ColumnsMeta, "allMatches" | "scores" | "defaultFilters"> {
+  const isPeptide = anchorSpec.axesSpec[1]?.name === "pl7.app/variantKey";
 
-  const hasInVivoScore = [...IN_VIVO_MUTATION_COLUMNS].every(
-    (name) => scores.some((s) => s.column.spec.name === name),
+  const hasInVivoScore = [...IN_VIVO_MUTATION_COLUMNS].every((name) =>
+    scores.some((s) => s.column.spec.name === name),
   );
 
-  const isEnrichmentColumn = (name: string) => name.startsWith('pl7.app/enrichment') || name.startsWith('pl7.app/vdj/enrichment');
+  const isEnrichmentColumn = (name: string) =>
+    name.startsWith("pl7.app/enrichment") || name.startsWith("pl7.app/vdj/enrichment");
   const hasEnrichmentScores = scores.some((s) => isEnrichmentColumn(s.column.spec.name));
 
   // Peptide anchors always auto-select the peptide preset, regardless of which
   // score columns are upstream.
   const detectedPreset: WorkflowPreset | undefined = isPeptide
-    ? 'peptide'
+    ? "peptide"
     : hasInVivoScore
-      ? 'in-vivo'
+      ? "in-vivo"
       : hasEnrichmentScores
-        ? 'in-vitro'
+        ? "in-vitro"
         : undefined;
 
   // Default ranking: all non-String scores, excluding mutation columns when In Vivo Score replaces them
   const defaultRankingOrder: RankingOrder[] = scores
-    .filter((s) => s.column.spec.valueType !== 'String')
+    .filter((s) => s.column.spec.valueType !== "String")
     .filter((s) => !hasInVivoScore || !IN_VIVO_MUTATION_COLUMNS.has(s.column.spec.name))
     .map((s) => ({
       id: `default-rank-${s.column.id}`,
       value: matchToColumnId(s, anchorRef),
-      rankingOrder: (s.column.spec.annotations?.['pl7.app/score/rankingOrder'] as 'increasing' | 'decreasing') ?? 'decreasing',
+      rankingOrder:
+        (s.column.spec.annotations?.["pl7.app/score/rankingOrder"] as
+          | "increasing"
+          | "decreasing") ?? "decreasing",
       isExpanded: false,
     }));
 
   if (hasInVivoScore) {
     defaultRankingOrder.unshift({
-      value: { anchorRef, anchorName: 'main', column: IN_VIVO_SCORE_COLUMN_ID },
-      rankingOrder: 'decreasing',
+      value: { anchorRef, anchorName: "main", column: IN_VIVO_SCORE_COLUMN_ID },
+      rankingOrder: "decreasing",
     });
   }
 
@@ -365,22 +386,22 @@ function computePresets(
   });
 
   const fractionCDRMutationsCol = scores.find(
-    (s) => s.column.spec.name === 'pl7.app/vdj/sequence/fractionCDRMutations',
+    (s) => s.column.spec.name === "pl7.app/vdj/sequence/fractionCDRMutations",
   );
   if (fractionCDRMutationsCol) {
     inVivoFilters.push({
       column: matchToColumnId(fractionCDRMutationsCol, anchorRef),
-      default: { type: 'number_greaterThan', reference: 0.5 },
+      default: { type: "number_greaterThan", reference: 0.5 },
     });
   }
 
   const nMutationsCol = scores.find(
-    (s) => s.column.spec.name === 'pl7.app/vdj/sequence/nMutations',
+    (s) => s.column.spec.name === "pl7.app/vdj/sequence/nMutations",
   );
   if (nMutationsCol) {
     inVivoFilters.push({
       column: matchToColumnId(nMutationsCol, anchorRef),
-      default: { type: 'number_greaterThanOrEqualTo', reference: 3 },
+      default: { type: "number_greaterThanOrEqualTo", reference: 3 },
     });
   }
 
@@ -400,10 +421,13 @@ function computePresets(
   // Peptide defaults: all numeric score columns; no SHM exclusions.
   const inPeptideDefaults = {
     rankingOrder: scores
-      .filter((s) => s.column.spec.valueType !== 'String')
+      .filter((s) => s.column.spec.valueType !== "String")
       .map((s) => ({
         value: matchToColumnId(s, anchorRef),
-        rankingOrder: (s.column.spec.annotations?.['pl7.app/score/rankingOrder'] as 'increasing' | 'decreasing') ?? 'decreasing',
+        rankingOrder:
+          (s.column.spec.annotations?.["pl7.app/score/rankingOrder"] as
+            | "increasing"
+            | "decreasing") ?? "decreasing",
       })),
     filters: defaultFilters,
   };
@@ -419,8 +443,6 @@ function computePresets(
   };
 }
 
-export function getDefaultBlockLabel(data: {
-  datasetLabel?: string;
-}) {
-  return data.datasetLabel || 'Select dataset';
+export function getDefaultBlockLabel(data: { datasetLabel?: string }) {
+  return data.datasetLabel || "Select dataset";
 }

@@ -1,11 +1,16 @@
 <script setup lang="ts">
-import type { DiscreteFilter, FilterUI, PlTableFilter, ScopedColumnId } from '@platforma-open/milaboratories.top-antibodies.model';
-import { getInputAnchorRef } from '@platforma-open/milaboratories.top-antibodies.model';
-import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from '@platforma-sdk/ui-vue';
-import { ref } from 'vue';
-import { useApp } from '../../app';
-import { useAnchorSyncedDefaults } from '../../composables/useAnchorSyncedDefaults';
-import FilterCard from './FilterCard.vue';
+import type {
+  DiscreteFilter,
+  FilterUI,
+  PlTableFilter,
+  ScopedColumnId,
+} from "@platforma-open/milaboratories.top-antibodies.model";
+import { getInputAnchorRef } from "@platforma-open/milaboratories.top-antibodies.model";
+import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from "@platforma-sdk/ui-vue";
+import { ref } from "vue";
+import { useApp } from "../../app";
+import { useAnchorSyncedDefaults } from "../../composables/useAnchorSyncedDefaults";
+import FilterCard from "./FilterCard.vue";
 
 const app = useApp();
 
@@ -19,9 +24,10 @@ const generateUniqueId = () => {
 
 const getColumnLabel = (columnId: ScopedColumnId | undefined) => {
   const column = app.model.outputs.filterConfig?.options?.find(
-    (option: { value: ScopedColumnId; label: string }) => option && option.value.column === columnId?.column,
+    (option: { value: ScopedColumnId; label: string }) =>
+      option && option.value.column === columnId?.column,
   );
-  return column?.label ?? 'Set filter';
+  return column?.label ?? "Set filter";
 };
 
 const addFilter = () => {
@@ -34,7 +40,7 @@ const addFilter = () => {
   ui.filters.push({
     id: generateUniqueId(),
     value: undefined,
-    filter: { type: 'number_greaterThan', reference: 0 },
+    filter: { type: "number_greaterThan", reference: 0 },
     isExpanded: true, // Auto-expand new items
   });
 };
@@ -43,20 +49,23 @@ const getPresetDefaults = () => {
   const config = app.model.outputs.filterConfig;
   if (!config) return undefined;
   const preset = app.model.data.preset;
-  if (preset === 'in-vivo') return config.inVivoDefaults;
-  if (preset === 'in-vitro') return config.inVitroDefaults;
-  if (preset === 'peptide') return config.inPeptideDefaults;
+  if (preset === "in-vivo") return config.inVivoDefaults;
+  if (preset === "in-vitro") return config.inVitroDefaults;
+  if (preset === "peptide") return config.inPeptideDefaults;
   return undefined;
 };
 
 const resetToDefaults = () => {
   const defaults = getPresetDefaults();
-  app.model.data.filters = defaults?.map((defaultFilter: { column: ScopedColumnId; default: PlTableFilter | DiscreteFilter }) => ({
-    id: generateUniqueId(),
-    value: defaultFilter.column,
-    filter: { ...defaultFilter.default },
-    isExpanded: false,
-  })) ?? [];
+  app.model.data.filters =
+    defaults?.map(
+      (defaultFilter: { column: ScopedColumnId; default: PlTableFilter | DiscreteFilter }) => ({
+        id: generateUniqueId(),
+        value: defaultFilter.column,
+        filter: { ...defaultFilter.default },
+        isExpanded: false,
+      }),
+    ) ?? [];
 };
 
 // Use shared anchor sync logic
@@ -109,7 +118,9 @@ useAnchorSyncedDefaults({
       Keep sequences that:
       <PlTooltip>
         <PlIcon16 name="info" />
-        <template #tooltip> Only sequences that satisfy these conditions will be kept. All others will be excluded. </template>
+        <template #tooltip>
+          Only sequences that satisfy these conditions will be kept. All others will be excluded.
+        </template>
       </PlTooltip>
     </PlRow>
 
@@ -117,10 +128,10 @@ useAnchorSyncedDefaults({
       v-model:items="app.model.data.filters"
       :get-item-key="(item: FilterUI) => item.id ?? 0"
       :is-expanded="(item: FilterUI) => item.isExpanded === true"
-      :on-expand="(item: FilterUI) => item.isExpanded = !item.isExpanded"
+      :on-expand="(item: FilterUI) => (item.isExpanded = !item.isExpanded)"
     >
       <template #item-title="{ item }">
-        {{ (item as FilterUI).value ? getColumnLabel((item as FilterUI).value) : 'Add Filter' }}
+        {{ (item as FilterUI).value ? getColumnLabel((item as FilterUI).value) : "Add Filter" }}
       </template>
       <template #item-content="{ index }">
         <FilterCard
@@ -131,13 +142,9 @@ useAnchorSyncedDefaults({
     </PlElementList>
 
     <div class="d-flex flex-column gap-6">
-      <PlBtnSecondary icon="add" @click="addFilter">
-        Add Filter
-      </PlBtnSecondary>
+      <PlBtnSecondary icon="add" @click="addFilter"> Add Filter </PlBtnSecondary>
 
-      <PlBtnSecondary icon="reverse" @click="resetToDefaults">
-        Reset to defaults
-      </PlBtnSecondary>
+      <PlBtnSecondary icon="reverse" @click="resetToDefaults"> Reset to defaults </PlBtnSecondary>
     </div>
   </div>
 </template>

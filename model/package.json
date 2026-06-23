@@ -3,16 +3,14 @@
   "version": "4.2.2",
   "description": "Block model",
   "type": "module",
-  "main": "./dist/index.cjs",
-  "module": "./dist/index.js",
-  "types": "./dist/index.d.ts",
+  "main": "dist/index.cjs",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "import": "./dist/index.js",
-      "require": "./dist/index.cjs",
-      "default": "./dist/index.js",
-      "sources": "./src/index.ts"
+      "sources": "./src/index.ts",
+      "import": "./dist/index.js"
     },
     "./dist/*": "./dist/*"
   },
@@ -20,24 +18,25 @@
     "build": "ts-builder build --target block-model && block-tools build-model",
     "watch": "ts-builder build --target block-model --watch",
     "type-check": "ts-builder type-check --target block-model",
-    "lint": "eslint .",
     "test": "vitest",
-    "do-pack": "shx rm -f *.tgz && pnpm pack && shx mv *.tgz package.tgz"
+    "do-pack": "shx rm -f *.tgz && pnpm pack && shx mv *.tgz package.tgz",
+    "fmt": "ts-builder format",
+    "check": "ts-builder check --target block-model"
   },
   "dependencies": {
-    "@platforma-sdk/model": "catalog:",
     "@milaboratories/graph-maker": "catalog:",
     "@milaboratories/helpers": "catalog:",
-    "@milaboratories/strings": "catalog:"
+    "@milaboratories/strings": "catalog:",
+    "@platforma-sdk/model": "catalog:"
   },
   "devDependencies": {
     "@milaboratories/ts-builder": "catalog:",
     "@milaboratories/ts-configs": "catalog:",
     "@platforma-sdk/block-tools": "catalog:",
-    "@platforma-sdk/eslint-config": "catalog:",
-    "@types/node": "catalog:",
-    "typescript": "catalog:",
-    "vitest": "catalog:",
     "@platforma-sdk/ui-vue": "catalog:"
+  },
+  "peerDependencies": {
+    "@types/node": "*",
+    "typescript": "*"
   }
 }

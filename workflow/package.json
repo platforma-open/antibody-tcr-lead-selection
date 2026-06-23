@@ -1,23 +1,26 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies.workflow",
   "version": "4.2.1",
-  "type": "module",
   "description": "Block Workflow",
+  "type": "module",
   "scripts": {
-    "build": "shx rm -rf dist && pl-tengo check && pl-tengo build",
-    "format": "/usr/bin/env emacs --script ./format.el",
-    "do-pack": "shx rm -f *.tgz && pnpm pack && shx mv *.tgz package.tgz"
+    "build": "shx rm -rf dist && pl-tengo build",
+    "format": "/usr/bin/env emacs --script ./format.el || echo 'No emacs.'",
+    "do-pack": "shx rm -f *.tgz && pnpm pack && shx mv *.tgz package.tgz",
+    "check": "pl-tengo check"
   },
   "dependencies": {
+    "@platforma-open/milaboratories.software-anarci": "catalog:",
+    "@platforma-open/milaboratories.top-antibodies.anarci-kabat": "workspace:*",
+    "@platforma-open/milaboratories.top-antibodies.assembling-fasta": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.sample-clonotypes": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.spectratype": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.umap": "workspace:*",
-    "@platforma-open/milaboratories.top-antibodies.assembling-fasta": "workspace:*",
-    "@platforma-open/milaboratories.top-antibodies.anarci-kabat": "workspace:*",
-    "@platforma-sdk/workflow-tengo": "catalog:",
-    "@platforma-open/milaboratories.software-anarci": "catalog:"
+    "@platforma-sdk/workflow-tengo": "catalog:"
   },
   "devDependencies": {
-    "@platforma-sdk/tengo-builder": "catalog:"
+    "@platforma-sdk/tengo-builder": "catalog:",
+    "@platforma-sdk/test": "catalog:",
+    "shx": "catalog:"
   }
 }
