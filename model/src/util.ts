@@ -109,6 +109,8 @@ export const IN_VITRO_RANKING_SPEC_NAMES = new Set([
   'pl7.app/vdj/developabilityScore',
   'pl7.app/enrichment',
   'pl7.app/vdj/enrichment',
+  // Max frequency across target rounds (clonotype-enrichment) — ranked descending.
+  'pl7.app/maxFrequency',
 ]);
 
 /**
