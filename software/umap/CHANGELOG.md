@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.umap
 
+## 1.2.6
+
+### Patch Changes
+
+- a7b65c0: No Op Change To Unblock
+
 ## 1.2.5
 
 ### Patch Changes

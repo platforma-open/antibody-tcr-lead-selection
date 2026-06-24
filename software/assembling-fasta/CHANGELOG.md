@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.assembling-fasta
 
+## 1.3.5
+
+### Patch Changes
+
+- a7b65c0: No Op Change To Unblock
+
 ## 1.3.4
 
 ### Patch Changes

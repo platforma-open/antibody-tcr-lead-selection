@@ -1,5 +1,17 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 4.3.1
+
+### Patch Changes
+
+- a7b65c0: No Op Change To Unblock
+- Updated dependencies [a7b65c0]
+  - @platforma-open/milaboratories.top-antibodies.anarci-kabat@1.4.6
+  - @platforma-open/milaboratories.top-antibodies.assembling-fasta@1.3.5
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@2.2.1
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.8.6
+  - @platforma-open/milaboratories.top-antibodies.umap@1.2.6
+
 ## 4.3.0
 
 ### Minor Changes

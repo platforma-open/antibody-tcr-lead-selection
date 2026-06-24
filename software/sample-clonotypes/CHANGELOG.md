@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 2.2.1
+
+### Patch Changes
+
+- a7b65c0: No Op Change To Unblock
+
 ## 2.2.0
 
 ### Minor Changes
