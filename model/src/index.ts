@@ -24,7 +24,7 @@ import {
   isHiddenFromUIColumn,
   isPColumnSpec,
 } from '@platforma-sdk/model';
-import { buildCollection, commonExcludeSelectors, getInputAnchorRef, getInputFilterRef, IN_VIVO_SCORE_COLUMN_ID, isClusterIdAxisName, isSelectableMatch, matchToColumnId } from './util';
+import { buildCollection, commonExcludeSelectors, getInputAnchorRef, getInputFilterRef, IN_VIVO_SCORE_COLUMN_ID, isClusterIdAxisName, isProducedByLeadSelection, isSelectableMatch, matchToColumnId } from './util';
 import { convertFilterUI, convertRankingOrderUI } from './converters';
 import { blockDataModel } from './dataModel';
 import type { BlockArgs } from './types';
@@ -334,7 +334,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     const resultPoolColumns = ctx.resultPool.selectColumns(
       (spec) => (spec.valueType as string) !== 'File'
         && !(spec.annotations?.['pl7.app/isLinkerColumn'] === 'true' && spec.axesSpec.length > 2)
-        && !spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection'),
+        && !isProducedByLeadSelection(spec),
     );
     const sources: ColumnSource[] = [
       new ArrayColumnProvider(resultPoolColumns),

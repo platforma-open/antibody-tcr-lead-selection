@@ -1,6 +1,6 @@
 import {
   Annotation,
-  ColumnCollectionBuilder, type AnchoredColumnCollection,
+  ColumnCollectionBuilder, readAnnotationJson, type AnchoredColumnCollection,
   type AnchoredFindColumnsOptions,
   type AxisSpec,
   type ColumnMatch,
@@ -36,13 +36,27 @@ export const CLUSTER_ID_AXIS_NAMES: ReadonlySet<string> = new Set([
 ]);
 export const isClusterIdAxisName = (name: string): boolean => CLUSTER_ID_AXIS_NAMES.has(name);
 
+/** Trace-step `type` stamped by a lead-selection block onto the columns it produces. */
+const LEAD_SELECTION_TRACE_TYPE = 'milaboratories.antibody-tcr-lead-selection';
+
+/** True when the column was produced *by* a lead-selection block, as opposed to merely
+ *  being downstream of one. `pSpec.makeTrace` appends the producing block as the LAST
+ *  trace step, so only the final entry identifies the producer — a substring match on
+ *  the whole trace also (wrongly) catches everything computed downstream of a Selected
+ *  Leads step (3D structure prediction/clustering/liabilities, etc.). */
+export function isProducedByLeadSelection(spec: PColumnSpec): boolean {
+  const trace = readAnnotationJson(spec, Annotation.Trace);
+  return Array.isArray(trace) && trace.length > 0
+    && trace[trace.length - 1]?.type === LEAD_SELECTION_TRACE_TYPE;
+}
+
 /** JS post-filter for column matches — excludes sampleId-axis, cluster mapping, label,
- *  and columns produced by this block. */
+ *  and the selection-marker columns this (or another) lead-selection block produces. */
 export function isSelectableMatch(m: ColumnMatch, sampleAxisName: string): boolean {
   return !m.column.spec.axesSpec.some((a) => a.name === sampleAxisName)
     && !isClusterIdAxisName(m.column.spec.name)
     && m.column.spec.name !== 'pl7.app/label'
-    && !m.column.spec.annotations?.[Annotation.Trace]?.includes('antibody-tcr-lead-selection');
+    && !isProducedByLeadSelection(m.column.spec);
 }
 
 /** Converts a ColumnMatch to a ScopedColumnId for the workflow wire format. */
