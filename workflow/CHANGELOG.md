@@ -1,5 +1,16 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 4.3.0
+
+### Minor Changes
+
+- 0a06331: New changeset
+
+### Patch Changes
+
+- Updated dependencies [0a06331]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@2.2.0
+
 ## 4.2.1
 
 ### Patch Changes

@@ -1,5 +1,20 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 3.2.0
+
+### Minor Changes
+
+- 0a06331: New changeset
+- 76621cc: Rank by Max Frequency (`pl7.app/maxFrequency`) by default in the in-vitro preset, alongside enrichment scores.
+
+### Patch Changes
+
+- Updated dependencies [0a06331]
+- Updated dependencies [76621cc]
+  - @platforma-open/milaboratories.top-antibodies.workflow@4.3.0
+  - @platforma-open/milaboratories.top-antibodies.model@4.3.0
+  - @platforma-open/milaboratories.top-antibodies.ui@4.3.0
+
 ## 3.1.5
 
 ### Patch Changes
