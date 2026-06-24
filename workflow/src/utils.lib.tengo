@@ -538,9 +538,14 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec, inputFilterCol
     // for those columns and are dropped at the relevant FILTER stage instead of
     // being silently dropped before stage tracking. The presence column is a light
     // Int marker — adding the heavy main-sequence column itself would blow up the join.
-    mainSeqCols := append(
-        columns.getColumns("mainSeqs"),
-        columns.getColumns("mainSeqsVdj")...)
+    // Combine both groups with a loop rather than `append(a, b...)`: Tengo's
+    // `append` requires >=2 args, so spreading an empty second group (e.g. the
+    // peptide case, which has no VDJ main sequences) would collapse to a
+    // single-arg call and fail with "wrong number of arguments".
+    mainSeqCols := columns.getColumns("mainSeqs")
+    for col in columns.getColumns("mainSeqsVdj") {
+        mainSeqCols = append(mainSeqCols, col)
+    }
     if len(mainSeqCols) > 0 {
         presenceCol := deriveClonotypePresence(mainSeqCols[0], datasetSpec)
         if !is_undefined(presenceCol) {
