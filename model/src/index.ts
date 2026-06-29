@@ -556,6 +556,15 @@ export const platforma = BlockModelV3.create(blockDataModel)
     if (anchorSpec === undefined)
       return undefined;
 
+    // A centroid dataset's key axis carries the producing clustering block's id; that run's
+    // cluster axis carries the same id. When they match, it's the origin cluster (one centroid
+    // per cluster -> diversification is a no-op), so we drop it below. A fresh clustering run on
+    // the centroid dataset has a different id and is kept.
+    // axesSpec[1] is the clonotype-key axis by platform convention (axis 0 = sampleId), same as the
+    // linker matching below. If it's ever absent this resolves to undefined and the origin cluster
+    // simply isn't hidden (degrades to prior behaviour, no error).
+    const datasetClusteringId = anchorSpec.axesSpec[1]?.domain?.['pl7.app/peptide/extractionRunId'];
+
     // Get linker columns using the same iteration order as util.ts
     const options: Array<{ label: string; ref: PlRef }> = [];
 
@@ -580,7 +589,16 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
       for (const link of linkers) {
         const linkerSpec = ctx.resultPool.getPColumnSpecByRef(link.ref);
-        if (!linkerSpec?.axesSpec.some((axis) => isClusterIdAxisName(axis.name))) {
+        if (!linkerSpec) {
+          continue;
+        }
+        const clusterAxis = linkerSpec.axesSpec.find((axis) => isClusterIdAxisName(axis.name));
+        if (!clusterAxis) {
+          continue;
+        }
+        // Hide the origin cluster of a centroid dataset (see datasetClusteringId above).
+        if (datasetClusteringId !== undefined
+          && clusterAxis.domain?.['pl7.app/clustering/blockId'] === datasetClusteringId) {
           continue;
         }
         // Extract clustering trace element label directly to avoid verbose
