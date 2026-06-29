@@ -560,6 +560,9 @@ export const platforma = BlockModelV3.create(blockDataModel)
     // cluster axis carries the same id. When they match, it's the origin cluster (one centroid
     // per cluster -> diversification is a no-op), so we drop it below. A fresh clustering run on
     // the centroid dataset has a different id and is kept.
+    // axesSpec[1] is the clonotype-key axis by platform convention (axis 0 = sampleId), same as the
+    // linker matching below. If it's ever absent this resolves to undefined and the origin cluster
+    // simply isn't hidden (degrades to prior behaviour, no error).
     const datasetClusteringId = anchorSpec.axesSpec[1]?.domain?.['pl7.app/peptide/extractionRunId'];
 
     // Get linker columns using the same iteration order as util.ts
