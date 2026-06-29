@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 4.3.2
+
+### Patch Changes
+
+- 5f9643d: Hide a centroid dataset's origin cluster from the diversification options, since each centroid is already its own cluster.
+
 ## 4.3.1
 
 ### Patch Changes
