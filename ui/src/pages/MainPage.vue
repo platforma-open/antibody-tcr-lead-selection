@@ -129,11 +129,21 @@ const NO_PRESET_VALUE = '__no_preset__';
 
 const isPeptideModality = computed(() => app.model.outputs.modality === 'peptide');
 
+// Amplicon (synthetic-repertoire-profiler) reports the 'peptide' modality (it
+// shares the variantKey, non-VDJ path) — read the anchor domain only to relabel
+// the preset chip. The preset value stays 'peptide' so preset application is
+// unchanged.
+const isAmplicon = computed(() => {
+  const keyAxis = app.model.outputs.inputAnchorSpec?.axesSpec?.[1];
+  return keyAxis?.name === 'pl7.app/variantKey'
+    && keyAxis?.domain?.['pl7.app/repertoire/extractionRunId'] !== undefined;
+});
+
 const presetOptions = computed(() => {
   if (isPeptideModality.value) {
     return [
       { label: 'None', value: NO_PRESET_VALUE },
-      { label: 'Peptide', value: 'peptide' },
+      { label: isAmplicon.value ? 'Variant' : 'Peptide', value: 'peptide' },
     ];
   }
   return [

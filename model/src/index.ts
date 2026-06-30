@@ -563,7 +563,8 @@ export const platforma = BlockModelV3.create(blockDataModel)
     // axesSpec[1] is the clonotype-key axis by platform convention (axis 0 = sampleId), same as the
     // linker matching below. If it's ever absent this resolves to undefined and the origin cluster
     // simply isn't hidden (degrades to prior behaviour, no error).
-    const datasetClusteringId = anchorSpec.axesSpec[1]?.domain?.['pl7.app/peptide/extractionRunId'];
+    const datasetClusteringId = anchorSpec.axesSpec[1]?.domain?.['pl7.app/peptide/extractionRunId']
+      ?? anchorSpec.axesSpec[1]?.domain?.['pl7.app/repertoire/extractionRunId'];
 
     // Get linker columns using the same iteration order as util.ts
     const options: Array<{ label: string; ref: PlRef }> = [];
@@ -634,12 +635,21 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
   .sections((ctx) => {
     const ref = getInputAnchorRef(ctx.data);
-    const isPeptide = ref !== undefined
-      && ctx.resultPool.getPColumnSpecByRef(ref)?.axesSpec[1]?.name === 'pl7.app/variantKey';
+    const keyAxis = ref !== undefined
+      ? ctx.resultPool.getPColumnSpecByRef(ref)?.axesSpec[1]
+      : undefined;
+    const isPeptide = keyAxis?.name === 'pl7.app/variantKey';
+    // Amplicon (synthetic-repertoire-profiler) shares the variantKey axis with
+    // peptide-extraction; only the axis domain tells them apart. It takes the same
+    // non-VDJ path as peptide (so the isPeptide gating below stays) — only the
+    // sequence-space section label differs.
+    const isAmplicon = isPeptide
+      && keyAxis?.domain?.['pl7.app/repertoire/extractionRunId'] !== undefined;
+    const spaceLabel = isAmplicon ? 'Variant Space' : isPeptide ? 'Peptide Space' : 'Clonotype Space';
 
     const sections: Array<{ type: 'link'; href: `/${string}`; label: string }> = [
       { type: 'link', href: '/', label: strings.titles.main },
-      { type: 'link', href: '/umap', label: isPeptide ? 'Peptide Space' : 'Clonotype Space' },
+      { type: 'link', href: '/umap', label: spaceLabel },
       { type: 'link', href: '/selection', label: 'Selection Plot' },
     ];
     if (!isPeptide) {
