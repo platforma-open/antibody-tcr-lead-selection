@@ -45,6 +45,15 @@ const CLUSTERING_TRACE_TYPES = [
   'milaboratories.embedding-clustering.clustering',
 ];
 
+// Trace types force-included in the filter/ranking column labels so the producing block is always
+// identifiable, even when the column's own name is unique (label derivation otherwise only adds trace
+// steps to disambiguate, and a high-importance upstream dataset step wins those slots). VDJ Multiomic
+// Integration's per-clonotype columns (dominant antigen, per-antigen fractions, restriction index,
+// breadth) share generic names, so without this they show no provenance.
+const FORCED_PROVENANCE_TRACE_TYPES = [
+  'milaboratories.vdj-multiomic-integration',
+];
+
 export const platforma = BlockModelV3.create(blockDataModel)
 
   .args<BlockArgs>((data) => {
@@ -142,7 +151,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     const labeled = deriveLabels(
       filterableMatches,
       (m) => m.column.spec,
-      { includeNativeLabel: true },
+      { includeNativeLabel: true, forceTraceElements: FORCED_PROVENANCE_TRACE_TYPES },
     );
     const options = labeled.map(({ value, label }) => ({
       label,
@@ -176,7 +185,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     const labeled = deriveLabels(
       rankableMatches,
       (m) => m.column.spec,
-      { includeNativeLabel: true },
+      { includeNativeLabel: true, forceTraceElements: FORCED_PROVENANCE_TRACE_TYPES },
     );
     const options = labeled.map(({ value, label }) => ({
       label,
