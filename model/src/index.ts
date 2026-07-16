@@ -224,16 +224,20 @@ export const platforma = BlockModelV3.create(blockDataModel)
     };
   })
 
-  .output("presetConfig", (ctx) => {
-    const result = buildCollection(ctx, getInputAnchorRef(ctx.data));
-    if (!result) return undefined;
+  .output(
+    "presetConfig",
+    (ctx) => {
+      const result = buildCollection(ctx, getInputAnchorRef(ctx.data));
+      if (!result) return undefined;
 
-    return {
-      detectedPreset: result.meta.detectedPreset,
-      hasInVivoScore: result.meta.hasInVivoScore,
-      hasEnrichmentScores: result.meta.hasEnrichmentScores,
-    };
-  })
+      return {
+        detectedPreset: result.meta.detectedPreset,
+        hasInVivoScore: result.meta.hasInVivoScore,
+        hasEnrichmentScores: result.meta.hasEnrichmentScores,
+      };
+    },
+    { retentive: true },
+  )
 
   .outputWithStatus("pf", (ctx) => {
     const anchor = getInputAnchorRef(ctx.data);
