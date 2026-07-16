@@ -1,44 +1,44 @@
 <script setup lang="ts">
-import type { PredefinedGraphOption } from '@milaboratories/graph-maker';
-import { GraphMaker } from '@milaboratories/graph-maker';
-import strings from '@milaboratories/strings';
-import { computed } from 'vue';
-import { useApp } from '../app';
+import type { PredefinedGraphOption } from "@milaboratories/graph-maker";
+import { GraphMaker } from "@milaboratories/graph-maker";
+import strings from "@milaboratories/strings";
+import { computed } from "vue";
+import { useApp } from "../app";
 
 const app = useApp();
 
-const defaultOptions = computed((): PredefinedGraphOption<'heatmap'>[] => {
+const defaultOptions = computed((): PredefinedGraphOption<"heatmap">[] => {
   return [
     {
-      inputName: 'value',
+      inputName: "value",
       selectedSource: {
-        kind: 'PColumn',
-        valueType: 'Int',
-        name: 'pl7.app/vdj/vjGeneUsage',
+        kind: "PColumn",
+        valueType: "Int",
+        name: "pl7.app/vdj/vjGeneUsage",
         axesSpec: [],
       },
     },
     {
-      inputName: 'x',
+      inputName: "x",
       selectedSource: {
-        type: 'String',
-        name: 'pl7.app/vdj/geneHit',
-        domain: { 'pl7.app/vdj/reference': 'VGene' },
+        type: "String",
+        name: "pl7.app/vdj/geneHit",
+        domain: { "pl7.app/vdj/reference": "VGene" },
       },
     },
     {
-      inputName: 'y',
+      inputName: "y",
       selectedSource: {
-        type: 'String',
-        name: 'pl7.app/vdj/geneHit',
-        domain: { 'pl7.app/vdj/reference': 'JGene' },
+        type: "String",
+        name: "pl7.app/vdj/geneHit",
+        domain: { "pl7.app/vdj/reference": "JGene" },
       },
     },
     {
-      inputName: 'tabBy',
+      inputName: "tabBy",
       selectedSource: {
-        type: 'String',
-        name: 'pl7.app/vdj/chain',
+        type: "String",
+        name: "pl7.app/vdj/chain",
       },
     },
   ];
