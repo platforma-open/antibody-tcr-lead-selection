@@ -1,5 +1,22 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 4.3.2
+
+### Patch Changes
+
+- 03894ab: Keep filter and ranking options available while an upstream block is recalculating.
+
+  Previously the filter/ranking config outputs were `retentive`, so a freshly-configured Lead Selection block showed no filter options (an empty, spinning "Filter by" dropdown) for the entire time any upstream block was running. The config outputs now recompute from the currently-available columns instead, so the options stay populated. Selecting a column whose producer is still recalculating is safe — running the block waits for that upstream to finish before executing.
+
+  Also migrates the block onto the canonical structurer layout and upgrades the SDK toolchain (block-tools, tengo-builder).
+
+- Updated dependencies [03894ab]
+  - @platforma-open/milaboratories.top-antibodies.umap@1.2.7
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.8.7
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@2.2.2
+  - @platforma-open/milaboratories.top-antibodies.assembling-fasta@1.3.6
+  - @platforma-open/milaboratories.top-antibodies.anarci-kabat@1.4.7
+
 ## 4.3.1
 
 ### Patch Changes
