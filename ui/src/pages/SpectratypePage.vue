@@ -1,48 +1,47 @@
 <script setup lang="ts">
-import type { PredefinedGraphOption } from '@milaboratories/graph-maker';
-import { GraphMaker } from '@milaboratories/graph-maker';
-import { PlBlockPage } from '@platforma-sdk/ui-vue';
-import strings from '@milaboratories/strings';
-import { computed } from 'vue';
-import { useApp } from '../app';
+import type { PredefinedGraphOption } from "@milaboratories/graph-maker";
+import { GraphMaker } from "@milaboratories/graph-maker";
+import { PlBlockPage } from "@platforma-sdk/ui-vue";
+import strings from "@milaboratories/strings";
+import { computed } from "vue";
+import { useApp } from "../app";
 
 const app = useApp();
 
-const defaultOptions = computed((): PredefinedGraphOption<'discrete'>[] => {
+const defaultOptions = computed((): PredefinedGraphOption<"discrete">[] => {
   return [
     {
-      inputName: 'y',
+      inputName: "y",
       selectedSource: {
-        kind: 'PColumn',
-        valueType: 'Int',
-        name: 'pl7.app/vdj/vSpectratype',
+        kind: "PColumn",
+        valueType: "Int",
+        name: "pl7.app/vdj/vSpectratype",
         axesSpec: [],
       },
     },
     {
-      inputName: 'primaryGrouping',
+      inputName: "primaryGrouping",
       selectedSource: {
-        type: 'Int',
-        name: 'pl7.app/vdj/sequenceLength',
+        type: "Int",
+        name: "pl7.app/vdj/sequenceLength",
       },
     },
     {
-      inputName: 'secondaryGrouping',
+      inputName: "secondaryGrouping",
       selectedSource: {
-        type: 'String',
-        name: 'pl7.app/vdj/geneHit',
+        type: "String",
+        name: "pl7.app/vdj/geneHit",
       },
     },
     {
-      inputName: 'tabBy',
+      inputName: "tabBy",
       selectedSource: {
-        type: 'String',
-        name: 'pl7.app/vdj/chain',
+        type: "String",
+        name: "pl7.app/vdj/chain",
       },
     },
   ];
 });
-
 </script>
 
 <template>

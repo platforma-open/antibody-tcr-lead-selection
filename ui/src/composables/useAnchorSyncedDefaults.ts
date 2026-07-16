@@ -1,7 +1,7 @@
-import type { ScopedColumnId } from '@platforma-open/milaboratories.top-antibodies.model';
-import type { PlRef } from '@platforma-sdk/model';
-import { plRefsEqual } from '@platforma-sdk/model';
-import { computed, ref, watch } from 'vue';
+import type { ScopedColumnId } from "@platforma-open/milaboratories.top-antibodies.model";
+import type { PlRef } from "@platforma-sdk/model";
+import { plRefsEqual } from "@platforma-sdk/model";
+import { computed, ref, watch } from "vue";
 
 export interface ConfigWithOptions {
   options?: Array<{ value: ScopedColumnId; label: string }>;
@@ -52,9 +52,15 @@ export interface UseAnchorSyncedDefaultsOptions {
  */
 export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions) {
   const {
-    getAnchor, getConfig, clearState, applyDefaults, hasDefaults,
-    hasExistingStateForConfig, hasAnyItems,
-    getInitializedAnchorKey, setInitializedAnchorKey,
+    getAnchor,
+    getConfig,
+    clearState,
+    applyDefaults,
+    hasDefaults,
+    hasExistingStateForConfig,
+    hasAnyItems,
+    getInitializedAnchorKey,
+    setInitializedAnchorKey,
     getPreset,
   } = options;
 
@@ -66,12 +72,12 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
   const configAnchorKey = computed(() => {
     const config = getConfig();
     if (!config?.options?.length) return null;
-    const mainOption = config.options.find((o) => o.value?.anchorName === 'main');
+    const mainOption = config.options.find((o) => o.value?.anchorName === "main");
     return mainOption?.value?.anchorRef ? JSON.stringify(mainOption.value.anchorRef) : null;
   });
 
   // Computed preset value for watching
-  const currentPreset = computed(() => getPreset?.() ?? 'none');
+  const currentPreset = computed(() => getPreset?.() ?? "none");
 
   // Track the last known anchor to detect actual anchor changes
   const lastKnownAnchor = ref<PlRef | null>(null);
@@ -82,7 +88,7 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
     ([currentAnchor, configKey, preset]: [PlRef | undefined, string | null, string]) => {
       const config = getConfig();
       // Include preset in anchor key so changing preset invalidates "already initialized"
-      const presetSuffix = getPreset ? `::${getPreset() ?? 'none'}` : '';
+      const presetSuffix = getPreset ? `::${getPreset() ?? "none"}` : "";
       const currentAnchorKey = currentAnchor ? JSON.stringify(currentAnchor) + presetSuffix : null;
       const initializedAnchorKey = getInitializedAnchorKey?.();
       const isAlreadyInitialized = currentAnchorKey && initializedAnchorKey === currentAnchorKey;
@@ -98,8 +104,11 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
       }
 
       // Already applied for this anchor+preset combo (in this component instance)? Skip
-      if (appliedForAnchor.value && plRefsEqual(appliedForAnchor.value, currentAnchor)
-        && appliedForPreset.value === preset) {
+      if (
+        appliedForAnchor.value &&
+        plRefsEqual(appliedForAnchor.value, currentAnchor) &&
+        appliedForPreset.value === preset
+      ) {
         return;
       }
 
@@ -120,7 +129,8 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
           return;
         }
         // No existing items - only clear tracking if anchor actually changed
-        const anchorActuallyChanged = !lastKnownAnchor.value || !plRefsEqual(lastKnownAnchor.value, currentAnchor);
+        const anchorActuallyChanged =
+          !lastKnownAnchor.value || !plRefsEqual(lastKnownAnchor.value, currentAnchor);
         if (anchorActuallyChanged) {
           appliedForAnchor.value = null;
           appliedForPreset.value = null;
@@ -130,10 +140,11 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
       }
 
       // Verify config matches current anchor BEFORE checking defaults
-      const mainOption = config.options?.find((o) => o.value?.anchorName === 'main');
+      const mainOption = config.options?.find((o) => o.value?.anchorName === "main");
       if (!mainOption?.value || !plRefsEqual(mainOption.value.anchorRef, currentAnchor)) {
         // Config is stale - only clear if anchor actually changed
-        const anchorActuallyChanged = !lastKnownAnchor.value || !plRefsEqual(lastKnownAnchor.value, currentAnchor);
+        const anchorActuallyChanged =
+          !lastKnownAnchor.value || !plRefsEqual(lastKnownAnchor.value, currentAnchor);
         if (anchorActuallyChanged) {
           clearState();
           appliedForAnchor.value = null;
@@ -149,8 +160,10 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
       // Check if existing state matches current config (e.g., after component remount)
       // This must be done AFTER we have valid config to compare against
       // Skip this check when preset changed — user explicitly wants new defaults
-      const presetChanged = appliedForAnchor.value && plRefsEqual(appliedForAnchor.value, currentAnchor)
-        && appliedForPreset.value !== preset;
+      const presetChanged =
+        appliedForAnchor.value &&
+        plRefsEqual(appliedForAnchor.value, currentAnchor) &&
+        appliedForPreset.value !== preset;
       if (!presetChanged && hasExistingStateForConfig?.(config)) {
         appliedForAnchor.value = currentAnchor;
         appliedForPreset.value = preset;

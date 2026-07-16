@@ -14,3 +14,6 @@ software/**/*.tgz
 # BUG in vue-tsc, it enables incremental builds when we do not ask it
 ui/tsconfig.app.tsbuildinfo
 ui/tsconfig.node.tsbuildinfo
+.DS_Store
+.vscode/sftp.json
+test-dry-run.json
