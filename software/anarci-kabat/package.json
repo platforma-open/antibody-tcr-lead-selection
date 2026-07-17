@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies.anarci-kabat",
-  "version": "1.4.8",
+  "version": "1.4.9",
   "files": [
     "./dist/**/*"
   ],

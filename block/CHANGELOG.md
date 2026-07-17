@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 3.2.6
+
+### Patch Changes
+
+- c8adf0f: Rebuild software with block-tools 2.12.7 so docker images publish to the trusted `containers.pl-open.science` registry instead of the untrusted `quay.io` (backend rejects quay images).
+
 ## 3.2.5
 
 ### Patch Changes

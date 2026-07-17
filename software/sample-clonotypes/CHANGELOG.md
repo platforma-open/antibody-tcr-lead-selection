@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 2.2.4
+
+### Patch Changes
+
+- c8adf0f: Rebuild software with block-tools 2.12.7 so docker images publish to the trusted `containers.pl-open.science` registry instead of the untrusted `quay.io` (backend rejects quay images).
+
 ## 2.2.3
 
 ### Patch Changes

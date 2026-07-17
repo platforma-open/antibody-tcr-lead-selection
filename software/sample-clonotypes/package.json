@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies.sample-clonotypes",
-  "version": "2.2.3",
+  "version": "2.2.4",
   "files": [
     "./dist/**/*"
   ],
