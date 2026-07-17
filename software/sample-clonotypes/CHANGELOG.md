@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 2.2.3
+
+### Patch Changes
+
+- c765278: Release software
+
 ## 2.2.2
 
 ### Patch Changes

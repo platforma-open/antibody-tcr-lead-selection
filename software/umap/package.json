@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies.umap",
-  "version": "1.2.7",
+  "version": "1.2.8",
   "files": [
     "./dist/**/*"
   ],

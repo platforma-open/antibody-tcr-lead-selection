@@ -1,5 +1,17 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 4.3.3
+
+### Patch Changes
+
+- c765278: Release software
+- Updated dependencies [c765278]
+  - @platforma-open/milaboratories.top-antibodies.anarci-kabat@1.4.8
+  - @platforma-open/milaboratories.top-antibodies.assembling-fasta@1.3.7
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@2.2.3
+  - @platforma-open/milaboratories.top-antibodies.spectratype@1.8.8
+  - @platforma-open/milaboratories.top-antibodies.umap@1.2.8
+
 ## 4.3.2
 
 ### Patch Changes

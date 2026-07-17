@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.anarci-kabat
 
+## 1.4.8
+
+### Patch Changes
+
+- c765278: Release software
+
 ## 1.4.7
 
 ### Patch Changes

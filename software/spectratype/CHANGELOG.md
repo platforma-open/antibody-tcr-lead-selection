@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.spectratype
 
+## 1.8.8
+
+### Patch Changes
+
+- c765278: Release software
+
 ## 1.8.7
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.assembling-fasta
 
+## 1.3.7
+
+### Patch Changes
+
+- c765278: Release software
+
 ## 1.3.6
 
 ### Patch Changes

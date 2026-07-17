@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 3.2.5
+
+### Patch Changes
+
+- c765278: Release software
+
 ## 3.2.4
 
 ### Patch Changes
