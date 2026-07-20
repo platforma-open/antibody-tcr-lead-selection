@@ -1,6 +1,7 @@
 import type { GraphMakerState } from "@milaboratories/graph-maker";
 import type {
-  ColumnMatch,
+  ColumnRecipe,
+  ColumnUniversalId,
   DatasetSelection,
   DataInfo,
   PColumn,
@@ -8,7 +9,6 @@ import type {
   PlDataTableStateV2,
   PlMultiSequenceAlignmentModel,
   PlRef,
-  PObjectId,
   TreeNodeAccessor,
 } from "@platforma-sdk/model";
 import type { PlTableFilter } from "./typesFilters";
@@ -118,7 +118,7 @@ export type ScopedColumn = {
 export type ScopedColumnId = {
   anchorRef: PlRef;
   anchorName: string;
-  column: PObjectId; // SUniversalPColumnId
+  column: ColumnUniversalId; // canonical column id fed into the workflow's bundleBuilder
 };
 
 export type RankingOrder = {
@@ -171,9 +171,9 @@ export type PresetDefaults = {
 
 export type ColumnsMeta = {
   /** All discovered columns (direct + linked via linker traversal) */
-  allMatches: ColumnMatch[];
+  allMatches: ColumnRecipe[];
   /** Score columns (subset of allMatches with pl7.app/isScore annotation) */
-  scores: ColumnMatch[];
+  scores: ColumnRecipe[];
   defaultFilters: PlTableFiltersDefault[];
   defaultRankingOrder: RankingOrder[];
   /** True when the Repertoire Score column is present upstream; it becomes the primary In Vivo ranking */

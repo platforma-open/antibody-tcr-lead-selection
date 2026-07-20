@@ -1,17 +1,15 @@
 import {
   Annotation,
-  ColumnCollectionBuilder,
+  Column,
+  ColumnsCollection,
   readAnnotationJson,
-  type AnchoredColumnCollection,
-  type AnchoredFindColumnsOptions,
   type AxisSpec,
-  type ColumnMatch,
+  type ColumnRecipe,
   type PColumnSpec,
   type PlRef,
-  type RenderCtx,
+  type RelaxedColumnSelector,
 } from "@platforma-sdk/model";
 import type {
-  BlockArgs,
   BlockData,
   ColumnsMeta,
   PlTableFiltersDefault,
@@ -30,8 +28,11 @@ export function getInputFilterRef(data: Pick<BlockData, "input">): PlRef | undef
   return data.input?.primary.filter;
 }
 
-/** Common WASM exclude selectors shared across filter/rank/table discovery. */
-export const commonExcludeSelectors: NonNullable<AnchoredFindColumnsOptions["exclude"]> = [
+/** Common host-side exclude selectors shared across filter/rank/table discovery.
+ *  Linker columns and per-sequence annotations are dropped from discovery
+ *  *results* — linkers still stay in the source collection so anchored
+ *  discovery can traverse them. */
+export const commonExcludeSelectors: RelaxedColumnSelector[] = [
   { annotations: { "pl7.app/isLinkerColumn": "true" } },
   { annotations: { "pl7.app/sequence/isAnnotation": "true" } },
 ];
@@ -62,20 +63,25 @@ export function isProducedByLeadSelection(spec: PColumnSpec): boolean {
   );
 }
 
-/** JS post-filter for column matches — excludes sampleId-axis, cluster mapping, label,
- *  and the selection-marker columns this (or another) lead-selection block produces. */
-export function isSelectableMatch(m: ColumnMatch, sampleAxisName: string): boolean {
+/** JS post-filter for discovered columns — excludes sampleId-axis, cluster mapping, label,
+ *  and the selection-marker columns this (or another) lead-selection block produces.
+ *  `getSpec()` is a host round-trip (memoised per recipe); every survivor pays it. */
+export function isSelectableMatch(c: ColumnRecipe, sampleAxisName: string): boolean {
+  const spec = c.getSpec();
   return (
-    !m.column.spec.axesSpec.some((a) => a.name === sampleAxisName) &&
-    !isClusterIdAxisName(m.column.spec.name) &&
-    m.column.spec.name !== "pl7.app/label" &&
-    !isProducedByLeadSelection(m.column.spec)
+    // File value type is not recognized by the spec frame — dropped here rather
+    // than via a selector, since `File` is not a matchable `ValueType`.
+    (spec.valueType as string) !== "File" &&
+    !spec.axesSpec.some((a) => a.name === sampleAxisName) &&
+    !isClusterIdAxisName(spec.name) &&
+    spec.name !== "pl7.app/label" &&
+    !isProducedByLeadSelection(spec)
   );
 }
 
-/** Converts a ColumnMatch to a ScopedColumnId for the workflow wire format. */
-export function matchToColumnId(match: ColumnMatch, anchorRef: PlRef): ScopedColumnId {
-  return { anchorRef, anchorName: "main", column: match.column.id };
+/** Converts a discovered column recipe to a ScopedColumnId for the workflow wire format. */
+export function matchToColumnId(recipe: ColumnRecipe, anchorRef: PlRef): ScopedColumnId {
+  return { anchorRef, anchorName: "main", column: recipe.id };
 }
 
 // The Repertoire Score exported by the repertoire-score block. When present
@@ -194,53 +200,54 @@ export function getVisibleClusterAxes<T extends { id: unknown; spec: { axesSpec:
 }
 
 /**
- * Builds an AnchoredColumnCollection from the result pool and computes column metadata
- * (scores, defaults, presets). Replaces the old getColumns() function.
+ * Builds a host-driven {@link ColumnsCollection} over the upstream result pool
+ * and computes column metadata (scores, defaults, presets).
+ *
+ * The returned `collection` is the shared base (result pool minus File-typed
+ * columns); callers run their own `discover({ anchors: { main: anchorSpec } })`
+ * against it with the mode/selectors they need. `anchorSpec` is exposed so those
+ * callers don't refetch it.
+ *
+ * Relies on the ambient render ctx (set during output evaluation) for
+ * `Column` / `ColumnsCollection` resolution — no `ctx` argument needed.
  */
-export function buildCollection(
-  ctx: RenderCtx<BlockArgs, BlockData>,
-  inputAnchor: PlRef | undefined,
-): { collection: AnchoredColumnCollection; meta: ColumnsMeta; sampleAxisName: string } | undefined {
+export function buildCollection(inputAnchor: PlRef | undefined):
+  | {
+      collection: ColumnsCollection;
+      anchorSpec: PColumnSpec;
+      meta: ColumnsMeta;
+      sampleAxisName: string;
+    }
+  | undefined {
   if (!inputAnchor) return undefined;
 
-  const anchorSpec = ctx.resultPool.getPColumnSpecByRef(inputAnchor);
+  const anchorSpec = Column(inputAnchor)?.getSpec();
   if (!anchorSpec) return undefined;
 
-  // Exclude columns unsupported by the WASM spec frame:
-  // - File value type is not recognized
-  // - Linker columns with >2 axes have >2 connected components, which the spec frame rejects
-  const resultPoolColumns = ctx.resultPool.selectColumns(
-    (spec) =>
-      (spec.valueType as string) !== "File" &&
-      !(spec.annotations?.["pl7.app/isLinkerColumn"] === "true" && spec.axesSpec.length > 2),
-  );
-  // Use the full 2-axis input anchor as PColumnSpec.
-  // This makes the anchored ID deriver use idx:0=sampleId, idx:1=clonotypeKey,
-  // matching the workflow's `addAnchor("main", inputAnchor)` reference frame —
-  // so column IDs from model discovery resolve correctly in bundleBuilder.
-  // Discovery scope is restricted via JS post-filter below: sampleId-axis columns
-  // are dropped to avoid ambiguous literal AxisIds in workflow's anchoredQuery.
-  const collection = new ColumnCollectionBuilder(ctx.getService("pframeSpec"))
-    .addSource(resultPoolColumns)
-    .build({ anchors: { main: anchorSpec } });
-  if (!collection) return undefined;
+  // Host-driven base: the whole upstream result pool. Linker columns are kept in
+  // the source so anchored discovery can traverse them; they're dropped from
+  // results via `commonExcludeSelectors`, and File-typed columns via
+  // `isSelectableMatch` (both applied by callers on the discovered set).
+  const collection = ColumnsCollection(["result_pool"]);
 
-  // Discover all enrichment-compatible columns keyed by clonotypeKey.
-  // The 'enrichment' mode ensures only columns whose axes are satisfiable
-  // by the trunk (clonotypeKey) — directly or via linker traversal — are returned.
+  // Use the full 2-axis input anchor as the discovery anchor. The anchored ID
+  // deriver keys idx:0=sampleId, idx:1=clonotypeKey — matching the workflow's
+  // `addAnchor("main", inputAnchor)` reference frame — so discovered column ids
+  // resolve correctly in bundleBuilder. sampleId-axis columns are dropped in the
+  // `isSelectableMatch` post-filter to avoid ambiguous literal AxisIds downstream.
   const sampleAxisName = anchorSpec.axesSpec[0].name;
   const allMatches = collection
-    .findColumns({
+    .discover({
+      anchors: { main: anchorSpec },
       mode: "related",
-      exclude: commonExcludeSelectors,
       maxHops: 2,
+      exclude: commonExcludeSelectors,
     })
-    .filter((m) => isSelectableMatch(m, sampleAxisName));
+    .getColumns()
+    .filter((c) => isSelectableMatch(c, sampleAxisName));
 
   // Extract scores
-  const scores = allMatches.filter(
-    (m) => m.column.spec.annotations?.["pl7.app/isScore"] === "true",
-  );
+  const scores = allMatches.filter((c) => c.getSpec().annotations?.["pl7.app/isScore"] === "true");
 
   // Compute defaults and presets
   const defaultFilters = computeDefaultFilters(scores, inputAnchor);
@@ -248,6 +255,7 @@ export function buildCollection(
 
   return {
     collection,
+    anchorSpec,
     sampleAxisName,
     meta: {
       allMatches,
@@ -258,14 +266,14 @@ export function buildCollection(
   };
 }
 
-function computeDefaultFilters(scores: ColumnMatch[], anchorRef: PlRef): PlTableFiltersDefault[] {
+function computeDefaultFilters(scores: ColumnRecipe[], anchorRef: PlRef): PlTableFiltersDefault[] {
   const defaultFilters: PlTableFiltersDefault[] = [];
 
   for (const score of scores) {
-    const valueString = score.column.spec.annotations?.["pl7.app/score/defaultCutoff"];
+    const spec = score.getSpec();
+    const valueString = spec.annotations?.["pl7.app/score/defaultCutoff"];
     if (valueString === undefined) continue;
 
-    const spec = score.column.spec;
     if (spec.valueType === "String") {
       try {
         const value = JSON.parse(valueString) as string[];
@@ -326,7 +334,7 @@ function computeDefaultFilters(scores: ColumnMatch[], anchorRef: PlRef): PlTable
 }
 
 function computePresets(
-  scores: ColumnMatch[],
+  scores: ColumnRecipe[],
   defaultFilters: PlTableFiltersDefault[],
   anchorRef: PlRef,
   anchorSpec: PColumnSpec,
@@ -335,12 +343,12 @@ function computePresets(
 
   // The Repertoire Score (repertoire-score block), when present upstream, is the
   // In Vivo preset's primary ranking.
-  const repertoireScore = scores.find((s) => s.column.spec.name === REPERTOIRE_SCORE_COLUMN_NAME);
+  const repertoireScore = scores.find((s) => s.getSpec().name === REPERTOIRE_SCORE_COLUMN_NAME);
   const hasRepertoireScore = repertoireScore !== undefined;
 
   const isEnrichmentColumn = (name: string) =>
     name.startsWith("pl7.app/enrichment") || name.startsWith("pl7.app/vdj/enrichment");
-  const hasEnrichmentScores = scores.some((s) => isEnrichmentColumn(s.column.spec.name));
+  const hasEnrichmentScores = scores.some((s) => isEnrichmentColumn(s.getSpec().name));
 
   // Peptide anchors always auto-select the peptide preset, regardless of which
   // score columns are upstream.
@@ -356,16 +364,15 @@ function computePresets(
   // it is pulled to the front (below) as the primary ranking, and the raw SHM
   // mutation columns it subsumes are dropped.
   const defaultRankingOrder: RankingOrder[] = scores
-    .filter((s) => s.column.spec.valueType !== "String")
-    .filter((s) => !hasRepertoireScore || s.column.spec.name !== REPERTOIRE_SCORE_COLUMN_NAME)
-    .filter((s) => !hasRepertoireScore || !IN_VIVO_MUTATION_COLUMNS.has(s.column.spec.name))
+    .filter((s) => s.getSpec().valueType !== "String")
+    .filter((s) => !hasRepertoireScore || s.getSpec().name !== REPERTOIRE_SCORE_COLUMN_NAME)
+    .filter((s) => !hasRepertoireScore || !IN_VIVO_MUTATION_COLUMNS.has(s.getSpec().name))
     .map((s) => ({
-      id: `default-rank-${s.column.id}`,
+      id: `default-rank-${s.id}`,
       value: matchToColumnId(s, anchorRef),
       rankingOrder:
-        (s.column.spec.annotations?.["pl7.app/score/rankingOrder"] as
-          | "increasing"
-          | "decreasing") ?? "decreasing",
+        (s.getSpec().annotations?.["pl7.app/score/rankingOrder"] as "increasing" | "decreasing") ??
+        "decreasing",
       isExpanded: false,
     }));
 
@@ -373,7 +380,7 @@ function computePresets(
     defaultRankingOrder.unshift({
       value: matchToColumnId(repertoireScore, anchorRef),
       rankingOrder:
-        (repertoireScore.column.spec.annotations?.["pl7.app/score/rankingOrder"] as
+        (repertoireScore.getSpec().annotations?.["pl7.app/score/rankingOrder"] as
           | "increasing"
           | "decreasing") ?? "decreasing",
     });
@@ -382,7 +389,7 @@ function computePresets(
   // Both presets intersect discovery-driven defaults with a per-preset
   // allowlist of spec names, so new upstream score columns can't bloat them.
   const specNameByColumnId = new Map(
-    scores.map((s) => [matchToColumnId(s, anchorRef).column, s.column.spec.name]),
+    scores.map((s) => [matchToColumnId(s, anchorRef).column, s.getSpec().name]),
   );
 
   // In Vitro defaults
@@ -411,7 +418,7 @@ function computePresets(
   });
 
   const fractionCDRMutationsCol = scores.find(
-    (s) => s.column.spec.name === "pl7.app/vdj/sequence/fractionCDRMutations",
+    (s) => s.getSpec().name === "pl7.app/vdj/sequence/fractionCDRMutations",
   );
   if (fractionCDRMutationsCol) {
     inVivoFilters.push({
@@ -420,9 +427,7 @@ function computePresets(
     });
   }
 
-  const nMutationsCol = scores.find(
-    (s) => s.column.spec.name === "pl7.app/vdj/sequence/nMutations",
-  );
+  const nMutationsCol = scores.find((s) => s.getSpec().name === "pl7.app/vdj/sequence/nMutations");
   if (nMutationsCol) {
     inVivoFilters.push({
       column: matchToColumnId(nMutationsCol, anchorRef),
@@ -445,11 +450,11 @@ function computePresets(
   // Peptide defaults: all numeric score columns; no SHM exclusions.
   const inPeptideDefaults = {
     rankingOrder: scores
-      .filter((s) => s.column.spec.valueType !== "String")
+      .filter((s) => s.getSpec().valueType !== "String")
       .map((s) => ({
         value: matchToColumnId(s, anchorRef),
         rankingOrder:
-          (s.column.spec.annotations?.["pl7.app/score/rankingOrder"] as
+          (s.getSpec().annotations?.["pl7.app/score/rankingOrder"] as
             | "increasing"
             | "decreasing") ?? "decreasing",
       })),
