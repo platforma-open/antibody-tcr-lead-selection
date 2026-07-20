@@ -28,13 +28,16 @@ export function getInputFilterRef(data: Pick<BlockData, "input">): PlRef | undef
   return data.input?.primary.filter;
 }
 
+/** Exact-match string matcher for a column/axis selector value. */
+export const exactMatch = (value: string) => [{ type: "exact" as const, value }];
+
 /** Common host-side exclude selectors shared across filter/rank/table discovery.
  *  Linker columns and per-sequence annotations are dropped from discovery
  *  *results* — linkers still stay in the source collection so anchored
  *  discovery can traverse them. */
 export const commonExcludeSelectors: RelaxedColumnSelector[] = [
-  { annotations: { "pl7.app/isLinkerColumn": "true" } },
-  { annotations: { "pl7.app/sequence/isAnnotation": "true" } },
+  { annotations: { [Annotation.IsLinkerColumn]: "true" } },
+  { annotations: { [Annotation.Sequence.IsAnnotation]: "true" } },
 ];
 
 /** Cluster-id axis / column names. Both unprefixed (post-peptide-adaptation)
@@ -45,6 +48,23 @@ export const CLUSTER_ID_AXIS_NAMES: ReadonlySet<string> = new Set([
   "pl7.app/vdj/clusterId",
 ]);
 export const isClusterIdAxisName = (name: string): boolean => CLUSTER_ID_AXIS_NAMES.has(name);
+
+/**
+ * Host-side excludes for the "selectable for filter/rank" discovery: linkers,
+ * per-sequence annotations, the label column, clonotype-mapping (clusterId-named)
+ * columns, and per-sample (sampleId-axis) columns. Pushed into `discover`/`filter`
+ * so non-matching columns never have their spec fetched into the sandbox. The two
+ * predicates that CAN'T be selectors — File value type and lead-selection-produced
+ * columns — remain in {@link isSelectableMatch}, paid only for the survivors.
+ */
+export function discoveryExcludeSelectors(sampleAxisName: string): RelaxedColumnSelector[] {
+  return [
+    ...commonExcludeSelectors,
+    { name: exactMatch(Annotation.Label) },
+    ...[...CLUSTER_ID_AXIS_NAMES].map((name) => ({ name: exactMatch(name) })),
+    { axes: [{ name: exactMatch(sampleAxisName) }], partialAxesMatch: true },
+  ];
+}
 
 /** Trace-step `type` stamped by a lead-selection block onto the columns it produces. */
 const LEAD_SELECTION_TRACE_TYPE = "milaboratories.antibody-tcr-lead-selection";
@@ -63,20 +83,13 @@ export function isProducedByLeadSelection(spec: PColumnSpec): boolean {
   );
 }
 
-/** JS post-filter for discovered columns — excludes sampleId-axis, cluster mapping, label,
- *  and the selection-marker columns this (or another) lead-selection block produces.
- *  `getSpec()` is a host round-trip (memoised per recipe); every survivor pays it. */
-export function isSelectableMatch(c: ColumnRecipe, sampleAxisName: string): boolean {
+/** JS post-filter for the residual predicates that {@link discoveryExcludeSelectors}
+ *  can't express host-side: File value type (`File` is not a matchable `ValueType`)
+ *  and columns produced by a lead-selection block (last-trace-step check on parsed
+ *  JSON). Paid only for the survivors of the host-side exclude. */
+export function isSelectableMatch(c: ColumnRecipe): boolean {
   const spec = c.getSpec();
-  return (
-    // File value type is not recognized by the spec frame — dropped here rather
-    // than via a selector, since `File` is not a matchable `ValueType`.
-    (spec.valueType as string) !== "File" &&
-    !spec.axesSpec.some((a) => a.name === sampleAxisName) &&
-    !isClusterIdAxisName(spec.name) &&
-    spec.name !== "pl7.app/label" &&
-    !isProducedByLeadSelection(spec)
-  );
+  return !isProducedByLeadSelection(spec);
 }
 
 /** Converts a discovered column recipe to a ScopedColumnId for the workflow wire format. */
@@ -226,28 +239,28 @@ export function buildCollection(inputAnchor: PlRef | undefined):
 
   // Host-driven base: the whole upstream result pool. Linker columns are kept in
   // the source so anchored discovery can traverse them; they're dropped from
-  // results via `commonExcludeSelectors`, and File-typed columns via
-  // `isSelectableMatch` (both applied by callers on the discovered set).
+  // results (along with label/cluster-mapping/per-sample columns) host-side via
+  // `discoveryExcludeSelectors`. Only File / lead-selection-produced survive to
+  // the `isSelectableMatch` post-filter.
   const collection = ColumnsCollection(["result_pool"]);
 
   // Use the full 2-axis input anchor as the discovery anchor. The anchored ID
   // deriver keys idx:0=sampleId, idx:1=clonotypeKey — matching the workflow's
   // `addAnchor("main", inputAnchor)` reference frame — so discovered column ids
-  // resolve correctly in bundleBuilder. sampleId-axis columns are dropped in the
-  // `isSelectableMatch` post-filter to avoid ambiguous literal AxisIds downstream.
+  // resolve correctly in bundleBuilder.
   const sampleAxisName = anchorSpec.axesSpec[0].name;
   const allMatches = collection
     .discover({
       anchors: { main: anchorSpec },
       mode: "related",
       maxHops: 2,
-      exclude: commonExcludeSelectors,
+      exclude: discoveryExcludeSelectors(sampleAxisName),
     })
     .getColumns()
-    .filter((c) => isSelectableMatch(c, sampleAxisName));
+    .filter(isSelectableMatch);
 
   // Extract scores
-  const scores = allMatches.filter((c) => c.getSpec().annotations?.["pl7.app/isScore"] === "true");
+  const scores = allMatches.filter((c) => c.getSpec().annotations?.[Annotation.IsScore] === "true");
 
   // Compute defaults and presets
   const defaultFilters = computeDefaultFilters(scores, inputAnchor);
@@ -271,7 +284,7 @@ function computeDefaultFilters(scores: ColumnRecipe[], anchorRef: PlRef): PlTabl
 
   for (const score of scores) {
     const spec = score.getSpec();
-    const valueString = spec.annotations?.["pl7.app/score/defaultCutoff"];
+    const valueString = spec.annotations?.[Annotation.Score.DefaultCutoff];
     if (valueString === undefined) continue;
 
     if (spec.valueType === "String") {
@@ -281,8 +294,8 @@ function computeDefaultFilters(scores: ColumnRecipe[], anchorRef: PlRef): PlTabl
           // invalid string filter — skip silently (console unavailable in model sandbox)
           continue;
         }
-        const isDiscreteFilter = spec.annotations?.["pl7.app/isDiscreteFilter"] === "true";
-        const hasDiscreteValues = !!spec.annotations?.["pl7.app/discreteValues"];
+        const isDiscreteFilter = spec.annotations?.[Annotation.IsDiscreteFilter] === "true";
+        const hasDiscreteValues = !!spec.annotations?.[Annotation.DiscreteValues];
         if (isDiscreteFilter && hasDiscreteValues && value.length > 0) {
           defaultFilters.push({
             column: matchToColumnId(score, anchorRef),
@@ -307,7 +320,7 @@ function computeDefaultFilters(scores: ColumnRecipe[], anchorRef: PlRef): PlTabl
           continue;
         }
 
-        const direction = spec.annotations?.["pl7.app/score/rankingOrder"] ?? "increasing";
+        const direction = spec.annotations?.[Annotation.Score.RankingOrder] ?? "increasing";
         if (direction !== "increasing" && direction !== "decreasing") {
           // invalid ranking order — skip silently (console unavailable in model sandbox)
           continue;
@@ -371,7 +384,7 @@ function computePresets(
       id: `default-rank-${s.id}`,
       value: matchToColumnId(s, anchorRef),
       rankingOrder:
-        (s.getSpec().annotations?.["pl7.app/score/rankingOrder"] as "increasing" | "decreasing") ??
+        (s.getSpec().annotations?.[Annotation.Score.RankingOrder] as "increasing" | "decreasing") ??
         "decreasing",
       isExpanded: false,
     }));
@@ -454,7 +467,7 @@ function computePresets(
       .map((s) => ({
         value: matchToColumnId(s, anchorRef),
         rankingOrder:
-          (s.getSpec().annotations?.["pl7.app/score/rankingOrder"] as
+          (s.getSpec().annotations?.[Annotation.Score.RankingOrder] as
             | "increasing"
             | "decreasing") ?? "decreasing",
       })),

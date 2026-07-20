@@ -24,15 +24,13 @@ import {
   dedupColumns,
   deriveDistinctLabels,
   isColumnLazy,
-  isHiddenFromGraphColumn,
-  isHiddenFromUIColumn,
-  isLeafColumn,
   isPColumnSpec,
 } from "@platforma-sdk/model";
 import {
   buildCollection,
   CLUSTER_ID_AXIS_NAMES,
-  commonExcludeSelectors,
+  discoveryExcludeSelectors,
+  exactMatch,
   getInputAnchorRef,
   getInputFilterRef,
   isClusterIdAxisName,
@@ -60,9 +58,6 @@ const CLUSTERING_TRACE_TYPES = [
   "milaboratories.embedding-clustering.clustering",
 ];
 
-/** Exact-match string matcher for a column/axis selector value. */
-const exactMatch = (value: string) => [{ type: "exact" as const, value }];
-
 // Display selectors for the main table (host-side `ColumnSelector`s — the V3
 // replacement for the old `(spec) => boolean` display lambdas).
 
@@ -80,14 +75,15 @@ const LABEL_KEY_AXIS_SELECTORS: RelaxedColumnSelector[] = [
 /** Amino-acid main-sequence columns (VDJ assembling feature or peptide assembling feature). */
 const AA_MAIN_SEQUENCE_SELECTORS: RelaxedColumnSelector[] = [
   {
-    domain: { "pl7.app/alphabet": "aminoacid" },
+    domain: { [Annotation.Alphabet]: "aminoacid" },
     annotations: {
-      "pl7.app/vdj/isAssemblingFeature": "true",
-      "pl7.app/vdj/isMainSequence": "true",
+      [Annotation.VDJ.IsAssemblingFeature]: "true",
+      [Annotation.VDJ.IsMainSequence]: "true",
     },
   },
   {
-    domain: { "pl7.app/alphabet": "aminoacid" },
+    domain: { [Annotation.Alphabet]: "aminoacid" },
+    // Peptide assembling-feature keys have no `Annotation.*` constant yet.
     annotations: {
       "pl7.app/isAssemblingFeature": "true",
       "pl7.app/isMainSequence": "true",
@@ -159,7 +155,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     const opts = buildDatasetOptions(ctx, {
       primary: (spec: PObjectSpec): boolean => {
         if (!isPColumnSpec(spec)) return false;
-        if (spec.annotations?.["pl7.app/isAnchor"] !== "true") return false;
+        if (spec.annotations?.[Annotation.IsAnchor] !== "true") return false;
         if (spec.axesSpec.length < 2) return false;
         if (spec.axesSpec[0]?.name !== "pl7.app/sampleId") return false;
         const rowAxis = spec.axesSpec[1]?.name;
@@ -224,11 +220,10 @@ export const platforma = BlockModelV3.create(blockDataModel)
     const filterableMatches = result.collection
       .discover({
         anchors: { main: result.anchorSpec },
-        mode: "enrichment",
-        exclude: commonExcludeSelectors,
+        exclude: discoveryExcludeSelectors(result.sampleAxisName),
       })
       .getColumns()
-      .filter((c) => isSelectableMatch(c, result.sampleAxisName));
+      .filter(isSelectableMatch);
 
     const labels = deriveDistinctLabels(
       filterableMatches.map((c) => c.getSpec()),
@@ -256,16 +251,15 @@ export const platforma = BlockModelV3.create(blockDataModel)
     const result = buildCollection(inputAnchor);
     if (!result) return undefined;
 
+    // `type: "String"` is a valid ValueType, so the non-string filter goes
+    // host-side too — only File / lead-selection-produced survive to isSelectableMatch.
     const rankableMatches = result.collection
       .discover({
         anchors: { main: result.anchorSpec },
-        mode: "enrichment",
-        exclude: commonExcludeSelectors,
+        exclude: [...discoveryExcludeSelectors(result.sampleAxisName), { type: "String" }],
       })
       .getColumns()
-      .filter(
-        (c) => isSelectableMatch(c, result.sampleAxisName) && c.getSpec().valueType !== "String",
-      );
+      .filter(isSelectableMatch);
 
     const labels = deriveDistinctLabels(
       rankableMatches.map((c) => c.getSpec()),
@@ -314,36 +308,27 @@ export const platforma = BlockModelV3.create(blockDataModel)
     const anchorClonotypeAxisName = result.anchorSpec.axesSpec[1]?.name;
     if (!anchorClonotypeAxisName) return undefined;
 
-    const msaMatches = result.collection
+    // Every constraint is host-side: must carry the anchor clonotype axis, must
+    // NOT carry the per-sample axis, and linker / hide-from-ui / hide-from-graph
+    // columns are excluded (the hide-* annotations are StringifiedJson<boolean>,
+    // so an exact "true" match is faithful). With no JS predicate left we take
+    // ids straight from the host — zero spec round-trips. Set-dedup the ids since
+    // the same leaf can surface via multiple paths and createPFrame rejects dupes.
+    const msaIds = result.collection
       .discover({
-        mode: "enrichment",
         anchors: { main: result.anchorSpec },
-        exclude: [{ annotations: { "pl7.app/isLinkerColumn": "true" } }],
+        include: { axes: [{ name: exactMatch(anchorClonotypeAxisName) }], partialAxesMatch: true },
+        exclude: [
+          { annotations: { [Annotation.IsLinkerColumn]: "true" } },
+          { axes: [{ name: exactMatch(result.sampleAxisName) }], partialAxesMatch: true },
+          { annotations: { [Annotation.HideDataFromUi]: exactMatch("true") } },
+          { annotations: { [Annotation.HideDataFromGraphs]: exactMatch("true") } },
+        ],
       })
-      .getColumns()
-      .filter((c) => {
-        const spec = c.getSpec();
-        return (
-          (spec.valueType as string) !== "File" &&
-          !isHiddenFromUIColumn(spec) &&
-          !isHiddenFromGraphColumn(spec) &&
-          spec.axesSpec.some((a) => a.name === anchorClonotypeAxisName) &&
-          !spec.axesSpec.some((a) => a.name === result.sampleAxisName)
-        );
-      });
+      .getColumnIds();
 
-    // Pass ids — the host resolves spec+data server-side, so no per-column
-    // materialisation in the sandbox. Dedup: the same leaf can be discovered via
-    // multiple paths, and createPFrame rejects duplicate ids.
-    return ctx.createPFrame(
-      dedupColumns(
-        msaMatches,
-        (c) => c.id,
-        (c) => c.getSpec(),
-      ).map((c) => c.id),
-    );
+    return ctx.createPFrame([...new Set(msaIds)]);
   })
-
   // Use the cdr3LengthsCalculated cols
   .outputWithStatus("spectratypePf", (ctx) => {
     const pCols = accessorGraphColumns(
@@ -422,39 +407,16 @@ export const platforma = BlockModelV3.create(blockDataModel)
     );
     if (!clonotypeAxisMatches) return undefined;
 
-    const assemblingKabatAccessor = ctx.outputs.resolve({
-      field: "assemblingKabatPf",
-      assertFieldType: "Input",
-      allowPermanentAbsence: true,
-    });
-
     const poolDiscovered = ColumnsCollection()
-      .discover({ anchors: { main: leadSelectionSpec }, mode: "enrichment" })
+      .discover({ anchors: { main: leadSelectionSpec } })
       .getColumns()
       .filter((c) => {
         const spec = c.getSpec();
         return !isProducedByLeadSelection(spec);
       });
 
-    // The block's own sampled/kabat outputs are clonotype-keyed leaves — include
-    // them directly. The lead-selection exclusion above applies only to the
-    // result pool (upstream), never to the block's own current output.
-    const ownColumns = ColumnsCollection([
-      sampledRowsAccessor,
-      ...(assemblingKabatAccessor ? [assemblingKabatAccessor] : []),
-    ]).getColumns();
-
-    // Split into primary (leaf-form → full-join core) and secondary
-    // (linker-reached). Mirrors what Form A's `discoverTableColumns` does. Dedup
-    // by id first: the pool and the block's own outputs can surface the same leaf
-    // (V3 dedups secondary internally, but trusts primary to be unique).
-    const allTableCols = dedupColumns(
-      [...poolDiscovered, ...ownColumns],
-      (c) => c.id,
-      (c) => c.getSpec(),
-    );
-    const primaryColumns = allTableCols.filter(isLeafColumn);
-    const secondaryColumns = allTableCols.filter((c) => !isLeafColumn(c));
+    const primaryColumns = poolDiscovered.filter((c) => c.id === leadSelectionCol.id);
+    const secondaryColumns = poolDiscovered.filter((c) => c.id !== leadSelectionCol.id);
 
     // Build filter/ranking display signatures. The selected filter/ranking
     // columns are given ordering priority and forced visible. Matched by
@@ -519,8 +481,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     ];
 
     return createPlDataTableV3(ctx, {
-      primaryJoinType: "full",
-      primaryColumns,
+      primaryColumns: primaryColumns,
       columns: secondaryColumns,
       tableState: ctx.data.tableState,
       sorting,
@@ -654,7 +615,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
         [
           {
             axes: axesToMatch,
-            annotations: { "pl7.app/isLinkerColumn": "true" },
+            annotations: { [Annotation.IsLinkerColumn]: "true" },
           },
         ],
         {
@@ -684,7 +645,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
         // disambiguation when vdj-integration linkers are present in the pool.
         let label = "Cluster";
         try {
-          const trace = JSON.parse(linkerSpec.annotations?.["pl7.app/trace"] ?? "[]") as {
+          const trace = JSON.parse(linkerSpec.annotations?.[Annotation.Trace] ?? "[]") as {
             type?: string;
             label?: string;
           }[];
