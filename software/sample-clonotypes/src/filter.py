@@ -73,6 +73,28 @@ def apply_filter(df, column_name, filter_type, reference_value):
                             string_in, string_notIn, isNA, isNotNA")
 
 
+def drop_empty_keys(df):
+    """Remove rows with null or empty clonotypeKey.
+
+    The clone table is built with a Full join upstream, which can introduce rows
+    from secondary-axis columns (cluster/linker) that are not tied to any
+    clonotype. Their clonotypeKey is null (empty string after the parquet
+    round-trip). Such rows are not real clonotypes; if kept they collide on any
+    PColumn built with clonotypeKey as a unique axis (e.g. selectionStage).
+    Dropping them at load keeps both the filtered output and the selection-stage
+    output clean.
+    """
+    before = df.height
+    df = df.filter(
+        pl.col("clonotypeKey").is_not_null()
+        & (pl.col("clonotypeKey").cast(pl.Utf8) != "")
+    )
+    dropped = before - df.height
+    if dropped > 0:
+        print(f"drop_empty_keys: removed {dropped} rows with empty/null clonotypeKey")
+    return df
+
+
 def apply_filters(df, filter_map):
     """
     Apply all filters specified in the filter_map to the DataFrame.
@@ -214,6 +236,11 @@ def main():
         print(f"Empty output file created: {args.out}")
         print(f"Total time: {total_time:.3f}s")
         return
+
+    # Drop empty/null clonotypeKey rows once, at the source, so both the filtered
+    # output (args.out) and the selection-stage output are free of Full-join
+    # secondary-axis rows that would collide on a unique clonotypeKey axis.
+    df = drop_empty_keys(df)
 
     # Parse filter map from JSON string
     try:
