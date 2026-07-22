@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 3.2.7
+
+### Patch Changes
+
+- 7af3f2d: Fix selectionStage PColumn build failure caused by empty clonotypeKey rows. The upstream Full join can emit secondary-axis (cluster/linker) rows not tied to any clonotype; their empty clonotypeKey collided on the single-axis selectionStage frame. filter.py now drops null/empty clonotypeKey rows from the selection-stage output.
+
 ## 3.2.6
 
 ### Patch Changes
