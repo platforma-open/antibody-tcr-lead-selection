@@ -73,6 +73,26 @@ def apply_filter(df, column_name, filter_type, reference_value):
                             string_in, string_notIn, isNA, isNotNA")
 
 
+def drop_empty_keys(selection_df):
+    """Remove rows with null or empty clonotypeKey from the selection-stage table.
+
+    The clone table is built with a Full join upstream, which can introduce rows
+    from secondary-axis columns (cluster/linker) that are not tied to any
+    clonotype. Their clonotypeKey is null (empty string after the parquet
+    round-trip), and multiple such rows collide on the selectionStage PColumn
+    axis, which requires unique keys.
+    """
+    before = selection_df.height
+    selection_df = selection_df.filter(
+        pl.col("clonotypeKey").is_not_null()
+        & (pl.col("clonotypeKey").cast(pl.Utf8) != "")
+    )
+    dropped = before - selection_df.height
+    if dropped > 0:
+        print(f"drop_empty_keys: removed {dropped} rows with empty/null clonotypeKey")
+    return selection_df
+
+
 def apply_filters(df, filter_map):
     """
     Apply all filters specified in the filter_map to the DataFrame.
@@ -94,6 +114,10 @@ def apply_filters(df, filter_map):
         selection_df = df.select("clonotypeKey").with_columns(
             pl.lit(1).cast(pl.Int64).alias("selectionStage")
         )
+        # Drop rows with empty/null clonotypeKey: the Full join upstream can emit
+        # secondary-axis (cluster/linker) rows not tied to any clonotype; these
+        # collide on the selectionStage PColumn axis (all key == "").
+        selection_df = drop_empty_keys(selection_df)
         return df.with_columns(pl.lit(1).alias("top")), selection_df
 
     filtered_df = df.clone()
@@ -149,6 +173,10 @@ def apply_filters(df, filter_map):
     selection_parts.append(survivors)
 
     selection_df = pl.concat(selection_parts)
+    # Drop rows with empty/null clonotypeKey: the Full join upstream can emit
+    # secondary-axis (cluster/linker) rows not tied to any clonotype; these
+    # collide on the selectionStage PColumn axis (all key == "").
+    selection_df = drop_empty_keys(selection_df)
     print(f"Selection stage tracking: {selection_df.height} total clones across {n_filters} filter stages")
 
     return filtered_df, selection_df
