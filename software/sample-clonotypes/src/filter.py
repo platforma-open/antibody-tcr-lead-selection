@@ -73,24 +73,26 @@ def apply_filter(df, column_name, filter_type, reference_value):
                             string_in, string_notIn, isNA, isNotNA")
 
 
-def drop_empty_keys(selection_df):
-    """Remove rows with null or empty clonotypeKey from the selection-stage table.
+def drop_empty_keys(df):
+    """Remove rows with null or empty clonotypeKey.
 
     The clone table is built with a Full join upstream, which can introduce rows
     from secondary-axis columns (cluster/linker) that are not tied to any
     clonotype. Their clonotypeKey is null (empty string after the parquet
-    round-trip), and multiple such rows collide on the selectionStage PColumn
-    axis, which requires unique keys.
+    round-trip). Such rows are not real clonotypes; if kept they collide on any
+    PColumn built with clonotypeKey as a unique axis (e.g. selectionStage).
+    Dropping them at load keeps both the filtered output and the selection-stage
+    output clean.
     """
-    before = selection_df.height
-    selection_df = selection_df.filter(
+    before = df.height
+    df = df.filter(
         pl.col("clonotypeKey").is_not_null()
         & (pl.col("clonotypeKey").cast(pl.Utf8) != "")
     )
-    dropped = before - selection_df.height
+    dropped = before - df.height
     if dropped > 0:
         print(f"drop_empty_keys: removed {dropped} rows with empty/null clonotypeKey")
-    return selection_df
+    return df
 
 
 def apply_filters(df, filter_map):
@@ -114,10 +116,6 @@ def apply_filters(df, filter_map):
         selection_df = df.select("clonotypeKey").with_columns(
             pl.lit(1).cast(pl.Int64).alias("selectionStage")
         )
-        # Drop rows with empty/null clonotypeKey: the Full join upstream can emit
-        # secondary-axis (cluster/linker) rows not tied to any clonotype; these
-        # collide on the selectionStage PColumn axis (all key == "").
-        selection_df = drop_empty_keys(selection_df)
         return df.with_columns(pl.lit(1).alias("top")), selection_df
 
     filtered_df = df.clone()
@@ -173,10 +171,6 @@ def apply_filters(df, filter_map):
     selection_parts.append(survivors)
 
     selection_df = pl.concat(selection_parts)
-    # Drop rows with empty/null clonotypeKey: the Full join upstream can emit
-    # secondary-axis (cluster/linker) rows not tied to any clonotype; these
-    # collide on the selectionStage PColumn axis (all key == "").
-    selection_df = drop_empty_keys(selection_df)
     print(f"Selection stage tracking: {selection_df.height} total clones across {n_filters} filter stages")
 
     return filtered_df, selection_df
@@ -242,6 +236,11 @@ def main():
         print(f"Empty output file created: {args.out}")
         print(f"Total time: {total_time:.3f}s")
         return
+
+    # Drop empty/null clonotypeKey rows once, at the source, so both the filtered
+    # output (args.out) and the selection-stage output are free of Full-join
+    # secondary-axis rows that would collide on a unique clonotypeKey axis.
+    df = drop_empty_keys(df)
 
     # Parse filter map from JSON string
     try:
