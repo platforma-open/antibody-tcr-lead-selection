@@ -9,7 +9,6 @@ import {
   type PColumnSpec,
   type PlRef,
   type RenderCtx,
-  type SUniversalPColumnId,
 } from "@platforma-sdk/model";
 import type {
   BlockArgs,
@@ -79,10 +78,11 @@ export function matchToColumnId(match: ColumnMatch, anchorRef: PlRef): ScopedCol
   return { anchorRef, anchorName: "main", column: match.column.id };
 }
 
-// Sentinel column ID for the computed In Vivo Score ranking
-export const IN_VIVO_SCORE_COLUMN_ID = "pl7.app/vdj/inVivoScore" as SUniversalPColumnId;
+// The Repertoire Score exported by the repertoire-score block. When present
+// upstream it is used as the primary In Vivo ranking.
+export const REPERTOIRE_SCORE_COLUMN_NAME = "pl7.app/vdj/repertoireScore";
 
-// SHM mutation columns that are replaced by In Vivo Score in ranking.
+// SHM mutation columns that are replaced by the Repertoire Score in ranking.
 export const IN_VIVO_MUTATION_COLUMNS = new Set([
   "pl7.app/vdj/sequence/fractionCDRMutations",
   "pl7.app/vdj/sequence/nMutations",
@@ -105,9 +105,11 @@ export const IN_VIVO_FILTER_SPEC_NAMES = new Set([
   "pl7.app/vdj/convergence/fastStar",
 ]);
 
-// In Vivo preset allowlist for ranking. The In Vivo Score sentinel is added
-// separately when mutation columns are present.
+// In Vivo preset allowlist for ranking. The Repertoire Score (pulled to the front
+// in computePresets when present) is the primary ranking; the entries below are
+// kept as secondary rankings when their columns are present upstream.
 export const IN_VIVO_RANKING_SPEC_NAMES = new Set([
+  "pl7.app/vdj/repertoireScore",
   "pl7.app/developabilityScore",
   "pl7.app/vdj/developabilityScore",
   // Convergent neighbour frequency (clonotype-convergence) — ranked descending.
@@ -335,9 +337,10 @@ function computePresets(
 ): Omit<ColumnsMeta, "allMatches" | "scores" | "defaultFilters"> {
   const isPeptide = anchorSpec.axesSpec[1]?.name === "pl7.app/variantKey";
 
-  const hasInVivoScore = [...IN_VIVO_MUTATION_COLUMNS].every((name) =>
-    scores.some((s) => s.column.spec.name === name),
-  );
+  // The Repertoire Score (repertoire-score block), when present upstream, is the
+  // In Vivo preset's primary ranking.
+  const repertoireScore = scores.find((s) => s.column.spec.name === REPERTOIRE_SCORE_COLUMN_NAME);
+  const hasRepertoireScore = repertoireScore !== undefined;
 
   const isEnrichmentColumn = (name: string) =>
     name.startsWith("pl7.app/enrichment") || name.startsWith("pl7.app/vdj/enrichment");
@@ -347,16 +350,19 @@ function computePresets(
   // score columns are upstream.
   const detectedPreset: WorkflowPreset | undefined = isPeptide
     ? "peptide"
-    : hasInVivoScore
+    : hasRepertoireScore
       ? "in-vivo"
       : hasEnrichmentScores
         ? "in-vitro"
         : undefined;
 
-  // Default ranking: all non-String scores, excluding mutation columns when In Vivo Score replaces them
+  // Default ranking: all non-String scores. When the Repertoire Score is present
+  // it is pulled to the front (below) as the primary ranking, and the raw SHM
+  // mutation columns it subsumes are dropped.
   const defaultRankingOrder: RankingOrder[] = scores
     .filter((s) => s.column.spec.valueType !== "String")
-    .filter((s) => !hasInVivoScore || !IN_VIVO_MUTATION_COLUMNS.has(s.column.spec.name))
+    .filter((s) => !hasRepertoireScore || s.column.spec.name !== REPERTOIRE_SCORE_COLUMN_NAME)
+    .filter((s) => !hasRepertoireScore || !IN_VIVO_MUTATION_COLUMNS.has(s.column.spec.name))
     .map((s) => ({
       id: `default-rank-${s.column.id}`,
       value: matchToColumnId(s, anchorRef),
@@ -367,10 +373,13 @@ function computePresets(
       isExpanded: false,
     }));
 
-  if (hasInVivoScore) {
+  if (repertoireScore) {
     defaultRankingOrder.unshift({
-      value: { anchorRef, anchorName: "main", column: IN_VIVO_SCORE_COLUMN_ID },
-      rankingOrder: "decreasing",
+      value: matchToColumnId(repertoireScore, anchorRef),
+      rankingOrder:
+        (repertoireScore.column.spec.annotations?.["pl7.app/score/rankingOrder"] as
+          | "increasing"
+          | "decreasing") ?? "decreasing",
     });
   }
 
@@ -427,7 +436,6 @@ function computePresets(
 
   const inVivoRankingOrder: RankingOrder[] = defaultRankingOrder.filter((r) => {
     const col = r.value?.column;
-    if (col === IN_VIVO_SCORE_COLUMN_ID) return true;
     if (col === undefined) return false;
     const specName = specNameByColumnId.get(col);
     return specName !== undefined && IN_VIVO_RANKING_SPEC_NAMES.has(specName);
@@ -454,7 +462,7 @@ function computePresets(
 
   return {
     defaultRankingOrder,
-    hasInVivoScore,
+    hasRepertoireScore,
     hasEnrichmentScores,
     detectedPreset,
     inVivoDefaults,

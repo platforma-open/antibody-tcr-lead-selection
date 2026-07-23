@@ -29,7 +29,6 @@ import {
   commonExcludeSelectors,
   getInputAnchorRef,
   getInputFilterRef,
-  IN_VIVO_SCORE_COLUMN_ID,
   isClusterIdAxisName,
   isProducedByLeadSelection,
   isSelectableMatch,
@@ -203,18 +202,6 @@ export const platforma = BlockModelV3.create(blockDataModel)
       value: matchToColumnId(value, inputAnchor!),
     }));
 
-    // Add synthetic In Vivo Score option when mutation columns are present
-    if (result.meta.hasInVivoScore) {
-      options.unshift({
-        label: "In Vivo Score",
-        value: {
-          anchorRef: inputAnchor!,
-          anchorName: "main",
-          column: IN_VIVO_SCORE_COLUMN_ID,
-        },
-      });
-    }
-
     return {
       options,
       defaults: result.meta.defaultRankingOrder,
@@ -232,7 +219,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
       return {
         detectedPreset: result.meta.detectedPreset,
-        hasInVivoScore: result.meta.hasInVivoScore,
+        hasRepertoireScore: result.meta.hasRepertoireScore,
         hasEnrichmentScores: result.meta.hasEnrichmentScores,
       };
     },
@@ -473,7 +460,6 @@ export const platforma = BlockModelV3.create(blockDataModel)
           {
             match: (spec) =>
               spec.name === "pl7.app/ranking-order" ||
-              spec.name === "pl7.app/vdj/inVivoScore" ||
               isFilterOrRank(spec) ||
               (spec.name === Annotation.Label &&
                 spec.axesSpec.length === 1 &&

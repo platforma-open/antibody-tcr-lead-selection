@@ -269,9 +269,9 @@ watch(
         <template #tooltip>
           Pre-configured ranking for common discovery workflows.
           <br /><br />
-          <b>In Vivo (immunization/infection):</b> Ranks by In Vivo Score, calculated from clonal
-          expansion, CDR mutations and germinal center selection metrics. Identifies immune-refined
-          candidates. <br /><br />
+          <b>In Vivo (immunization/infection):</b> Ranks by the Repertoire Score (from the
+          Repertoire Score block), a composite of clonal expansion, CDR mutations and germinal
+          center selection signals. Identifies immune-refined candidates. <br /><br />
           <b>In Vitro (display/panning):</b> — Ranks by enrichment across selection rounds.
           Identifies clones selected for target binding. <br /><br />
           <b>Peptide:</b> Ranks by all available numeric score columns (e.g., enrichment, sequence

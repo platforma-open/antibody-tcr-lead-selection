@@ -167,8 +167,8 @@ export type ColumnsMeta = {
   scores: ColumnMatch[];
   defaultFilters: PlTableFiltersDefault[];
   defaultRankingOrder: RankingOrder[];
-  /** True when SHM mutation columns are present and In Vivo Score should replace them in ranking */
-  hasInVivoScore: boolean;
+  /** True when the Repertoire Score column is present upstream; it becomes the primary In Vivo ranking */
+  hasRepertoireScore: boolean;
   /** True when enrichment score columns are present */
   hasEnrichmentScores: boolean;
   /** Auto-detected preset based on available columns */
