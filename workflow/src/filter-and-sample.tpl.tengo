@@ -44,16 +44,8 @@ self.body(func(inputs) {
     filteredClonotypes := filterResult.getFile("filteredClonotypes.parquet")
     selectionParquet := filterResult.getFile("selection.parquet")
 
-    // Check if In Vivo Score is in the ranking map
-    hasInVivoScore := false
-    for key, _ in rankingMap {
-        if key == "inVivoScore" {
-            hasInVivoScore = true
-        }
-    }
-
     // Store outputs
-    sampledColsParams := sampledColsConv.getColumns(datasetSpec, false, false) // No ranking column
+    sampledColsParams := sampledColsConv.getColumns(datasetSpec, false) // No ranking column
     filteredClonotypesPf := xsv.importFile(filteredClonotypes, "parquet", sampledColsParams,
                                         {cpu: 1, mem: "16GiB"})
 
@@ -96,7 +88,7 @@ self.body(func(inputs) {
 		selectionParquet = sampleClones.getFile("selection_out.parquet")
 
 		// Store outputs
-        sampledColsParams := sampledColsConv.getColumns(datasetSpec, true, hasInVivoScore) // Add ranking column
+        sampledColsParams := sampledColsConv.getColumns(datasetSpec, true) // Add ranking column
 		sampledColumnsPf := xsv.importFile(finalClonotypes, "parquet", sampledColsParams,
 											{cpu: 1, mem: "16GiB"})
 		outputs["sampledRows"] = pframes.exportFrame(sampledColumnsPf)

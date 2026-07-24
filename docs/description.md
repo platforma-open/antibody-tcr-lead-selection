@@ -6,7 +6,7 @@ Ranks and selects top lead candidates — antibodies, TCRs, or peptides — usin
 
 The block offers built-in presets for common discovery workflows:
 
-* **In Vivo (immunization/infection):** Ranks antibody/TCR candidates by In Vivo Score, a composite metric calculated from clonal expansion, CDR mutation frequency, and germinal center selection signals. Applies default filters on mutation-related metrics (e.g., fraction of CDR mutations, total number of mutations) to focus on immune-refined candidates.
+* **In Vivo (immunization/infection):** Ranks antibody/TCR candidates by the Repertoire Score exported by the upstream Repertoire Score block — a composite metric combining clonal expansion, CDR mutation frequency, and germinal center selection signals. Applies default filters on mutation-related metrics (e.g., fraction of CDR mutations, total number of mutations) to focus on immune-refined candidates.
 * **In Vitro (display/panning):** Ranks antibody/TCR candidates by enrichment scores across selection rounds to identify clones selected for target binding.
 * **Peptide:** Ranks peptide candidates by all available numeric score columns (typically enrichment, sequence properties, and liabilities). Suited for peptide selection campaigns where SHM-based metrics are not applicable.
 

@@ -8,49 +8,6 @@ import time
 import json
 
 
-
-# In Vivo Score: source column headers and composite weights
-IN_VIVO_SCORE_SOURCES = {
-    "inVivo_primaryAbundance": 0.40,
-    "inVivo_fractionCDR": 0.35,
-    "inVivo_nMutations": 0.25,
-}
-
-
-def compute_in_vivo_score(df):
-    """Compute In Vivo Score: weighted percentile combination of primary abundance,
-    CDR mutation fraction, and total nucleotide mutations.
-
-    score = 0.40 * percentile(primaryAbundance)
-          + 0.35 * percentile(fractionCDRMutations)
-          + 0.25 * percentile(nMutations)
-
-    percentile(x) = (average_rank(x) - 1) / (N - 1), where N = non-NA count.
-    NA -> 0.0. When N = 1, percentile = 0.5.
-    """
-    missing = [col for col in IN_VIVO_SCORE_SOURCES if col not in df.columns]
-    if missing:
-        print(f"Warning: Missing In Vivo Score source columns: {missing}. Cannot compute score.")
-        return df
-
-    score_expr = pl.lit(0.0)
-    for col_name, weight in IN_VIVO_SCORE_SOURCES.items():
-        n = df[col_name].drop_nulls().len()
-        if n == 0:
-            pct = pl.lit(0.0)
-        elif n == 1:
-            pct = pl.when(pl.col(col_name).is_not_null()).then(0.5).otherwise(0.0)
-        else:
-            pct = (
-                (pl.col(col_name).rank(method="average") - 1) / (n - 1)
-            ).fill_null(0.0)
-        score_expr = score_expr + pct * weight
-
-    df = df.with_columns(score_expr.alias("inVivoScore"))
-    print(f"Computed In Vivo Score for {df.height} rows")
-    return df
-
-
 def parse_arguments():
     parser = argparse.ArgumentParser(description="Rank rows based on Col* columns and output top N rows. Supports Col0, Col1 (clonotype properties), Col_cluster.0 (cluster properties), and Col_linker.0.0, Col_linker.0.1 (linker properties).")
     parser.add_argument("--parquet", required=True, help="Path to input Parquet file")
@@ -244,18 +201,6 @@ def main():
           f"({len(clonotype_col_columns)} clonotype, {len(cluster_col_columns)} cluster, " +
           f"{len(linker_col_columns)} linker)")
 
-    # Compute In Vivo Score if requested in ranking map
-    if args.ranking_map:
-        try:
-            raw_map = json.loads(args.ranking_map)
-            if "inVivoScore" in raw_map:
-                df = compute_in_vivo_score(df)
-                if "inVivoScore" in df.columns:
-                    all_ranking_cols = ["inVivoScore"] + all_ranking_cols
-                    print(f"  Added In Vivo Score computed from source columns: {list(IN_VIVO_SCORE_SOURCES.keys())}")
-        except json.JSONDecodeError:
-            pass  # Will be handled by parse_ranking_map
-
     # Parse ranking map
     ranking_map = parse_ranking_map(args.ranking_map, all_ranking_cols)
     if ranking_map is None:
@@ -279,8 +224,6 @@ def main():
     output_columns['clonotypeKey'] = result['clonotypeKey']
     output_columns['top'] = [1] * result.height
     output_columns['ranked_order'] = result['ranked_order']
-    if 'inVivoScore' in result.columns:
-        output_columns['inVivoScore'] = result['inVivoScore']
 
     simplified_df = pl.DataFrame(output_columns)
 
