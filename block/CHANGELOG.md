@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 4.0.0
+
+### Major Changes
+
+- 583b0ec: Remove old in vivo score and enable default ranking by repertoire score in "in Vivo" preset
+
 ## 3.2.7
 
 ### Patch Changes

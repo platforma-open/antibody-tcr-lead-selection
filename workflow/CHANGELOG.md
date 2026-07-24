@@ -1,5 +1,16 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 5.0.0
+
+### Major Changes
+
+- 583b0ec: Remove old in vivo score and enable default ranking by repertoire score in "in Vivo" preset
+
+### Patch Changes
+
+- Updated dependencies [583b0ec]
+  - @platforma-open/milaboratories.top-antibodies.sample-clonotypes@3.0.0
+
 ## 4.3.5
 
 ### Patch Changes

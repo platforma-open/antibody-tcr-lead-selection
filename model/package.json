@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies.model",
-  "version": "4.3.4",
+  "version": "5.0.0",
   "private": true,
   "description": "Block model",
   "type": "module",
