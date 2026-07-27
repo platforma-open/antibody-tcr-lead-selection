@@ -15,7 +15,7 @@ def parse_arguments():
     parser.add_argument("--out", required=True, help="Path to output Parquet file")
     parser.add_argument("--ranking-map", type=str, help='JSON string specifying ranking direction for each column, e.g., {"Col0":"decreasing","Col1":"increasing","Col_linker.0.0":"decreasing"}')
     parser.add_argument("--diversification-column", type=str,
-                        help="Column header name to use for diversified ranking (e.g., 'clusterAxis_0_0')")
+                        help="Column header name to use for diversified ranking (e.g., 'cluster_0')")
     parser.add_argument("--selection-in", type=str, required=False,
                         help="Path to selection stage parquet from filter.py (clonotypeKey + selectionStage)")
     parser.add_argument("--selection-out", type=str, required=False,
@@ -116,6 +116,19 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
         df = df.drop_nulls(subset=null_check_cols)
         print(f"Dropped null ranking/diversification rows: {before_null_drop} -> {df.height} "
               f"(checked: {null_check_cols})")
+
+    # A clonotype with no cluster assigned cannot be diversified against, so it is
+    # not eligible for selection. It arrives here as an EMPTY STRING, not a null:
+    # pframes.parquetFileBuilder defaults naStr/nullStr to "" when writing the
+    # clone table, so the Full join's unmatched keys become "" and drop_nulls above
+    # never sees them. Scoped to the diversification column only — ranking columns
+    # are cast to numeric above, where a missing value is already a real null.
+    if diversification_column and diversification_column in df.columns:
+        if df[diversification_column].dtype == pl.Utf8:
+            before_empty_drop = df.height
+            df = df.filter(pl.col(diversification_column) != "")
+            print(f"Dropped rows with unassigned '{diversification_column}': "
+                  f"{before_empty_drop} -> {df.height}")
 
     # Build sort criteria from ranking_map
     if all_ranking_cols:

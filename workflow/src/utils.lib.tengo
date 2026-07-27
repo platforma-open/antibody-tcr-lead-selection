@@ -179,7 +179,18 @@ buildSortedLinkers := func(columns, datasetSpec) {
 
 /**
  * Resolves cluster column reference to header name by matching against sortedLinkers.
- * 
+ *
+ * Returns the linker's own cluster axis header ("cluster_<linkerIdx>", set in
+ * initializeCloneTable's linker loop). Do NOT return the "clusterAxis_<idx>_<n>"
+ * form: that header is only created by the cluster-size loop, and only for
+ * linkers whose clustering block exports a clusterSize column matching the
+ * bundle's namePattern. For a clustering block outside that pattern (e.g.
+ * 3d-structure-clustering, which exports pl7.app/structure/clustering/clusterSize)
+ * the header never exists, the sampler logs "Diversification column ... not found"
+ * and silently skips diversification. "cluster_<linkerIdx>" always exists whenever
+ * the linker is in the table, and the diversification linker is always added
+ * (its axis is forced into usedNonMainAxes below).
+ *
  * @param args - Arguments containing diversificationColumn
  * @param columns - PBundle containing all columns
  * @param sortedLinkers - List of linker columns in proper order
@@ -216,7 +227,7 @@ resolveClusterColumnHeader := func(args, columns, sortedLinkers) {
             if isClusterIdAxis(axis.name) {
                 // Use clusterAxisDomainsMatch for proper domain comparison
                 if clusterAxisDomainsMatch(selectedClusterIdAxis, axis) {
-                    return "clusterAxis_" + string(linkerIdx) + "_0"
+                    return "cluster_" + string(linkerIdx)
                 }
             }
         }
@@ -431,6 +442,11 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec, inputFilterCol
 
     // Get linker columns — only add to clone table if their non-main axis is used
     linkerClusterIdAxesWithIdx := []
+    // Axes already headered "cluster_<linkerIdx>" by the linker loop. setAxisHeader
+    // is last-write-wins, so the cluster-size loop below must not rename these —
+    // "cluster_<linkerIdx>" is the name resolveClusterColumnHeader hands to the
+    // sampler as --diversification-column.
+    linkerHeaderedAxes := {}
 
     for linkerIdx, col in sortedLinkers {
         // Determine the linker's non-clonotypeKey axis
@@ -451,12 +467,14 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec, inputFilterCol
             // clonotypeKey is in second axis
             cloneTable.add(col, {header: "linker." + string(linkerIdx)})
             cloneTable.setAxisHeader(col.spec.axesSpec[0], "cluster_" + string(linkerIdx))
+            linkerHeaderedAxes[col.spec.axesSpec[0].name] = true
             clusterIdAxis = col.spec.axesSpec[0]
             addedCols = true
         } else if datasetSpec.axesSpec[1].name == col.spec.axesSpec[0].name {
             // clonotypeKey is in first axis
             cloneTable.add(col, {header: "linker." + string(linkerIdx)})
             cloneTable.setAxisHeader(col.spec.axesSpec[1], "cluster_" + string(linkerIdx))
+            linkerHeaderedAxes[col.spec.axesSpec[1].name] = true
             clusterIdAxis = col.spec.axesSpec[1]
             addedCols = true
         }
@@ -500,9 +518,12 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec, inputFilterCol
             if matchingLinkerIdx >= 0 {
                 cloneTable.add(col, {header: "clusterSize." + string(matchingLinkerIdx)})
                 addedCols = true
-                // Add the cluster axis header using matching linker index
+                // Add the cluster axis header using matching linker index, but never
+                // rename an axis the linker loop already headered "cluster_<linkerIdx>"
+                // — that name is what the sampler receives as --diversification-column.
                 for axisIdx, axis in col.spec.axesSpec {
-                    if axis.name != datasetSpec.axesSpec[1].name {
+                    if axis.name != datasetSpec.axesSpec[1].name &&
+                       is_undefined(linkerHeaderedAxes[axis.name]) {
                         cloneTable.setAxisHeader(axis, "clusterAxis_" + string(matchingLinkerIdx) + "_" + string(axisIdx))
                     }
                 }
