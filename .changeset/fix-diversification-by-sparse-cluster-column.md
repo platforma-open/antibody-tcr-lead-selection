@@ -1,4 +1,5 @@
 ---
+'@platforma-open/milaboratories.top-antibodies': patch
 '@platforma-open/milaboratories.top-antibodies.workflow': patch
 '@platforma-open/milaboratories.top-antibodies.sample-clonotypes': patch
 ---
