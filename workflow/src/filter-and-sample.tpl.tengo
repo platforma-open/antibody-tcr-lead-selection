@@ -118,7 +118,7 @@ self.body(func(inputs) {
     if hasPrecondition {
         preconditionStageName := inputs.preconditionStageName
         if is_undefined(preconditionStageName) || preconditionStageName == "" {
-            preconditionStageName = "Present in target(s)"
+            preconditionStageName = "Observed in rounds"
         }
         valueLabels[string(stageIdx)] = preconditionStageName
         stageIdx = stageIdx + 1

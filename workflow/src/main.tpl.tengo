@@ -218,7 +218,7 @@ wf.body(func(args) {
                 filterMap: filterMap,
                 rankingMap: rankingMap,
                 preconditionMap: preconditionMap,
-                preconditionStageName: "Present in target(s)",
+                preconditionStageName: "Observed in rounds",
                 datasetSpec: datasetSpec,
                 topClonotypes: args.topClonotypes,
                 diversificationColumn: clusterColumnHeader,
