@@ -3,11 +3,13 @@ import {
   createPlDataTableStateV2,
   createPrimaryRef,
   DataModelBuilder,
+  type PObjectId,
 } from "@platforma-sdk/model";
 import type {
   BlockData,
   BlockData_Ver_2026_02_25,
   BlockData_Ver_2026_05_08,
+  BlockData_Ver_2026_05_21,
   LegacyBlockArgs,
   LegacyUiState,
 } from "./types";
@@ -18,6 +20,12 @@ const defaultSelectionPlotState = (): BlockData["selectionPlotState"] => ({
   template: "selection",
   currentTab: null,
 });
+
+/**
+ * Sentinel column id of the block's former built-in "In Vivo Score" ranking
+ * option.
+ */
+const REMOVED_IN_VIVO_SCORE_COLUMN_ID = "pl7.app/vdj/inVivoScore" as PObjectId;
 
 export const blockDataModel = new DataModelBuilder()
   .from<BlockData_Ver_2026_02_25>("Ver_2026_02_25")
@@ -57,7 +65,7 @@ export const blockDataModel = new DataModelBuilder()
     ...prev,
     selectionPlotState: defaultSelectionPlotState(),
   }))
-  .migrate<BlockData>("Ver_2026_05_21", (prev) => {
+  .migrate<BlockData_Ver_2026_05_21>("Ver_2026_05_21", (prev) => {
     const { inputAnchor, ...rest } = prev;
     return {
       ...rest,
@@ -66,6 +74,18 @@ export const blockDataModel = new DataModelBuilder()
           ? createDatasetSelection(createPrimaryRef(inputAnchor))
           : undefined,
     };
+  })
+  // The built-in "In Vivo Score" is gone — the Repertoire Score block produces
+  // the score now. Stored ranking entries still hold its sentinel id, which no
+  // longer matches any ranking option (red "Rank by" dropdown) and resolves to
+  // nothing when the workflow builds its column bundle. Drop those entries and
+  // flag the one-time notice, but only for projects that actually used it.
+  .migrate<BlockData>("Ver_2026_07_28", (prev) => {
+    const rankingOrder = prev.rankingOrder.filter(
+      (rank) => rank.value?.column !== REMOVED_IN_VIVO_SCORE_COLUMN_ID,
+    );
+    if (rankingOrder.length === prev.rankingOrder.length) return { ...prev };
+    return { ...prev, rankingOrder, inVivoScoreRemovedNotice: true };
   })
   .init(() => ({
     defaultBlockLabel: getDefaultBlockLabel({}),
@@ -101,4 +121,5 @@ export const blockDataModel = new DataModelBuilder()
     filtersInitializedForAnchor: undefined,
     rankingsInitializedForAnchor: undefined,
     preset: undefined,
+    inVivoScoreRemovedNotice: undefined,
   }));

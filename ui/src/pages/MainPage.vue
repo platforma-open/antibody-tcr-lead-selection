@@ -76,6 +76,15 @@ const kabatNumbering = computed<boolean>({
   set: (v: boolean) => (app.model.data.kabatNumbering = v),
 });
 
+// One-time notice for projects whose stored ranking was cleaned up by the
+// Ver_2026_07_28 migration. Dismissing it clears the flag for good.
+const inVivoScoreNoticeVisible = computed<boolean>({
+  get: () => app.model.data.inVivoScoreRemovedNotice === true,
+  set: (v: boolean) => {
+    if (!v) app.model.data.inVivoScoreRemovedNotice = false;
+  },
+});
+
 // Special value for "No diversification" option
 const NO_DIVERSIFICATION_VALUE = "__no_diversification__";
 
@@ -223,6 +232,16 @@ watch(
       </PlBtnGhost>
       <PlBtnGhost icon="settings" @click.stop="() => (settingsOpen = true)"> Settings </PlBtnGhost>
     </template>
+    <PlAlert
+      v-model="inVivoScoreNoticeVisible"
+      type="warn"
+      label="In Vivo Score removed"
+      closeable
+    >
+      From this version on, Lead Selection no longer computes its own In Vivo Score, and the ranking
+      column using it has been removed from this project. The score is now produced by the
+      Repertoire Score block — add it upstream and rank by its Repertoire Score column instead.
+    </PlAlert>
     <PlAlert v-if="app.model.outputs.kabatWarning" type="warn">
       {{ app.model.outputs.kabatWarning }}
     </PlAlert>
