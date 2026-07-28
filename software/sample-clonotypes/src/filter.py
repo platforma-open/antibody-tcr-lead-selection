@@ -106,6 +106,10 @@ def coerce_numeric_columns(df, spec_map):
     to "", so a column with any missing value arrives as Utf8 with "" in the gaps.
     Numeric comparisons need a real numeric dtype, and "" must become NaN so the
     is_not_nan() guard in apply_filter() excludes those rows.
+
+    Float64 is the target for every numeric column, integer-valued ones included:
+    the "" gaps become NaN, which no integer dtype can hold, and the comparisons in
+    apply_filter() behave the same on either dtype.
     """
     for column in spec_map.keys():
         if column not in df.columns:
@@ -119,26 +123,18 @@ def coerce_numeric_columns(df, spec_map):
         if ((data_type != "String") and (filter_type.startswith("number_"))):
 
             if df.schema[column] == pl.String:
-                print(f"Data type inconsistency in column {column}. Trying to find out if it's an integer or a float...")
-                # Check if non-empty values ("") might be integers or floats
-                non_empty_values = df.filter(pl.col(column) != "").select(pl.col(column)).to_series().to_list()
-                consensus_type = {"interger": 0, "float": 0}
-                for value in non_empty_values[:50]:
-                    if isinstance(value, int):
-                        consensus_type["interger"] += 1
-                    elif isinstance(value, float):
-                        consensus_type["float"] += 1
-                    else:
-                        print(f"Value {value} is not an integer or float. Skipping cast.")
-                # decide data type based on consensus
-                if consensus_type["interger"] > consensus_type["float"]:
-                    dtype = pl.Int32
-                    print(f"Casting column {column} to Int64 based on consensus.")
-                else:
-                    dtype = pl.Float64
-                    print(f"Casting column {column} to Float64 based on consensus.")
-                # Most tommon case is that zero values are represented as ""
-                df = df.with_columns(pl.col(column).replace("", float("NaN")).cast(dtype))
+                print(f"Data type inconsistency in column {column}. Casting to Float64.")
+                # Most common case is that zero values are represented as ""
+                nulls_before = df.select(pl.col(column).is_null().sum()).item()
+                df = df.with_columns(
+                    pl.col(column).replace("", float("NaN")).cast(pl.Float64, strict=False)
+                )
+                nulls_after = df.select(pl.col(column).is_null().sum()).item()
+                # A non-numeric value becomes null rather than aborting the run, but it
+                # then fails every numeric filter, so report it instead of losing it.
+                if nulls_after > nulls_before:
+                    print(f"Column {column}: {nulls_after - nulls_before} values could not be "
+                          f"parsed as numbers and became null. They pass no numeric filter.")
 
     return df
 
