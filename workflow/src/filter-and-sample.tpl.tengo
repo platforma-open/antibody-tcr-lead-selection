@@ -20,12 +20,14 @@ self.body(func(inputs) {
     filterMap := inputs.filterMap
     rankingMap := inputs.rankingMap
     topClonotypes := inputs.topClonotypes
+    preconditionMap := inputs.preconditionMap
+    hasPrecondition := !is_undefined(preconditionMap) && len(preconditionMap) > 0
 
     outputs := {}
     finalClonotypes := undefined
 
     // Run filtering script with selection stage tracking
-    filterResult := exec.builder().
+    filterBuilder := exec.builder().
         software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.sample-clonotypes:filter")).
         mem("16GiB").
         cpu(1).
@@ -33,7 +35,18 @@ self.body(func(inputs) {
         arg("--parquet").arg("clonotypes.parquet").
         arg("--out").arg("filteredClonotypes.parquet").
         arg("--filter-map").arg(string(json.encode(filterMap))).
-        arg("--emit-selection").arg("selection.parquet").
+        arg("--emit-selection").arg("selection.parquet")
+
+    // Target-presence precondition, passed separately from the user filters so it
+    // collapses to a single tracked stage ahead of them. Omitted entirely when no
+    // enrichment source resolved a Max Frequency column, so a missing funnel stage
+    // truthfully means the check did not run.
+    if hasPrecondition {
+        filterBuilder = filterBuilder.
+            arg("--precondition-map").arg(string(json.encode(preconditionMap)))
+    }
+
+    filterResult := filterBuilder.
         saveFile("filteredClonotypes.parquet").
         saveFile("selection.parquet").
         printErrStreamToStdout().
@@ -100,6 +113,16 @@ self.body(func(inputs) {
     filterStageNames := inputs.filterStageNames
     valueLabels := {}
     stageIdx := 1
+    // The precondition is stage 1 whenever it is applied, matching the stage
+    // offset filter.py derives from the same non-empty precondition map.
+    if hasPrecondition {
+        preconditionStageName := inputs.preconditionStageName
+        if is_undefined(preconditionStageName) || preconditionStageName == "" {
+            preconditionStageName = "Present in target(s)"
+        }
+        valueLabels[string(stageIdx)] = preconditionStageName
+        stageIdx = stageIdx + 1
+    }
     if !is_undefined(filterStageNames) {
         for name in filterStageNames {
             valueLabels[string(stageIdx)] = name

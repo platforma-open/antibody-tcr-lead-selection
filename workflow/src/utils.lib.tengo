@@ -237,6 +237,88 @@ resolveClusterColumnHeader := func(args, columns, sortedLinkers) {
 }
 
 /**
+ * Collects the enrichment source block ids referenced by filter and ranking
+ * columns, in first-reference order.
+ *
+ * Every column exported by clonotype-enrichment carries the producing block's id
+ * in `pl7.app/blockId`, so that id identifies which enrichment run a score came
+ * from. Columns from other blocks are kept too when they carry a block id; they
+ * are harmless because only ids that own a Max Frequency column resolve to a
+ * precondition (see resolveTargetPresenceColumns).
+ *
+ * Order follows args.filters then args.rankingOrder — both plain lists — rather
+ * than map iteration, so the derived Precond_<k> headers are stable across runs
+ * and do not churn the exec cache key.
+ *
+ * @param columns - PBundle containing all columns
+ * @param args - Arguments containing filters and rankingOrder
+ * @return List of block id strings, first-reference order
+ */
+collectEnrichmentSourceIds := func(columns, args) {
+    refs := []
+    if len(args.filters) > 0 {
+        for filter in args.filters {
+            if filter.value != undefined {
+                refs = append(refs, filter.value.column)
+            }
+        }
+    }
+    if len(args.rankingOrder) > 0 {
+        for col in args.rankingOrder {
+            if col.value != undefined {
+                refs = append(refs, col.value.column)
+            }
+        }
+    }
+
+    seen := {}
+    ordered := []
+    for ref in refs {
+        spec := columns.getSpec(ref)
+        if is_undefined(spec) || is_undefined(spec.domain) {
+            continue
+        }
+        blockId := spec.domain["pl7.app/blockId"]
+        if is_undefined(blockId) || !is_undefined(seen[blockId]) {
+            continue
+        }
+        seen[blockId] = true
+        ordered = append(ordered, blockId)
+    }
+
+    return ordered
+}
+
+/**
+ * Resolves the per-element Max Frequency column for each enrichment source.
+ *
+ * clonotype-enrichment emits this column only when it runs on cluster abundance,
+ * and exactly one per block, so the source block id is a unique key. Sources
+ * with no match are skipped: the precondition is not applied for them, and when
+ * nothing resolves no stage is emitted at all, so the funnel's lack of the stage
+ * honestly reports that the check did not run.
+ *
+ * @param columns - PBundle containing all columns
+ * @param sourceIds - List of enrichment source block ids
+ * @return List of matched Max Frequency PColumns, in sourceIds order
+ */
+resolveTargetPresenceColumns := func(columns, sourceIds) {
+    matched := []
+    for blockId in sourceIds {
+        for col in columns.getColumns("maxFrequencies") {
+            if is_undefined(col.spec) || is_undefined(col.spec.domain) {
+                continue
+            }
+            if col.spec.domain["pl7.app/blockId"] == blockId {
+                matched = append(matched, col)
+                break
+            }
+        }
+    }
+    return matched
+}
+
+/**
  * Derives a lightweight, dense, per-clonotype presence column from a "main
  * sequence" column. The clone table is built with a Full join, which keeps only
  * the union of keys across added columns; sparse columns (e.g. enrichment, which
@@ -298,7 +380,8 @@ deriveClonotypePresence := func(mainSeqsCol, datasetSpec) {
  *        (PlDatasetSelector). Added to the clone table; clonotypes missing from it
  *        are dropped as a pre-condition in the filter software (see filter.py),
  *        not via the join, so the Full join can keep all clonotypes for the funnel.
- * @return Map with keys: cloneTable, filterMap, rankingMap, sortedLinkers, clusterColumnHeader, addedCols
+ * @return Map with keys: cloneTable, filterMap, rankingMap, preconditionMap,
+ *         sortedLinkers, clusterColumnHeader, addedCols
  */
 initializeCloneTable := func(pframes, columns, args, datasetSpec, inputFilterColumn) {
     // Build clonotype table
@@ -398,6 +481,25 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec, inputFilterCol
                 addedCols = true
                 rankingMap[header] = col.rankingOrder
             }
+        }
+    }
+
+    // Target-presence precondition. A score computed at cluster resolution says
+    // nothing about whether *this* element was seen in the target selection
+    // rounds, so every enrichment source referenced by a filter or ranking column
+    // must also back the element with its own Max Frequency > 0. Enforced as a
+    // single tracked stage in the filter software (filter.py), ahead of the user
+    // filters, and never surfaced as a user-editable filter.
+    // Same-column-added-twice case (a user ranking by a source's own Max
+    // Frequency) needs an explicit id, as the filter columns above do.
+    preconditionMap := {}
+    for k, col in resolveTargetPresenceColumns(columns, collectEnrichmentSourceIds(columns, args)) {
+        header := "Precond_" + string(k)
+        cloneTable.add(col, {header: header, id: "precond_" + string(k)})
+        preconditionMap[header] = {
+            type: "number_greaterThan",
+            reference: 0,
+            valueType: col.spec.valueType
         }
     }
 
@@ -580,6 +682,7 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec, inputFilterCol
         cloneTable: builtTable,
         filterMap: filterMap,
         rankingMap: rankingMap,
+        preconditionMap: preconditionMap,
         sortedLinkers: sortedLinkers,
         clusterColumnHeader: clusterColumnHeader,
         addedCols: addedCols
@@ -855,6 +958,8 @@ export {
     processRankingColumn: processRankingColumn,
     buildSortedLinkers: buildSortedLinkers,
     resolveClusterColumnHeader: resolveClusterColumnHeader,
+    collectEnrichmentSourceIds: collectEnrichmentSourceIds,
+    resolveTargetPresenceColumns: resolveTargetPresenceColumns,
     initializeCloneTable: initializeCloneTable,
     makeHeaderName: makeHeaderName,
     initializeCdr3SeqTable: initializeCdr3SeqTable,
