@@ -232,12 +232,7 @@ watch(
       </PlBtnGhost>
       <PlBtnGhost icon="settings" @click.stop="() => (settingsOpen = true)"> Settings </PlBtnGhost>
     </template>
-    <PlAlert
-      v-model="inVivoScoreNoticeVisible"
-      type="warn"
-      label="In Vivo Score removed"
-      closeable
-    >
+    <PlAlert v-model="inVivoScoreNoticeVisible" type="warn" label="In Vivo Score removed" closeable>
       From this version on, Lead Selection no longer computes its own In Vivo Score, and the ranking
       column using it has been removed from this project. The score is now produced by the
       Repertoire Score block — add it upstream and rank by its Repertoire Score column instead.
