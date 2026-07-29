@@ -70,13 +70,22 @@ export type BlockData_Ver_2026_05_08 = BlockData_Ver_2026_02_25 & {
   selectionPlotState: GraphMakerState;
 };
 
-export type BlockData = Omit<BlockData_Ver_2026_05_08, "inputAnchor"> & {
+export type BlockData_Ver_2026_05_21 = Omit<BlockData_Ver_2026_05_08, "inputAnchor"> & {
   /**
    * Dataset selection emitted by `PlDatasetSelector` (primary anchor + optional
    * filter). Replaces the previous `inputAnchor: PlRef`; the args lambda
    * unpacks it into the workflow's `inputAnchor` + `inputFilter`.
    */
   input?: DatasetSelection;
+};
+
+export type BlockData = BlockData_Ver_2026_05_21 & {
+  /**
+   * Set by the `Ver_2026_07_28` migration when it dropped the block's former
+   * built-in "In Vivo Score" from the stored ranking. Drives a one-time notice
+   * on the main page; cleared when the user dismisses it.
+   */
+  inVivoScoreRemovedNotice?: boolean;
 };
 
 export type BlockArgs = {
