@@ -79,6 +79,17 @@ wf.prepare(func(args){
         partialAxesMatch: true
     }, "clusterSizes")
 
+    // Per-element Max Frequency from clonotype-enrichment (emitted in cluster
+    // mode only), used to enforce the target-presence precondition. One per
+    // enrichment block; matched to referenced score columns by `pl7.app/blockId`.
+    // The element axis is the anchor's row axis in every modality — clonotypeKey
+    // for VDJ, variantKey for peptides — so no per-modality handling is needed.
+    bundleBuilder.addMulti({
+        axes: [{ anchor: "main", idx: 1 }],
+        name: "pl7.app/maxFrequency",
+        partialAxesMatch: true
+    }, "maxFrequencies")
+
     // Add CDR3 sequences
 	bundleBuilder.addMulti({
 		axes: [{ anchor: "main", idx: 1 }], // Clonotype axis
@@ -183,6 +194,7 @@ wf.body(func(args) {
         cloneTable := tableInit.cloneTable
         filterMap := tableInit.filterMap
         rankingMap := tableInit.rankingMap
+        preconditionMap := tableInit.preconditionMap
         sortedLinkers := tableInit.sortedLinkers
         clusterColumnHeader := tableInit.clusterColumnHeader
         addedCols := tableInit.addedCols
@@ -205,6 +217,8 @@ wf.body(func(args) {
                 filters: args.filters,
                 filterMap: filterMap,
                 rankingMap: rankingMap,
+                preconditionMap: preconditionMap,
+                preconditionStageName: "Observed in rounds",
                 datasetSpec: datasetSpec,
                 topClonotypes: args.topClonotypes,
                 diversificationColumn: clusterColumnHeader,

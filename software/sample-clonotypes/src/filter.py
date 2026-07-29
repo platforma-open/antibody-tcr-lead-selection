@@ -13,6 +13,10 @@ def parse_arguments():
     parser.add_argument("--parquet", required=True, help="Path to input Parquet file")
     parser.add_argument("--out", required=True, help="Path to output Parquet file")
     parser.add_argument("--filter-map", required=True, help="JSON string containing filter mapping")
+    parser.add_argument("--precondition-map", required=False,
+                        help='JSON string mapping Precond_* columns to filter specifications, e.g. '
+                             '{"Precond_0":{"type":"number_greaterThan","reference":0,"valueType":"Double"}}. '
+                             'Applied as a single selection stage ahead of the user filters.')
     parser.add_argument("--emit-selection", required=False, help="Path to output selection stage parquet (clonotypeKey + selectionStage)")
     return parser.parse_args()
 
@@ -95,30 +99,127 @@ def drop_empty_keys(df):
     return df
 
 
-def apply_filters(df, filter_map):
+def coerce_numeric_columns(df, spec_map):
+    """Cast string-typed columns to numeric where a numeric filter targets them.
+
+    The clone table is written with parquetFileBuilder, whose naStr/nullStr default
+    to "", so a column with any missing value arrives as Utf8 with "" in the gaps.
+    Numeric comparisons need a real numeric dtype, and "" must become NaN so the
+    is_not_nan() guard in apply_filter() excludes those rows.
+
+    Float64 is the target for every numeric column, integer-valued ones included:
+    the "" gaps become NaN, which no integer dtype can hold, and the comparisons in
+    apply_filter() behave the same on either dtype.
     """
-    Apply all filters specified in the filter_map to the DataFrame.
-    If filter_map is empty, return the input table with a "top" column added with value 1.
+    for column in spec_map.keys():
+        if column not in df.columns:
+            print(f"Column '{column}' from spec map not present in table. Skipping cast.")
+            continue
+
+        spec = spec_map[column]
+        filter_type = spec["type"]
+        data_type = spec["valueType"]
+        # Check data type if filters are non-string and correct for the given data type
+        if ((data_type != "String") and (filter_type.startswith("number_"))):
+
+            if df.schema[column] == pl.String:
+                print(f"Data type inconsistency in column {column}. Casting to Float64.")
+                # Most common case is that zero values are represented as ""
+                nulls_before = df.select(pl.col(column).is_null().sum()).item()
+                df = df.with_columns(
+                    pl.col(column).replace("", float("NaN")).cast(pl.Float64, strict=False)
+                )
+                nulls_after = df.select(pl.col(column).is_null().sum()).item()
+                # A non-numeric value becomes null rather than aborting the run, but it
+                # then fails every numeric filter, so report it instead of losing it.
+                if nulls_after > nulls_before:
+                    print(f"Column {column}: {nulls_after - nulls_before} values could not be "
+                          f"parsed as numbers and became null. They pass no numeric filter.")
+
+    return df
+
+
+def apply_precondition(df, precondition_map):
+    """Apply the target-presence precondition as one combined step.
+
+    Every Precond_* column must pass its predicate (AND across enrichment
+    sources): an element judged by a source's cluster-level score must also be
+    backed by that source's own per-element Max Frequency. Unlike the user
+    filters this is not a tunable, so it is reported as a single stage rather
+    than one stage per source.
+
+    Returns (filtered df, eliminated clonotypeKey df or None).
+    """
+    precond_columns = sorted([col for col in df.columns if re.match(r'^Precond_\d+$', col)],
+                             key=lambda x: int(x[8:]))  # Extract number after "Precond_"
+
+    print(f"Found Precond_* columns: {precond_columns}")
+
+    if not precond_columns:
+        print("No Precond_* columns in table; target-presence precondition not applied.")
+        return df, None
+
+    before_keys = df.select("clonotypeKey")
+    for column_name in precond_columns:
+        spec = precondition_map.get(column_name)
+        if spec is None:
+            print(f"No precondition spec for column '{column_name}'. Skipping.")
+            continue
+        before_rows = df.height
+        df = apply_filter(df, column_name, spec["type"], spec.get("reference"))
+        print(f"Precondition '{column_name}' {spec['type']} {spec.get('reference')}: "
+              f"{before_rows} -> {df.height} rows")
+
+    eliminated = before_keys.join(df.select("clonotypeKey"), on="clonotypeKey", how="anti")
+    return df, eliminated
+
+
+def apply_filters(df, filter_map, precondition_map=None):
+    """
+    Apply the target-presence precondition and all filters specified in the
+    filter_map to the DataFrame.
+    If both maps are empty, return the input table with a "top" column added with value 1.
 
     Args:
         df: polars DataFrame
         filter_map: dictionary mapping column names to filter specifications
+        precondition_map: dictionary mapping Precond_* columns to filter
+            specifications, applied together as stage 1
 
     Returns:
         tuple of (filtered polars DataFrame, selection stage polars DataFrame)
         Selection stage DataFrame has columns: clonotypeKey, selectionStage (Int64)
-        selectionStage = filter index (1-based) that eliminated the clone,
-        or N_filters+1 for clones that survived all filters.
+        selectionStage = stage index (1-based) that eliminated the clone, or
+        N_filters+offset+1 for clones that survived everything, where offset is 1
+        when a precondition is applied and 0 otherwise.
     """
-    # If filter_map is empty, all clones survive (stage 1)
-    if not filter_map:
-        print("Filter map is empty. Returning input table with 'top' column added.")
+    precondition_map = precondition_map or {}
+
+    # If there is nothing to apply, all clones survive (stage 1)
+    if not filter_map and not precondition_map:
+        print("No filters or preconditions to apply. Returning input table with 'top' column added.")
         selection_df = df.select("clonotypeKey").with_columns(
             pl.lit(1).cast(pl.Int64).alias("selectionStage")
         )
         return df.with_columns(pl.lit(1).alias("top")), selection_df
 
     filtered_df = df.clone()
+    selection_parts = []
+
+    # Target-presence precondition: one tracked stage ahead of the user filters.
+    # The offset is derived from the map being non-empty — the same condition the
+    # workflow uses to decide whether to emit the stage label — so labels and
+    # stage numbers stay aligned even if the columns are absent from the table.
+    stage_offset = 1 if precondition_map else 0
+    if precondition_map:
+        filtered_df, eliminated_by_precondition = apply_precondition(filtered_df, precondition_map)
+        if eliminated_by_precondition is not None and eliminated_by_precondition.height > 0:
+            selection_parts.append(
+                eliminated_by_precondition.with_columns(
+                    pl.lit(1).cast(pl.Int64).alias("selectionStage")
+                )
+            )
+
     initial_rows = filtered_df.height
 
     # Find all Filter_* columns in the DataFrame
@@ -129,11 +230,17 @@ def apply_filters(df, filter_map):
     print(f"Filter map keys: {list(filter_map.keys())}")
 
     n_filters = len(filter_columns)
-    selection_parts = []
 
     # Apply filters
-    for stage_idx, column_name in enumerate(filter_columns, start=1):
-        filter_spec = filter_map[column_name]
+    for stage_idx, column_name in enumerate(filter_columns, start=stage_offset + 1):
+        filter_spec = filter_map.get(column_name)
+        if filter_spec is None:
+            # The workflow always pairs a Filter_<i> column with a filter_map entry,
+            # so this is a safety net rather than an expected state. The stage index
+            # is still consumed so stage numbers stay aligned with the workflow's
+            # stage labels; it simply eliminates nothing.
+            print(f"No filter spec for column '{column_name}'. Skipping.")
+            continue
 
         filter_type = filter_spec["type"]
         reference_value = filter_spec.get("reference")
@@ -164,14 +271,15 @@ def apply_filters(df, filter_map):
                 eliminated.with_columns(pl.lit(stage_idx).cast(pl.Int64).alias("selectionStage"))
             )
 
-    # Surviving clones get selectionStage = N_filters + 1
+    # Surviving clones get selectionStage = N_filters + offset + 1
     survivors = filtered_df.select("clonotypeKey").with_columns(
-        pl.lit(n_filters + 1).cast(pl.Int64).alias("selectionStage")
+        pl.lit(n_filters + stage_offset + 1).cast(pl.Int64).alias("selectionStage")
     )
     selection_parts.append(survivors)
 
     selection_df = pl.concat(selection_parts)
-    print(f"Selection stage tracking: {selection_df.height} total clones across {n_filters} filter stages")
+    print(f"Selection stage tracking: {selection_df.height} total clones across "
+          f"{n_filters + stage_offset} stages ({stage_offset} precondition, {n_filters} filter)")
 
     return filtered_df, selection_df
 
@@ -226,36 +334,20 @@ def main():
         print(f"Error parsing filter map JSON: {e}")
         return
 
-    # Make sure numeric columns where loaded as such
-    for column in filter_map.keys():
-        filter_spec = filter_map[column]
-        
-        filter_type = filter_spec["type"]
-        data_type = filter_spec["valueType"]
-        # Check data type if filters are non-string and correct for the given data type 
-        if ((data_type != "String") and (filter_type.startswith("number_"))):
-            
-            if filter_map[column]["type"].startswith("number_") and df.schema[column] == pl.String:
-                print("Data type inconsistency in column {column}. Trying to find out if it's an integer or a float...")
-                # Check if non-empty values ("") might be integers or floats
-                non_empty_values = df.filter(pl.col(column) != "").select(pl.col(column)).to_series().to_list()
-                consensus_type = {"interger": 0, "float": 0}
-                for value in non_empty_values[:50]:
-                    if isinstance(value, int):
-                        consensus_type["interger"] += 1
-                    elif isinstance(value, float):
-                        consensus_type["float"] += 1
-                    else:
-                        print(f"Value {value} is not an integer or float. Skipping cast.")
-                # decide data type based on consensus
-                if consensus_type["interger"] > consensus_type["float"]:
-                    dtype = pl.Int32
-                    print(f"Casting column {column} to Int64 based on consensus.")
-                else:
-                    dtype = pl.Float64
-                    print(f"Casting column {column} to Float64 based on consensus.")
-                # Most tommon case is that zero values are represented as ""
-                df = df.with_columns(pl.col(column).replace("", float("NaN")).cast(dtype))
+    # Parse precondition map from JSON string
+    precondition_map = {}
+    if args.precondition_map:
+        try:
+            precondition_map = json.loads(args.precondition_map)
+            print(f"Loaded precondition map: {precondition_map}")
+        except json.JSONDecodeError as e:
+            print(f"Error parsing precondition map JSON: {e}")
+            return
+
+    # Make sure numeric columns where loaded as such. Precondition columns need the
+    # same treatment as filter columns: they arrive as Utf8 with "" for elements the
+    # enrichment source never observed, and "" must become NaN to be excluded.
+    df = coerce_numeric_columns(df, {**filter_map, **precondition_map})
 
     # Optional primary filter (PlDatasetSelector): a pre-condition, not a tracked
     # stage. The Full join keeps all clonotypes (null/empty for those outside the
@@ -271,7 +363,7 @@ def main():
     # Apply filters
     filtering_start = time.time()
     print(f"Initial rows: {df.height}")
-    filtered_df, selection_df = apply_filters(df, filter_map)
+    filtered_df, selection_df = apply_filters(df, filter_map, precondition_map)
     filtering_time = time.time() - filtering_start
     print(f"Rows after filtering: {filtered_df.height}")
     print(f"Filtering: {filtering_time:.3f}s")
