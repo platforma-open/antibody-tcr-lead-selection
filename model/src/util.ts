@@ -3,11 +3,13 @@ import {
   Column,
   ColumnAbsentError,
   ColumnsCollection,
+  extractPObjectId,
   readAnnotationJson,
   type AxisSpec,
   type ColumnRecipe,
   type PColumnSpec,
   type PlRef,
+  type PObjectId,
   type RelaxedColumnSelector,
 } from "@platforma-sdk/model";
 import type {
@@ -113,14 +115,44 @@ export function isSelectableMatch(c: ColumnRecipe): boolean {
   return !isProducedByLeadSelection(spec);
 }
 
-/** Converts a discovered column recipe to a ScopedColumnId for the workflow wire format. */
-export function matchToColumnId(recipe: ColumnRecipe, anchorRef: PlRef): ScopedColumnId {
-  return { anchorRef, anchorName: "main", column: recipe.id };
+/**
+ * Collapses discovery results to one recipe per storage column, first hit wins.
+ *
+ * Restores the pre-migration shape of a discovery result. The old
+ * `findColumns()` reduced hits into a `Map<PObjectId, ColumnMatch>` keyed by the
+ * leaf column, merging several reachability variants into one entry; the new
+ * `discover().getColumns()` returns one recipe *per variant* instead. Since the
+ * wire format is the leaf id (see {@link ScopedColumnId.column}), variants of the
+ * same column would otherwise become several dropdown entries sharing one value.
+ *
+ * Only for the user-facing filter/ranking lists. The table wants the full
+ * recipes: their distinct ids are what `createPlDataTableV3` joins on.
+ */
+export function dedupByLeafId(recipes: ColumnRecipe[]): ColumnRecipe[] {
+  const seen = new Set<PObjectId>();
+  return recipes.filter((c) => {
+    const leaf = extractPObjectId(c.id);
+    if (seen.has(leaf)) return false;
+    seen.add(leaf);
+    return true;
+  });
 }
 
 // The Repertoire Score exported by the repertoire-score block. When present
 // upstream it is used as the primary In Vivo ranking.
 export const REPERTOIRE_SCORE_COLUMN_NAME = "pl7.app/vdj/repertoireScore";
+
+/**
+ * Converts a discovered column recipe to a ScopedColumnId for the workflow wire format.
+ *
+ * `extractPObjectId` walks the recipe id down to the storage column it ends at.
+ * For a direct hit that is already the id itself; for a hit reached through a
+ * linker chain it strips the `ColumnDiscoveredId` wrapper the workflow cannot
+ * read. See the note on {@link ScopedColumnId.column}.
+ */
+export function matchToColumnId(recipe: ColumnRecipe, anchorRef: PlRef): ScopedColumnId {
+  return { anchorRef, anchorName: "main", column: extractPObjectId(recipe.id) };
+}
 
 // SHM mutation columns that are replaced by the Repertoire Score in ranking.
 export const IN_VIVO_MUTATION_COLUMNS = new Set([
@@ -270,15 +302,16 @@ export function buildCollection(inputAnchor: PlRef | undefined):
   // `addAnchor("main", inputAnchor)` reference frame — so discovered column ids
   // resolve correctly in bundleBuilder.
   const sampleAxisName = anchorSpec.axesSpec[0].name;
-  const allMatches = collection
-    .discover({
-      anchors: { main: anchorSpec },
-      mode: "related",
-      maxHops: 2,
-      exclude: discoveryExcludeSelectors(sampleAxisName),
-    })
-    .getColumns()
-    .filter(isSelectableMatch);
+  const allMatches = dedupByLeafId(
+    collection
+      .discover({
+        anchors: { main: anchorSpec },
+        mode: "related",
+        maxHops: 2,
+        exclude: discoveryExcludeSelectors(sampleAxisName),
+      })
+      .getColumns(),
+  ).filter(isSelectableMatch);
 
   // Extract scores
   const scores = allMatches.filter((c) => c.getSpec().annotations?.[Annotation.IsScore] === "true");

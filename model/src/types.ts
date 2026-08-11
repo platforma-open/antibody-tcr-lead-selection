@@ -1,7 +1,6 @@
 import type { GraphMakerState } from "@milaboratories/graph-maker";
 import type {
   ColumnRecipe,
-  ColumnUniversalId,
   DatasetSelection,
   DataInfo,
   PColumn,
@@ -9,6 +8,7 @@ import type {
   PlDataTableStateV2,
   PlMultiSequenceAlignmentModel,
   PlRef,
+  PObjectId,
   TreeNodeAccessor,
 } from "@platforma-sdk/model";
 import type { PlTableFilter } from "./typesFilters";
@@ -118,7 +118,19 @@ export type ScopedColumn = {
 export type ScopedColumnId = {
   anchorRef: PlRef;
   anchorName: string;
-  column: ColumnUniversalId; // canonical column id fed into the workflow's bundleBuilder
+  /**
+   * Terminal storage id of the column, as `extractPObjectId(recipe.id)`.
+   *
+   * Deliberately *not* the full `ColumnUniversalId` the new API hands out:
+   * `bundleBuilder.addSingle` resolves a global `PObjectId` by ref and has no
+   * branch for the `ColumnDiscoveredId` that a linker-reached hit carries.
+   * Keeping the leaf id reproduces the pre-migration contract, where the model
+   * said *which* column and the workflow re-derived *how* to reach it.
+   *
+   * See `docs/handoff-addsingle-discovered-ids.md` for what has to land in
+   * workflow-tengo before this can become a `ColumnUniversalId`.
+   */
+  column: PObjectId;
 };
 
 export type RankingOrder = {

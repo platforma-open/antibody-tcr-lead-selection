@@ -23,12 +23,14 @@ import {
   createPlDataTableV3,
   dedupColumns,
   deriveDistinctLabels,
+  extractPObjectId,
   isDataColumn,
   isPColumnSpec,
 } from "@platforma-sdk/model";
 import {
   buildCollection,
   CLUSTER_ID_AXIS_NAMES,
+  dedupByLeafId,
   discoveryExcludeSelectors,
   exactMatch,
   getInputAnchorRef,
@@ -258,13 +260,14 @@ export const platforma = BlockModelV3.create(blockDataModel)
     const result = buildCollection(inputAnchor);
     if (!result) return undefined;
 
-    const filterableMatches = result.collection
-      .discover({
-        anchors: { main: result.anchorSpec },
-        exclude: discoveryExcludeSelectors(result.sampleAxisName),
-      })
-      .getColumns()
-      .filter(isSelectableMatch);
+    const filterableMatches = dedupByLeafId(
+      result.collection
+        .discover({
+          anchors: { main: result.anchorSpec },
+          exclude: discoveryExcludeSelectors(result.sampleAxisName),
+        })
+        .getColumns(),
+    ).filter(isSelectableMatch);
 
     const labels = deriveDistinctLabels(
       filterableMatches.map((c) => c.getSpec()),
@@ -294,13 +297,14 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
     // `type: "String"` is a valid ValueType, so the non-string filter goes
     // host-side too — only File / lead-selection-produced survive to isSelectableMatch.
-    const rankableMatches = result.collection
-      .discover({
-        anchors: { main: result.anchorSpec },
-        exclude: [...discoveryExcludeSelectors(result.sampleAxisName), { type: "String" }],
-      })
-      .getColumns()
-      .filter(isSelectableMatch);
+    const rankableMatches = dedupByLeafId(
+      result.collection
+        .discover({
+          anchors: { main: result.anchorSpec },
+          exclude: [...discoveryExcludeSelectors(result.sampleAxisName), { type: "String" }],
+        })
+        .getColumns(),
+    ).filter(isSelectableMatch);
 
     const labels = deriveDistinctLabels(
       rankableMatches.map((c) => c.getSpec()),
@@ -462,7 +466,8 @@ export const platforma = BlockModelV3.create(blockDataModel)
     // Build filter/ranking display signatures. The selected filter/ranking
     // columns are given ordering priority and forced visible. Matched by
     // spec signature (name + domain) via selectors, since display rules receive
-    // specs, not ids.
+    // specs, not ids. Args carry leaf ids (see ScopedColumnId.column), so the
+    // discovered recipes are reduced to their leaf before comparing.
     const filterColumnIds = new Set<string>(
       ctx.activeArgs?.filters
         .filter((f) => f.value?.column !== undefined)
@@ -482,7 +487,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     >();
     if (collectionResult) {
       for (const m of collectionResult.meta.allMatches) {
-        const idStr = m.id as string;
+        const idStr = extractPObjectId(m.id) as string;
         if (filterColumnIds.has(idStr) || rankingColumnIds.has(idStr)) {
           const spec = m.getSpec();
           filterRankSignatures.set(canonicalizeJson({ name: spec.name, domain: spec.domain }), {
