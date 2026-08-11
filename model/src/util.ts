@@ -1,8 +1,8 @@
 import {
   Annotation,
   Column,
-  ColumnAbsentError,
   ColumnsCollection,
+  DataColumn,
   extractPObjectId,
   readAnnotationJson,
   type AxisSpec,
@@ -35,23 +35,22 @@ export function getInputFilterRef(data: Pick<BlockData, "input">): PlRef | undef
 export const exactMatch = (value: string) => [{ type: "exact" as const, value }];
 
 /**
- * Spec behind a `PlRef`, or undefined when it cannot be resolved right now.
+ * Spec behind a `PlRef`, or undefined when there is nothing to render from.
  *
- * The `Column` factory has two "no spec" outcomes where the pre-migration
- * `ctx.resultPool.getPColumnSpecByRef` simply returned undefined: it yields
- * undefined while the column is still resolving, and it *throws*
- * `ColumnAbsentError` once every relevant accessor is locked without the column
- * appearing (an upstream block removed, say). Both mean "nothing to render" for
- * every caller here, and an uncaught throw would fail the whole output.
+ * A missing column is a normal state for this block, not an error: it works with
+ * whatever the upstream graph happens to provide and ignores the rest. So all
+ * three resolution statuses collapse to "render nothing" here.
+ *
+ * `Column(ref)` already returns undefined while a column is still resolving; the
+ * guard exists only for the `absent` status, where it throws `ColumnAbsentError`
+ * instead. Guarding on the status rather than catching keeps exceptions out of
+ * the control flow — and note `absent` is not the definitive "gone for good" its
+ * name suggests: it shows up in perfectly normal configurations, so it must stay
+ * silent rather than drive any user-facing warning.
  */
 export function getSpecByRef(ref: PlRef | undefined): PColumnSpec | undefined {
-  if (ref === undefined) return undefined;
-  try {
-    return Column(ref)?.getSpec();
-  } catch (e) {
-    if (e instanceof ColumnAbsentError) return undefined;
-    throw e;
-  }
+  if (ref === undefined || DataColumn.getStatusByPlRef(ref) === "absent") return undefined;
+  return Column(ref)?.getSpec();
 }
 
 /** Common host-side exclude selectors shared across filter/rank/table discovery.
