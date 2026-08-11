@@ -151,7 +151,7 @@ export const REPERTOIRE_SCORE_COLUMN_NAME = "pl7.app/vdj/repertoireScore";
  * read. See the note on {@link ScopedColumnId.column}.
  */
 export function matchToColumnId(recipe: ColumnRecipe, anchorRef: PlRef): ScopedColumnId {
-  return { anchorRef, anchorName: "main", column: extractPObjectId(recipe.id) };
+  return { anchorRef, column: extractPObjectId(recipe.id) };
 }
 
 // SHM mutation columns that are replaced by the Repertoire Score in ranking.

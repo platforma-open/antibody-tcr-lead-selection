@@ -72,7 +72,8 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
   const configAnchorKey = computed(() => {
     const config = getConfig();
     if (!config?.options?.length) return null;
-    const mainOption = config.options.find((o) => o.value?.anchorName === "main");
+    // Every option carries the same anchor, so the first one is representative.
+    const mainOption = config.options[0];
     return mainOption?.value?.anchorRef ? JSON.stringify(mainOption.value.anchorRef) : null;
   });
 
@@ -140,7 +141,7 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
       }
 
       // Verify config matches current anchor BEFORE checking defaults
-      const mainOption = config.options?.find((o) => o.value?.anchorName === "main");
+      const mainOption = config.options?.[0];
       if (!mainOption?.value || !plRefsEqual(mainOption.value.anchorRef, currentAnchor)) {
         // Config is stale - only clear if anchor actually changed
         const anchorActuallyChanged =
