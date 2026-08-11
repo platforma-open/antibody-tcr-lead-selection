@@ -1,6 +1,7 @@
 import {
   Annotation,
   Column,
+  ColumnAbsentError,
   ColumnsCollection,
   readAnnotationJson,
   type AxisSpec,
@@ -30,6 +31,26 @@ export function getInputFilterRef(data: Pick<BlockData, "input">): PlRef | undef
 
 /** Exact-match string matcher for a column/axis selector value. */
 export const exactMatch = (value: string) => [{ type: "exact" as const, value }];
+
+/**
+ * Spec behind a `PlRef`, or undefined when it cannot be resolved right now.
+ *
+ * The `Column` factory has two "no spec" outcomes where the pre-migration
+ * `ctx.resultPool.getPColumnSpecByRef` simply returned undefined: it yields
+ * undefined while the column is still resolving, and it *throws*
+ * `ColumnAbsentError` once every relevant accessor is locked without the column
+ * appearing (an upstream block removed, say). Both mean "nothing to render" for
+ * every caller here, and an uncaught throw would fail the whole output.
+ */
+export function getSpecByRef(ref: PlRef | undefined): PColumnSpec | undefined {
+  if (ref === undefined) return undefined;
+  try {
+    return Column(ref)?.getSpec();
+  } catch (e) {
+    if (e instanceof ColumnAbsentError) return undefined;
+    throw e;
+  }
+}
 
 /** Common host-side exclude selectors shared across filter/rank/table discovery.
  *  Linker columns and per-sequence annotations are dropped from discovery
@@ -234,7 +255,7 @@ export function buildCollection(inputAnchor: PlRef | undefined):
   | undefined {
   if (!inputAnchor) return undefined;
 
-  const anchorSpec = Column(inputAnchor)?.getSpec();
+  const anchorSpec = getSpecByRef(inputAnchor);
   if (!anchorSpec) return undefined;
 
   // Host-driven base: the whole upstream result pool. Linker columns are kept in

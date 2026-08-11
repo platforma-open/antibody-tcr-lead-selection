@@ -1,15 +1,16 @@
 import strings from "@milaboratories/strings";
 import type {
+  ColumnRecipe,
   InferHrefType,
   InferOutputsType,
   PColumn,
   PColumnDataUniversal,
   PColumnIdAndSpec,
-  PColumnSpec,
   PlRef,
   PObjectSpec,
   PTableSorting,
   RelaxedColumnSelector,
+  RenderCtx,
   TreeNodeAccessor,
 } from "@platforma-sdk/model";
 import {
@@ -17,13 +18,12 @@ import {
   BlockModelV3,
   buildDatasetOptions,
   canonicalizeJson,
-  Column,
   ColumnsCollection,
   createPFrameForGraphs,
   createPlDataTableV3,
   dedupColumns,
   deriveDistinctLabels,
-  isColumnLazy,
+  isDataColumn,
   isPColumnSpec,
 } from "@platforma-sdk/model";
 import {
@@ -33,6 +33,7 @@ import {
   exactMatch,
   getInputAnchorRef,
   getInputFilterRef,
+  getSpecByRef,
   isClusterIdAxisName,
   isProducedByLeadSelection,
   isSelectableMatch,
@@ -40,7 +41,7 @@ import {
 } from "./util";
 import { convertFilterUI, convertRankingOrderUI } from "./converters";
 import { blockDataModel } from "./dataModel";
-import type { BlockArgs } from "./types";
+import type { BlockArgs, BlockData } from "./types";
 
 export * from "./types";
 export * from "./converters";
@@ -97,25 +98,69 @@ const CLUSTER_ID_SELECTORS: RelaxedColumnSelector[] = [...CLUSTER_ID_AXIS_NAMES]
 }));
 
 /**
- * Adapt an accessor's leaf columns to `PColumn`s for `createPFrameForGraphs`,
- * which still takes materialised `PColumn[]` (no id-form yet). Only bare leaves
- * (`ColumnLazy`) carry `getData()` / a `PObjectId`, so wrapped recipes are
- * dropped via `isColumnLazy`. Deduped by id — the same leaf can be reachable via
- * more than one path, and `createPFrameForGraphs` rejects duplicate ids. Returns
- * `undefined` when the accessor is absent.
+ * Adapt column recipes to `PColumn`s for the helpers that still take
+ * materialised `PColumn[]` and have no id form (`createPFrameForGraphs`,
+ * `PColumnIdAndSpec`).
+ *
+ * Only bare leaves qualify: `PColumn.id` is typed `PObjectId`, which no wrapper
+ * recipe carries — hence `isDataColumn` rather than `hasReachableData`, which
+ * also admits spec-overrides over a leaf. Deduped by id: the same leaf can be
+ * reachable via more than one path and `createPFrameForGraphs` rejects
+ * duplicates.
  */
+function toGraphColumns(recipes: ColumnRecipe[]): PColumn<undefined | PColumnDataUniversal>[] {
+  return dedupColumns(
+    recipes.filter(isDataColumn).map((c) => ({ id: c.id, spec: c.getSpec(), data: c.getData() })),
+    (c) => c.id,
+    (c) => c.spec,
+  );
+}
+
+/** {@link toGraphColumns} over a single block-output accessor; `undefined` when absent. */
 function accessorGraphColumns(
   accessor: TreeNodeAccessor | undefined,
 ): PColumn<undefined | PColumnDataUniversal>[] | undefined {
   if (!accessor) return undefined;
-  return dedupColumns(
-    ColumnsCollection([accessor])
-      .getColumns()
-      .filter(isColumnLazy)
-      .map((c) => ({ id: c.id, spec: c.getSpec(), data: c.getData() })),
-    (c) => c.id,
-    (c) => c.spec,
-  );
+  return toGraphColumns(ColumnsCollection([accessor]).getColumns());
+}
+
+/**
+ * UMAP columns from the sequence-space block plus this block's own sampled-rows
+ * markers, materialised for `createPFrameForGraphs` / `PColumnIdAndSpec`.
+ *
+ * The legacy `{ anchor: "main", idx: 1 }` axis binding has no selector form, so
+ * the clonotype axis name is read off the resolved anchor spec and matched by
+ * name. Omitting `partialAxesMatch` keeps the old exact-axis-set semantics.
+ */
+function umapGraphColumns(
+  ctx: RenderCtx<BlockArgs, BlockData>,
+): PColumn<undefined | PColumnDataUniversal>[] | undefined {
+  const anchorSpec = getSpecByRef(getInputAnchorRef(ctx.data));
+  const clonotypeAxisName = anchorSpec?.axesSpec[1]?.name;
+  if (anchorSpec === undefined || clonotypeAxisName === undefined) return undefined;
+
+  const umap = ColumnsCollection(["result_pool"])
+    .discover({
+      anchors: { main: anchorSpec },
+      include: {
+        name: "^pl7\\.app/umap[12]$",
+        axes: [{ name: exactMatch(clonotypeAxisName) }],
+      },
+    })
+    .getColumns();
+  if (umap.length === 0) return undefined;
+
+  const sampledRows = ColumnsCollection(
+    [
+      ctx.outputs?.resolve({
+        field: "sampledRows",
+        assertFieldType: "Input",
+        allowPermanentAbsence: true,
+      }),
+    ].filter((a) => a !== undefined),
+  ).getColumns();
+
+  return toGraphColumns([...umap, ...sampledRows]);
 }
 
 export const platforma = BlockModelV3.create(blockDataModel)
@@ -192,9 +237,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
   .output(
     "inputAnchorSpec",
     (ctx) => {
-      const ref = getInputAnchorRef(ctx.data);
-      if (ref === undefined) return undefined;
-      return Column(ref)?.getSpec();
+      return getSpecByRef(getInputAnchorRef(ctx.data));
     },
     { retentive: true },
   )
@@ -202,9 +245,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
   .output(
     "modality",
     (ctx) => {
-      const ref = getInputAnchorRef(ctx.data);
-      if (ref === undefined) return undefined;
-      const spec = Column(ref)?.getSpec();
+      const spec = getSpecByRef(getInputAnchorRef(ctx.data));
       if (!spec) return undefined;
       return spec.axesSpec[1]?.name === "pl7.app/variantKey" ? "peptide" : "antibody_tcr";
     },
@@ -377,7 +418,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     // Don't render table until workflow has been executed
     if (!ctx.outputs) return undefined;
 
-    const anchorSpec = Column(anchor)?.getSpec();
+    const anchorSpec = getSpecByRef(anchor);
     if (!anchorSpec) return undefined;
 
     // Resolve the sampledRows output
@@ -487,10 +528,13 @@ export const platforma = BlockModelV3.create(blockDataModel)
       sorting,
       labelsOptions: {
         formatters: {
-          linker: (labels, spec) =>
-            (spec as PColumnSpec).axesSpec.some((a) => isClusterIdAxisName(a.name))
-              ? undefined
-              : `via ${labels.join(" > ")}`,
+          // `LinkerParts` replaced the flat label array in SDK 1.81: the chain
+          // now arrives as `parts.linkers`, each carrying its rendered `text`.
+          linker: (parts, hit) => {
+            if (hit?.axesSpec.some((a) => isClusterIdAxisName(a.name))) return undefined;
+            const chain = parts.linkers.map((l) => l.text).join(" > ");
+            return chain ? `via ${chain}` : undefined;
+          },
         },
       },
       displayOptions: {
@@ -526,43 +570,17 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
   // Use UMAP output from ctx from clonotype-space block
   .outputWithStatus("umapPf", (ctx) => {
-    const anchor = getInputAnchorRef(ctx.data);
-    if (anchor === undefined) return undefined;
+    const pCols = umapGraphColumns(ctx);
+    if (pCols === undefined) return undefined;
 
-    const umap = ctx.resultPool.getAnchoredPColumns({ main: anchor }, [
-      {
-        axes: [{ anchor: "main", idx: 1 }],
-        namePattern: "^pl7\\.app/umap[12]$",
-      },
-    ]);
-
-    if (umap === undefined || umap.length === 0) return undefined;
-
-    const sampledRows = ctx.outputs
-      ?.resolve({ field: "sampledRows", assertFieldType: "Input", allowPermanentAbsence: true })
-      ?.getPColumns();
-
-    return createPFrameForGraphs(ctx, [...umap, ...(sampledRows ?? [])]);
+    return createPFrameForGraphs(ctx, pCols);
   })
 
   .outputWithStatus("umapPcols", (ctx) => {
-    const anchor = getInputAnchorRef(ctx.data);
-    if (anchor === undefined) return undefined;
+    const pCols = umapGraphColumns(ctx);
+    if (pCols === undefined) return undefined;
 
-    const umap = ctx.resultPool.getAnchoredPColumns({ main: anchor }, [
-      {
-        axes: [{ anchor: "main", idx: 1 }],
-        namePattern: "^pl7\\.app/umap[12]$",
-      },
-    ]);
-
-    if (umap === undefined || umap.length === 0) return undefined;
-
-    const sampledRows = ctx.outputs
-      ?.resolve({ field: "sampledRows", assertFieldType: "Input", allowPermanentAbsence: true })
-      ?.getPColumns();
-
-    return [...umap, ...(sampledRows ?? [])].map(
+    return pCols.map(
       (c) =>
         ({
           columnId: c.id,
@@ -584,7 +602,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
     const anchor = getInputAnchorRef(ctx.data);
     if (anchor === undefined) return undefined;
 
-    const anchorSpec = Column(anchor)?.getSpec();
+    const anchorSpec = getSpecByRef(anchor);
     if (anchorSpec === undefined) return undefined;
 
     // A centroid dataset's key axis carries the producing clustering block's id; that run's
@@ -611,6 +629,11 @@ export const platforma = BlockModelV3.create(blockDataModel)
         axesToMatch = [anchorSpec.axesSpec[1], {}];
       }
 
+      // Deliberately still on `ctx.resultPool.getOptions`: the picked option is
+      // persisted as `data.diversificationColumn` and handed to the workflow's
+      // `addAnchor("selectedCluster", ...)`, which needs the `PlRef` wire shape.
+      // `deriveColumnOptions` yields `ColumnUniversalId`s instead, so moving to
+      // it means changing the workflow and migrating stored data together.
       const linkers = ctx.resultPool.getOptions(
         [
           {
@@ -626,7 +649,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
       );
 
       for (const link of linkers) {
-        const linkerSpec = Column(link.ref)?.getSpec();
+        const linkerSpec = getSpecByRef(link.ref);
         if (!linkerSpec) {
           continue;
         }
@@ -690,7 +713,7 @@ export const platforma = BlockModelV3.create(blockDataModel)
 
   .sections((ctx) => {
     const ref = getInputAnchorRef(ctx.data);
-    const keyAxis = ref !== undefined ? Column(ref)?.getSpec()?.axesSpec[1] : undefined;
+    const keyAxis = getSpecByRef(ref)?.axesSpec[1];
     const isPeptide = keyAxis?.name === "pl7.app/variantKey";
     // Amplicon (synthetic-repertoire-profiler) shares the variantKey axis with
     // peptide-extraction; only the axis domain tells them apart. It takes the same
