@@ -180,7 +180,14 @@ wf.body(func(args) {
 
         // Needed conditional variable
 	    isSingleCell := datasetSpec.axesSpec[1].name == "pl7.app/vdj/scClonotypeKey"
-	    isPeptide := datasetSpec.axesSpec[1].name == "pl7.app/variantKey"
+
+	    // Not a modality test, despite the name: it gates the spectratype and gene-usage step
+	    // below, which needs V/J gene calls. Every producer on the pl7.app/variantKey axis lacks
+	    // them — peptide-extraction, synthetic-repertoire-profiler, and import-vdj-data's bare
+	    // antibody sets, which are VDJ but were never aligned to a reference. The model draws the
+	    // same line in `hasGeneCalls` (model/src/util.ts); `modality` there is the separate
+	    // question and reports a bare set as antibody_tcr, which it is.
+	    hasNoGeneCalls := datasetSpec.axesSpec[1].name == "pl7.app/variantKey"
     
         ////////// Clonotype Filtering //////////
         // Initialize and build clone table with all columns. When the user
@@ -240,7 +247,7 @@ wf.body(func(args) {
             outputs["selectionStagePf"] = filterSampleResult.output("selectionStagePf", 24 * 60 * 60 * 1000)
 
             // CDR3 spectratype, V/J gene usage, and Kabat numbering are VDJ-only — skip for peptide inputs.
-            if !isPeptide {
+            if !hasNoGeneCalls {
                 ////////// CDR3 Length Calculation //////////
                 // Initialize and build CDR3 sequence table
                 cdr3SeqTableBuilt := utils.initializeCdr3SeqTable(pframes, columns, datasetSpec, isSingleCell)

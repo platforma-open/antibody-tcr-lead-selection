@@ -457,13 +457,55 @@ function computeDefaultFilters(scores: ColumnRecipe[], anchorRef: PlRef): PlTabl
   return defaultFilters;
 }
 
+/**
+ * Whether the anchor is one of the whole-sequence, non-VDJ modalities — peptide or amplicon.
+ *
+ * Three producers key on `pl7.app/variantKey` and only the run-id in the axis domain separates
+ * them: `pl7.app/peptide/extractionRunId` (peptide-extraction),
+ * `pl7.app/repertoire/extractionRunId` (synthetic-repertoire-profiler) and
+ * `pl7.app/vdj/clonotypingRunId` (import-vdj-data's bare antibody sets). The first two are
+ * whole-sequence; the third is VDJ — it carries per-chain amino-acid domains and located
+ * regions. Testing the axis NAME alone, as this block used to, called all three peptide.
+ *
+ * This answers "what modality is it", and nothing else. For "can it support the gene-based
+ * analyses" use {@link hasGeneCalls} — the two used to be the same test and are not the same
+ * question.
+ */
+export function isWholeSequenceModality(anchorSpec: PColumnSpec): boolean {
+  const keyAxis = anchorSpec.axesSpec[1];
+  if (keyAxis?.name !== "pl7.app/variantKey") return false;
+  const domain = keyAxis.domain ?? {};
+  return (
+    domain["pl7.app/peptide/extractionRunId"] !== undefined ||
+    domain["pl7.app/repertoire/extractionRunId"] !== undefined
+  );
+}
+
+/**
+ * Whether the anchor's dataset carries V/J gene calls, which the CDR3 V Spectratype and V/J
+ * Gene Usage sections need and Kabat renumbering assumes.
+ *
+ * Kept separate from {@link isWholeSequenceModality} deliberately. A bare antibody set is VDJ
+ * but has no gene calls — the scientist uploaded sequences, and nothing aligned them to a
+ * reference — so it must stay off those two analyses even though it is not peptide. Folding
+ * the two questions into one test is what produced the original bug in the other direction:
+ * the dataset was called peptide because the analyses did not apply to it.
+ *
+ * Every producer on the `pl7.app/variantKey` axis lacks gene calls today, which is why the
+ * check is still structural. If a variantKey producer ever emits V/J genes this should become
+ * a result-pool query for the gene columns themselves.
+ */
+export function hasGeneCalls(anchorSpec: PColumnSpec): boolean {
+  return anchorSpec.axesSpec[1]?.name !== "pl7.app/variantKey";
+}
+
 function computePresets(
   scores: ColumnRecipe[],
   defaultFilters: PlTableFiltersDefault[],
   anchorRef: PlRef,
   anchorSpec: PColumnSpec,
 ): Omit<ColumnsMeta, "allMatches" | "scores" | "defaultFilters"> {
-  const isPeptide = anchorSpec.axesSpec[1]?.name === "pl7.app/variantKey";
+  const isPeptide = isWholeSequenceModality(anchorSpec);
 
   // The Repertoire Score (repertoire-score block), when present upstream, is the
   // In Vivo preset's primary ranking.
