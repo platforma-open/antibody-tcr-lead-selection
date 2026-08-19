@@ -5,6 +5,7 @@ import {
   DataModelBuilder,
   type PObjectId,
 } from "@platforma-sdk/model";
+import { kind } from "@platforma-open/milaboratories.top-antibodies.kind";
 import type {
   BlockData,
   BlockData_Ver_2026_02_25,
@@ -27,7 +28,7 @@ const defaultSelectionPlotState = (): BlockData["selectionPlotState"] => ({
  */
 const REMOVED_IN_VIVO_SCORE_COLUMN_ID = "pl7.app/vdj/inVivoScore" as PObjectId;
 
-export const blockDataModel = new DataModelBuilder()
+export const blockDataModel = new DataModelBuilder({ kind })
   .from<BlockData_Ver_2026_02_25>("Ver_2026_02_25")
   .upgradeLegacy<LegacyBlockArgs, LegacyUiState>(({ args, uiState }) => ({
     defaultBlockLabel: args.defaultBlockLabel,
@@ -87,10 +88,14 @@ export const blockDataModel = new DataModelBuilder()
     if (rankingOrder.length === prev.rankingOrder.length) return { ...prev };
     return { ...prev, rankingOrder, inVivoScoreRemovedNotice: true };
   })
-  .init(() => ({
-    defaultBlockLabel: getDefaultBlockLabel({}),
-    customBlockLabel: "",
-    topClonotypes: 100,
+  // `params` is absent when a block is created by hand rather than from a
+  // template, so every field the contract carries keeps its own default.
+  .init(({ params }) => ({
+    defaultBlockLabel: params?.defaultBlockLabel ?? getDefaultBlockLabel({}),
+    customBlockLabel: params?.customBlockLabel ?? "",
+    input: params?.input,
+    topClonotypes: params?.topClonotypes ?? 100,
+    kabatNumbering: params?.kabatNumbering,
     rankingOrder: [],
     filters: [],
     diversificationColumn: undefined,
@@ -120,6 +125,6 @@ export const blockDataModel = new DataModelBuilder()
     alignmentModel: {},
     filtersInitializedForAnchor: undefined,
     rankingsInitializedForAnchor: undefined,
-    preset: undefined,
+    preset: params?.preset,
     inVivoScoreRemovedNotice: undefined,
   }));

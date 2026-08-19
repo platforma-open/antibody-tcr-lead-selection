@@ -41,6 +41,7 @@ import {
   isSelectableMatch,
   matchToColumnId,
 } from "./util";
+import { kind } from "@platforma-open/milaboratories.top-antibodies.kind";
 import { convertFilterUI, convertRankingOrderUI } from "./converters";
 import { blockDataModel } from "./dataModel";
 import type { BlockArgs, BlockData } from "./types";
@@ -165,7 +166,25 @@ function umapGraphColumns(
   return toGraphColumns([...umap, ...sampledRows]);
 }
 
-export const platforma = BlockModelV3.create(blockDataModel)
+export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind })
+
+  // Inverse of `init` — the same fields, projected back out for template export.
+  // View state (table, graphs, alignment, panel-init guards, the dismissed
+  // notice) never crosses the boundary, and neither do `rankingOrder`,
+  // `filters` and `diversificationColumn`: each holds an id or ref naming a
+  // column of *this* project, and the UI rebuilds all three from the block's
+  // own outputs against whatever dataset the block lands on. `preset` is what
+  // carries the ranking and filter recipe across.
+  .templateParams((data) => ({
+    input: data.input,
+
+    preset: data.preset,
+    topClonotypes: data.topClonotypes,
+    kabatNumbering: data.kabatNumbering,
+
+    defaultBlockLabel: data.defaultBlockLabel,
+    customBlockLabel: data.customBlockLabel,
+  }))
 
   .args<BlockArgs>((data) => {
     const inputAnchor = getInputAnchorRef(data);
