@@ -39,11 +39,12 @@ import {
   getSpecByRef,
   hasGeneCalls,
   isClusterIdAxisName,
+  isPeptideOrAmplicon,
   isPresenceOnlyColumn,
   isProducedByLeadSelection,
   isRankableMatch,
   isSelectableMatch,
-  isWholeSequenceModality,
+  recordSource,
   matchToColumnId,
 } from "./util";
 import { kind } from "@platforma-open/milaboratories.top-antibodies.kind";
@@ -317,7 +318,11 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     (ctx) => {
       const spec = getSpecByRef(getInputAnchorRef(ctx.data));
       if (!spec) return undefined;
-      return isWholeSequenceModality(spec) ? "peptide" : "antibody_tcr";
+      // Two values only, so "peptide" is the umbrella for both non-receptor producers —
+      // synthetic-repertoire-profiler included. The UI reads the axis domain separately when it
+      // needs to say "Variant" rather than "Peptide". Everything else, imported sets included,
+      // is a receptor dataset.
+      return isPeptideOrAmplicon(spec) ? "peptide" : "antibody_tcr";
     },
     { retentive: true },
   )
@@ -804,32 +809,23 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
   .sections((ctx) => {
     const ref = getInputAnchorRef(ctx.data);
     const anchorSpec = getSpecByRef(ref);
-    const keyAxis = anchorSpec?.axesSpec[1];
-    // Amplicon (synthetic-repertoire-profiler) shares the variantKey axis with
-    // peptide-extraction; only the axis domain tells them apart. It takes the same
-    // non-VDJ path as peptide (so the isPeptide gating below stays) — only the
-    // sequence-space section label differs. A bare antibody set from import-vdj-data shares
-    // the axis too but is VDJ, which is why this asks the domain rather than the axis name.
-    const isPeptide = anchorSpec !== undefined && isWholeSequenceModality(anchorSpec);
-    const isAmplicon =
-      isPeptide && keyAxis?.domain?.["pl7.app/repertoire/extractionRunId"] !== undefined;
-    // A bare antibody set is none of the above and lands on "Clonotype Space", which is what it
-    // is. It previously read "Peptide Space".
-    const spaceLabel = isAmplicon
-      ? "Variant Space"
-      : isPeptide
-        ? "Peptide Space"
-        : "Clonotype Space";
+    // The page is named after what a row is. Receptor datasets, imported or assembled, are
+    // clonotypes.
+    const source = anchorSpec !== undefined ? recordSource(anchorSpec) : "unknown";
+    const spaceLabel =
+      source === "amplicon"
+        ? "Variant Space"
+        : source === "peptide"
+          ? "Peptide Space"
+          : "Clonotype Space";
 
     const sections: Array<{ type: "link"; href: `/${string}`; label: string }> = [
       { type: "link", href: "/", label: strings.titles.main },
       { type: "link", href: "/umap", label: spaceLabel },
       { type: "link", href: "/selection", label: "Selection Plot" },
     ];
-    // Gated on gene calls rather than on modality: a bare antibody set is VDJ, but nothing
-    // aligned its sequences to a reference, so a spectratype has no V gene to bin by and a
-    // usage plot has nothing to count. Both stay hidden — for that reason, not for being
-    // mistaken for peptide.
+    // Gated on the columns, not on what produced them: an imported set has no V gene to bin by
+    // and nothing to count.
     if (anchorSpec !== undefined && hasGeneCalls(anchorSpec)) {
       sections.push(
         { type: "link", href: "/spectratype", label: "CDR3 V Spectratype" },

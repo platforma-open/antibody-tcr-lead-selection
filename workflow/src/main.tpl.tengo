@@ -181,12 +181,14 @@ wf.body(func(args) {
         // Needed conditional variable
 	    isSingleCell := datasetSpec.axesSpec[1].name == "pl7.app/vdj/scClonotypeKey"
 
-	    // Not a modality test, despite the name: it gates the spectratype and gene-usage step
-	    // below, which needs V/J gene calls. Every producer on the pl7.app/variantKey axis lacks
-	    // them — peptide-extraction, synthetic-repertoire-profiler, and import-vdj-data's bare
-	    // antibody sets, which are VDJ but were never aligned to a reference. The model draws the
-	    // same line in `hasGeneCalls` (model/src/util.ts); `modality` there is the separate
-	    // question and reports a bare set as antibody_tcr, which it is.
+	    // Whether V/J gene calls are absent — gates the spectratype and gene-usage step below.
+	    // A question about which columns exist, not about what produced the dataset: an imported
+	    // set is a receptor dataset with no gene calls. Same line the model draws in hasGeneCalls
+	    // (model/src/util.ts).
+	    //
+	    // TEMPORARY, same as there: when MiXCR migrates to the variantKey axis this reads true for
+	    // MiXCR and both analyses quietly stop being computed. Look for the gene columns in the
+	    // bundle instead.
 	    hasNoGeneCalls := datasetSpec.axesSpec[1].name == "pl7.app/variantKey"
     
         ////////// Clonotype Filtering //////////
