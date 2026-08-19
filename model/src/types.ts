@@ -1,15 +1,11 @@
 import type { GraphMakerState } from "@milaboratories/graph-maker";
 import type {
-  ColumnMatch,
+  ColumnRecipe,
   DatasetSelection,
-  DataInfo,
-  PColumn,
-  PColumnValues,
   PlDataTableStateV2,
   PlMultiSequenceAlignmentModel,
   PlRef,
   PObjectId,
-  TreeNodeAccessor,
 } from "@platforma-sdk/model";
 import type { PlTableFilter } from "./typesFilters";
 
@@ -106,19 +102,23 @@ export type BlockArgs = {
   diversificationColumn?: PlRef;
 };
 
-// @todo: move this type to SDK
-export type Column = PColumn<DataInfo<TreeNodeAccessor> | TreeNodeAccessor | PColumnValues>;
-
-export type ScopedColumn = {
-  anchorRef: PlRef;
-  anchorName: string;
-  column: Column;
-};
-
 export type ScopedColumnId = {
+  /**
+   * Anchor the column was discovered against. The UI uses it to tell a freshly
+   * arrived filter/ranking config from a stale one left over from the previous
+   * dataset; nothing on the workflow side reads it.
+   */
   anchorRef: PlRef;
-  anchorName: string;
-  column: PObjectId; // SUniversalPColumnId
+  /**
+   * Terminal storage id of the column, as `extractPObjectId(recipe.id)`.
+   *
+   * Deliberately *not* the full `ColumnUniversalId` the new API hands out:
+   * `bundleBuilder.addSingle` resolves a global `PObjectId` by ref and has no
+   * branch for the `ColumnDiscoveredId` that a linker-reached hit carries.
+   * Keeping the leaf id reproduces the pre-migration contract, where the model
+   * said *which* column and the workflow re-derived *how* to reach it.
+   */
+  column: PObjectId;
 };
 
 export type RankingOrder = {
@@ -171,9 +171,9 @@ export type PresetDefaults = {
 
 export type ColumnsMeta = {
   /** All discovered columns (direct + linked via linker traversal) */
-  allMatches: ColumnMatch[];
+  allMatches: ColumnRecipe[];
   /** Score columns (subset of allMatches with pl7.app/isScore annotation) */
-  scores: ColumnMatch[];
+  scores: ColumnRecipe[];
   defaultFilters: PlTableFiltersDefault[];
   defaultRankingOrder: RankingOrder[];
   /** True when the Repertoire Score column is present upstream; it becomes the primary In Vivo ranking */
