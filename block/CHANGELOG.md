@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 4.2.1
+
+### Patch Changes
+
+- 0f4d7a5: Release last changes
+
 ## 4.2.0
 
 ### Minor Changes
