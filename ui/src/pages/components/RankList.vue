@@ -2,7 +2,7 @@
 import type { ScopedColumnId } from "@platforma-open/milaboratories.top-antibodies.model";
 import { getInputAnchorRef } from "@platforma-open/milaboratories.top-antibodies.model";
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from "@platforma-sdk/ui-vue";
-import { ref } from "vue";
+import { ref, toRaw } from "vue";
 import { useApp } from "../../app";
 import { useAnchorSyncedDefaults } from "../../composables/useAnchorSyncedDefaults";
 import RankCard from "./RankCard.vue";
@@ -55,7 +55,7 @@ const resetToDefaults = () => {
     defaults?.map(
       (defaultRank: { value?: ScopedColumnId; rankingOrder: "increasing" | "decreasing" }) => ({
         id: generateUniqueId(),
-        value: defaultRank.value,
+        value: structuredClone(toRaw(defaultRank.value)),
         rankingOrder: defaultRank.rankingOrder,
         isExpanded: false,
       }),

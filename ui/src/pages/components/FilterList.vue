@@ -7,7 +7,7 @@ import type {
 } from "@platforma-open/milaboratories.top-antibodies.model";
 import { getInputAnchorRef } from "@platforma-open/milaboratories.top-antibodies.model";
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from "@platforma-sdk/ui-vue";
-import { ref } from "vue";
+import { ref, toRaw } from "vue";
 import { useApp } from "../../app";
 import { useAnchorSyncedDefaults } from "../../composables/useAnchorSyncedDefaults";
 import FilterCard from "./FilterCard.vue";
@@ -61,7 +61,7 @@ const resetToDefaults = () => {
     defaults?.map(
       (defaultFilter: { column: ScopedColumnId; default: PlTableFilter | DiscreteFilter }) => ({
         id: generateUniqueId(),
-        value: defaultFilter.column,
+        value: structuredClone(toRaw(defaultFilter.column)),
         filter: { ...defaultFilter.default },
         isExpanded: false,
       }),
