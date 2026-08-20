@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 5.0.3
+
+### Patch Changes
+
+- f0dd8ff: Deep-copy preset defaults so outputs changes don't rewrite saved rows
+
 ## 5.0.2
 
 ### Patch Changes
