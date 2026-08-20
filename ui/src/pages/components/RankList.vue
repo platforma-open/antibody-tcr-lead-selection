@@ -55,9 +55,6 @@ const resetToDefaults = () => {
     defaults?.map(
       (defaultRank: { value?: ScopedColumnId; rankingOrder: "increasing" | "decreasing" }) => ({
         id: generateUniqueId(),
-        // Deep copy: the defaults live inside `outputs`, which the SDK patches in
-        // place on every recompute. Storing the object by reference would let an
-        // outputs patch rewrite this row's column in the block's persisted data.
         value: structuredClone(toRaw(defaultRank.value)),
         rankingOrder: defaultRank.rankingOrder,
         isExpanded: false,

@@ -61,9 +61,6 @@ const resetToDefaults = () => {
     defaults?.map(
       (defaultFilter: { column: ScopedColumnId; default: PlTableFilter | DiscreteFilter }) => ({
         id: generateUniqueId(),
-        // Deep copy: the defaults live inside `outputs`, which the SDK patches in
-        // place on every recompute. Storing the object by reference would let an
-        // outputs patch rewrite this row's column in the block's persisted data.
         value: structuredClone(toRaw(defaultFilter.column)),
         filter: { ...defaultFilter.default },
         isExpanded: false,
