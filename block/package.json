@@ -26,6 +26,7 @@
   "devDependencies": {
     "@milaboratories/ts-builder": "catalog:",
     "@milaboratories/ts-configs": "catalog:",
+    "@platforma-open/milaboratories.top-antibodies.kind": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.model": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.ui": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.workflow": "workspace:*",

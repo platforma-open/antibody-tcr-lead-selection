@@ -1,4 +1,8 @@
-import type { ScopedColumnId } from "@platforma-open/milaboratories.top-antibodies.model";
+import type {
+  InitializedForAnchor,
+  ScopedColumnId,
+} from "@platforma-open/milaboratories.top-antibodies.model";
+import { anchorInitializedId } from "@platforma-open/milaboratories.top-antibodies.model";
 import type { PlRef } from "@platforma-sdk/model";
 import { plRefsEqual } from "@platforma-sdk/model";
 import { computed, ref, watch } from "vue";
@@ -33,14 +37,17 @@ export interface UseAnchorSyncedDefaultsOptions {
    */
   hasAnyItems?: () => boolean;
   /**
-   * Gets the anchor key for which defaults have been initialized (persisted in UI state).
-   * Returns undefined if never initialized.
+   * Gets the anchor for which defaults have been initialized (persisted in UI
+   * state). Returns undefined if never initialized, and also when the stored
+   * preset differs from the current one — the stored lists then belong to the
+   * other preset, so they must be replaced rather than preserved.
    */
-  getInitializedAnchorKey?: () => string | undefined;
+  getInitializedAnchorKey?: () => InitializedForAnchor["anchor"] | undefined;
   /**
-   * Sets the anchor key for which defaults have been initialized (persists in UI state).
+   * Sets the anchor for which defaults have been initialized, stamped with the
+   * current preset (persists in UI state). `undefined` clears the slot.
    */
-  setInitializedAnchorKey?: (key: string | undefined) => void;
+  setInitializedAnchorKey?: (key: InitializedForAnchor["anchor"] | undefined) => void;
 }
 
 /**
@@ -88,9 +95,14 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
     [getAnchor, configAnchorKey, currentPreset],
     ([currentAnchor, configKey, preset]: [PlRef | undefined, string | null, string]) => {
       const config = getConfig();
-      // Include preset in anchor key so changing preset invalidates "already initialized"
-      const presetSuffix = getPreset ? `::${getPreset() ?? "none"}` : "";
-      const currentAnchorKey = currentAnchor ? JSON.stringify(currentAnchor) + presetSuffix : null;
+      // The anchor as a canonical column identifier, minted by the same helper
+      // the stored value is written with — a single `createGlobalPObjectId` call
+      // site. Relocation re-canonicalizes that stored value when a template is
+      // applied, so this side has to produce the same bytes or the comparison
+      // below never matches, and the constructor is what guarantees it. The
+      // preset is not joined in: it is stored as its own field, since a joined
+      // string parses as no identifier at all and would not relocate.
+      const currentAnchorKey = currentAnchor ? (anchorInitializedId(currentAnchor) ?? null) : null;
       const initializedAnchorKey = getInitializedAnchorKey?.();
       const isAlreadyInitialized = currentAnchorKey && initializedAnchorKey === currentAnchorKey;
 
