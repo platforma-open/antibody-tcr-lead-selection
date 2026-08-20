@@ -24,10 +24,15 @@ from the model, since the model depends on the kind and not the reverse.
 
 The two `…InitializedForAnchor` fields travel too, reshaped by a
 `Ver_2026_08_20` migration from one `JSON.stringify(anchor) + "::" + preset`
-string into `{ anchor, preset }`. That is what makes them work across projects:
-a bare stringified `PlRef` parses as a column identifier and so gets relocated,
-while the preset beside it is left alone — the old joined form was unparseable
-and stranded naming the project it came from. It stays one slot rather than one
+string into `{ anchor: GlobalPObjectId, preset }`. That is what makes them work
+across projects: a canonically serialized `PlRef` parses as a column identifier
+and so gets relocated, while the preset beside it is left alone — the old joined
+form was unparseable and stranded naming the project it came from. The migration
+re-mints the anchor through `createGlobalPObjectId` rather than carrying the old
+bytes over, and the UI computes the key it compares against through the same
+helper: relocation re-canonicalizes the stored value, so a side still using
+`JSON.stringify` would stop matching for any ref whose keys are not already in
+alphabetical order. It stays one slot rather than one
 entry per preset, because there is one ranking list and one filter list: a
 stored preset differing from the current one is the signal that the lists belong
 to the other preset and must be replaced. With the anchor relocated, an applied
