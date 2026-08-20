@@ -169,18 +169,31 @@ function umapGraphColumns(
 export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind })
 
   // Inverse of `init` — the same fields, projected back out for template export.
-  // View state (table, graphs, alignment, panel-init guards, the dismissed
-  // notice) never crosses the boundary, and neither do `rankingOrder`,
-  // `filters` and `diversificationColumn`: each holds an id or ref naming a
-  // column of *this* project, and the UI rebuilds all three from the block's
-  // own outputs against whatever dataset the block lands on. `preset` is what
-  // carries the ranking and filter recipe across.
+  // The ranking and filter entries travel: `relocateBlockIds` points every
+  // column identifier they carry at the blocks of the project being built
+  // before the kind's parser or `init` ever see them. They go out through the
+  // same converters the args lambda uses, so the per-row UI extras (`id`,
+  // `isExpanded`) stay behind.
+  //
+  // View state — the table, the four graphs, the alignment model — never
+  // crosses, nor does `inVivoScoreRemovedNotice`, which a migration sets for a
+  // project that lost the built-in in-vivo score. The two
+  // `…InitializedForAnchor` slots do cross, and they carry their weight: each
+  // holds a bare stringified anchor beside the preset it was applied under, so
+  // relocation rewrites the anchor while leaving the preset alone, and the
+  // applied block recognizes the ranking and filter lists above as already
+  // applied instead of replacing them with the landing dataset's defaults.
   .templateParams((data) => ({
     input: data.input,
 
     preset: data.preset,
     topClonotypes: data.topClonotypes,
     kabatNumbering: data.kabatNumbering,
+    rankingOrder: convertRankingOrderUI(data.rankingOrder),
+    filters: convertFilterUI(data.filters),
+    diversificationColumn: data.diversificationColumn,
+    filtersInitializedForAnchor: data.filtersInitializedForAnchor,
+    rankingsInitializedForAnchor: data.rankingsInitializedForAnchor,
 
     defaultBlockLabel: data.defaultBlockLabel,
     customBlockLabel: data.customBlockLabel,

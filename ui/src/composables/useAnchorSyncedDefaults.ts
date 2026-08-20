@@ -33,12 +33,15 @@ export interface UseAnchorSyncedDefaultsOptions {
    */
   hasAnyItems?: () => boolean;
   /**
-   * Gets the anchor key for which defaults have been initialized (persisted in UI state).
-   * Returns undefined if never initialized.
+   * Gets the anchor for which defaults have been initialized (persisted in UI
+   * state). Returns undefined if never initialized, and also when the stored
+   * preset differs from the current one — the stored lists then belong to the
+   * other preset, so they must be replaced rather than preserved.
    */
   getInitializedAnchorKey?: () => string | undefined;
   /**
-   * Sets the anchor key for which defaults have been initialized (persists in UI state).
+   * Sets the anchor for which defaults have been initialized, stamped with the
+   * current preset (persists in UI state). `undefined` clears the slot.
    */
   setInitializedAnchorKey?: (key: string | undefined) => void;
 }
@@ -88,9 +91,11 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
     [getAnchor, configAnchorKey, currentPreset],
     ([currentAnchor, configKey, preset]: [PlRef | undefined, string | null, string]) => {
       const config = getConfig();
-      // Include preset in anchor key so changing preset invalidates "already initialized"
-      const presetSuffix = getPreset ? `::${getPreset() ?? "none"}` : "";
-      const currentAnchorKey = currentAnchor ? JSON.stringify(currentAnchor) + presetSuffix : null;
+      // The bare stringified anchor. The preset dimension lives in the storage
+      // shape — the call site reads and writes under the current preset's key —
+      // so it must not be joined into the value here: a bare stringified `PlRef`
+      // parses as a column identifier, which is what lets a template relocate it.
+      const currentAnchorKey = currentAnchor ? JSON.stringify(currentAnchor) : null;
       const initializedAnchorKey = getInitializedAnchorKey?.();
       const isAlreadyInitialized = currentAnchorKey && initializedAnchorKey === currentAnchorKey;
 

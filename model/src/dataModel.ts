@@ -11,6 +11,8 @@ import type {
   BlockData_Ver_2026_02_25,
   BlockData_Ver_2026_05_08,
   BlockData_Ver_2026_05_21,
+  BlockData_Ver_2026_07_28,
+  InitializedForAnchor,
   LegacyBlockArgs,
   LegacyUiState,
 } from "./types";
@@ -27,6 +29,25 @@ const defaultSelectionPlotState = (): BlockData["selectionPlotState"] => ({
  * option.
  */
 const REMOVED_IN_VIVO_SCORE_COLUMN_ID = "pl7.app/vdj/inVivoScore" as PObjectId;
+
+/**
+ * Reshapes one stored `JSON.stringify(anchor) + "::" + preset` guard value into
+ * the two-field slot.
+ *
+ * Split at the LAST `"::"`: a block id or column name can itself contain a colon,
+ * so a leftmost split would cut the anchor JSON in half. The tail is the preset —
+ * `"none"` when none was selected — and the head is the bare anchor JSON, which
+ * is what relocates when a template is applied.
+ */
+function splitInitializedForAnchor(stored: string | undefined): InitializedForAnchor | undefined {
+  if (stored === undefined) return undefined;
+  const separator = stored.lastIndexOf("::");
+  if (separator < 0) return { anchor: stored, preset: "none" };
+  return {
+    anchor: stored.slice(0, separator),
+    preset: stored.slice(separator + 2) as InitializedForAnchor["preset"],
+  };
+}
 
 export const blockDataModel = new DataModelBuilder({ kind })
   .from<BlockData_Ver_2026_02_25>("Ver_2026_02_25")
@@ -81,13 +102,21 @@ export const blockDataModel = new DataModelBuilder({ kind })
   // longer matches any ranking option (red "Rank by" dropdown) and resolves to
   // nothing when the workflow builds its column bundle. Drop those entries and
   // flag the one-time notice, but only for projects that actually used it.
-  .migrate<BlockData>("Ver_2026_07_28", (prev) => {
+  .migrate<BlockData_Ver_2026_07_28>("Ver_2026_07_28", (prev) => {
     const rankingOrder = prev.rankingOrder.filter(
       (rank) => rank.value?.column !== REMOVED_IN_VIVO_SCORE_COLUMN_ID,
     );
     if (rankingOrder.length === prev.rankingOrder.length) return { ...prev };
     return { ...prev, rankingOrder, inVivoScoreRemovedNotice: true };
   })
+  // The defaults-init guards were one `JSON.stringify(anchor) + "::" + preset`
+  // string; they are two fields now, so the anchor half stays a bare stringified
+  // `PlRef`. See `splitInitializedForAnchor` for why the split is from the right.
+  .migrate<BlockData>("Ver_2026_08_20", (prev) => ({
+    ...prev,
+    filtersInitializedForAnchor: splitInitializedForAnchor(prev.filtersInitializedForAnchor),
+    rankingsInitializedForAnchor: splitInitializedForAnchor(prev.rankingsInitializedForAnchor),
+  }))
   // `params` is absent when a block is created by hand rather than from a
   // template, so every field the contract carries keeps its own default.
   .init(({ params }) => ({
@@ -96,9 +125,9 @@ export const blockDataModel = new DataModelBuilder({ kind })
     input: params?.input,
     topClonotypes: params?.topClonotypes ?? 100,
     kabatNumbering: params?.kabatNumbering,
-    rankingOrder: [],
-    filters: [],
-    diversificationColumn: undefined,
+    rankingOrder: params?.rankingOrder ?? [],
+    filters: params?.filters ?? [],
+    diversificationColumn: params?.diversificationColumn,
     tableState: createPlDataTableStateV2(),
     graphStateUMAP: {
       title: "Sequence Space UMAP",
@@ -123,8 +152,8 @@ export const blockDataModel = new DataModelBuilder({ kind })
       currentTab: null,
     },
     alignmentModel: {},
-    filtersInitializedForAnchor: undefined,
-    rankingsInitializedForAnchor: undefined,
+    filtersInitializedForAnchor: params?.filtersInitializedForAnchor,
+    rankingsInitializedForAnchor: params?.rankingsInitializedForAnchor,
     preset: params?.preset,
     inVivoScoreRemovedNotice: undefined,
   }));
