@@ -47,3 +47,5 @@ catalog:
   'lodash.debounce': ^4.0.8
   # pinned to the copy already in the graph, so the kind does not pull a second one
   'es-toolkit': 1.40.0
+  # pinned to exactly what @platforma-sdk/model depends on, so branded types unify
+  '@milaboratories/pl-model-common': 1.48.0

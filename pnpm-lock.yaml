@@ -18,6 +18,9 @@ catalogs:
     '@milaboratories/multi-sequence-alignment':
       specifier: 1.47.18
       version: 1.47.18
+    '@milaboratories/pl-model-common':
+      specifier: 1.48.0
+      version: 1.48.0
     '@milaboratories/strings':
       specifier: 0.1.2
       version: 0.1.2
@@ -150,6 +153,9 @@ importers:
 
   kind:
     dependencies:
+      '@milaboratories/pl-model-common':
+        specifier: 'catalog:'
+        version: 1.48.0
       '@platforma-sdk/block-kind':
         specifier: 'catalog:'
         version: 1.1.0

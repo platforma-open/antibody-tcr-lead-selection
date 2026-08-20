@@ -1,3 +1,4 @@
+import type { GlobalPObjectId } from "@milaboratories/pl-model-common";
 import type { DatasetSelection, PlRef, PObjectId } from "@platforma-sdk/model";
 import type { PlTableFilter } from "./typesFilters";
 
@@ -20,13 +21,19 @@ export type WorkflowPreset = "in-vivo" | "in-vitro" | "peptide";
  * lists belong to the other preset and must be replaced — which is why the
  * comparison lives here rather than being dissolved into per-preset memory.
  *
- * The anchor is its own field rather than being joined onto the preset. A bare
- * stringified `PlRef` parses as a column identifier, so `relocateBlockIds`
- * rewrites it when a template is applied; `anchor + "::" + preset` parses as
- * nothing and would arrive still naming the project it was exported from. The
- * preset is not an identifier, so it is carried through untouched.
+ * The anchor is its own field rather than being joined onto the preset, and it is
+ * the *canonical* serialization of the `PlRef` — a `GlobalPObjectId`. That is what
+ * makes it parse as a column identifier, so `relocateBlockIds` rewrites it when a
+ * template is applied; it also re-emits it canonically, so whichever side
+ * recomputes the value has to canonicalize too or the two will not compare equal.
+ * `anchor + "::" + preset` parses as nothing and would arrive still naming the
+ * project it was exported from. The preset is not an identifier, so it is carried
+ * through untouched.
  */
-export type InitializedForAnchor = { anchor: string; preset: WorkflowPreset | "none" };
+export type InitializedForAnchor = {
+  anchor: GlobalPObjectId;
+  preset: WorkflowPreset | "none";
+};
 
 /** A column the user picked, together with the anchor it was picked against. */
 export type ScopedColumnId = {
@@ -113,8 +120,8 @@ export type BlockParams = {
   diversificationColumn?: PlRef;
 
   // Which anchor the UI last applied the ranking / filter defaults for, and
-  // under which preset. Carried because it relocates: `anchor` is a bare
-  // stringified `PlRef`, which `relocateBlockIds` rewrites to the corresponding
+  // under which preset. Carried because it relocates: `anchor` is a canonically
+  // serialized `PlRef`, which `relocateBlockIds` rewrites to the corresponding
   // block of the project being built, while `preset` is left alone. It therefore
   // matches what the target project computes, so the carried ranking and filter
   // lists are recognized as already applied and kept, rather than being replaced

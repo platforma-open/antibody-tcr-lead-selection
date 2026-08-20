@@ -1,5 +1,5 @@
 import { assertParamsObject } from "@platforma-sdk/block-kind";
-import { isDatasetSelection, isPlRef } from "@platforma-sdk/model";
+import { isDatasetSelection, isGlobalPObjectId, isPlRef } from "@platforma-sdk/model";
 import { isBoolean, isPlainObject, isString } from "es-toolkit";
 import { isArray, isNumber } from "es-toolkit/compat";
 import type {
@@ -92,16 +92,24 @@ const isFilter: Guard<Filter> = (v): v is Filter =>
   isPlainObject(v) && optional(isScopedColumnId)(v.value) && optional(isFilterPredicate)(v.filter);
 
 /**
- * The defaults-init slot, by its envelope only. `preset` is checked as a string
- * and not against the known union: a preset a later contract adds must not be
- * refused here, and what a preset name means is settled where the defaults are
- * looked up, not at the kind boundary.
+ * The defaults-init slot, by its envelope only.
+ *
+ * `isGlobalPObjectId` is a shape check on the parsed value, not a byte check on
+ * canonicality — it accepts the same keys in any order. Keeping the stored bytes
+ * canonical is the producer's job and the migration's; what the guard buys here
+ * is rejecting the two things that are actually wrong: the old joined
+ * `anchor::preset` string, and a local-form id, neither of which relocates.
+ *
+ * `preset` is checked as a string and not against the known union: a preset a
+ * later contract adds must not be refused here, and what a preset name means is
+ * settled where the defaults are looked up, not at the kind boundary.
  */
 const isInitializedForAnchor: Guard<InitializedForAnchor> = (v): v is InitializedForAnchor =>
-  isPlainObject(v) && isString(v.anchor) && isString(v.preset);
+  isPlainObject(v) && isGlobalPObjectId(v.anchor) && isString(v.preset);
 
 const REF = "a reference to another block's output";
-const INITIALIZED_SLOT = "an object of { anchor, preset }, both strings";
+const INITIALIZED_SLOT =
+  "an object of { anchor, preset }, the anchor a canonically serialized reference";
 
 /**
  * The contract, field by field, at runtime.
