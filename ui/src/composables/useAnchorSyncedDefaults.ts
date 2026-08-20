@@ -1,4 +1,8 @@
-import type { ScopedColumnId } from "@platforma-open/milaboratories.top-antibodies.model";
+import type {
+  InitializedForAnchor,
+  ScopedColumnId,
+} from "@platforma-open/milaboratories.top-antibodies.model";
+import { anchorInitializedId } from "@platforma-open/milaboratories.top-antibodies.model";
 import type { PlRef } from "@platforma-sdk/model";
 import { plRefsEqual } from "@platforma-sdk/model";
 import { computed, ref, watch } from "vue";
@@ -38,12 +42,12 @@ export interface UseAnchorSyncedDefaultsOptions {
    * preset differs from the current one — the stored lists then belong to the
    * other preset, so they must be replaced rather than preserved.
    */
-  getInitializedAnchorKey?: () => string | undefined;
+  getInitializedAnchorKey?: () => InitializedForAnchor["anchor"] | undefined;
   /**
    * Sets the anchor for which defaults have been initialized, stamped with the
    * current preset (persists in UI state). `undefined` clears the slot.
    */
-  setInitializedAnchorKey?: (key: string | undefined) => void;
+  setInitializedAnchorKey?: (key: InitializedForAnchor["anchor"] | undefined) => void;
 }
 
 /**
@@ -91,11 +95,14 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
     [getAnchor, configAnchorKey, currentPreset],
     ([currentAnchor, configKey, preset]: [PlRef | undefined, string | null, string]) => {
       const config = getConfig();
-      // The bare stringified anchor. The preset dimension lives in the storage
-      // shape — the call site reads and writes under the current preset's key —
-      // so it must not be joined into the value here: a bare stringified `PlRef`
-      // parses as a column identifier, which is what lets a template relocate it.
-      const currentAnchorKey = currentAnchor ? JSON.stringify(currentAnchor) : null;
+      // The anchor as a canonical column identifier, minted by the same helper
+      // the stored value is written with — a single `createGlobalPObjectId` call
+      // site. Relocation re-canonicalizes that stored value when a template is
+      // applied, so this side has to produce the same bytes or the comparison
+      // below never matches, and the constructor is what guarantees it. The
+      // preset is not joined in: it is stored as its own field, since a joined
+      // string parses as no identifier at all and would not relocate.
+      const currentAnchorKey = currentAnchor ? (anchorInitializedId(currentAnchor) ?? null) : null;
       const initializedAnchorKey = getInitializedAnchorKey?.();
       const isAlreadyInitialized = currentAnchorKey && initializedAnchorKey === currentAnchorKey;
 

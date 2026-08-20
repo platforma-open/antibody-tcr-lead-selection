@@ -48,7 +48,12 @@ import type { BlockArgs, BlockData } from "./types";
 
 export * from "./types";
 export * from "./converters";
-export { getDefaultBlockLabel, getInputAnchorRef, getInputFilterRef } from "./util";
+export {
+  anchorInitializedId,
+  getDefaultBlockLabel,
+  getInputAnchorRef,
+  getInputFilterRef,
+} from "./util";
 export { blockDataModel } from "./dataModel";
 export type Href = InferHrefType<typeof platforma>;
 export type BlockOutputs = InferOutputsType<typeof platforma>;

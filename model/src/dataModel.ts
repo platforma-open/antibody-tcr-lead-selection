@@ -3,6 +3,8 @@ import {
   createPlDataTableStateV2,
   createPrimaryRef,
   DataModelBuilder,
+  isPlRef,
+  parseJsonSafely,
   type PObjectId,
 } from "@platforma-sdk/model";
 import { kind } from "@platforma-open/milaboratories.top-antibodies.kind";
@@ -16,7 +18,7 @@ import type {
   LegacyBlockArgs,
   LegacyUiState,
 } from "./types";
-import { getDefaultBlockLabel } from "./util";
+import { anchorInitializedId, getDefaultBlockLabel } from "./util";
 
 const defaultSelectionPlotState = (): BlockData["selectionPlotState"] => ({
   title: "Selection Plot",
@@ -36,17 +38,32 @@ const REMOVED_IN_VIVO_SCORE_COLUMN_ID = "pl7.app/vdj/inVivoScore" as PObjectId;
  *
  * Split at the LAST `"::"`: a block id or column name can itself contain a colon,
  * so a leftmost split would cut the anchor JSON in half. The tail is the preset —
- * `"none"` when none was selected — and the head is the bare anchor JSON, which
- * is what relocates when a template is applied.
+ * `"none"` when none was selected.
+ *
+ * The head is re-minted through `anchorInitializedId` — the block's one
+ * `createGlobalPObjectId` call site — rather than carried over verbatim. The old value was written with `JSON.stringify`, whose key order is
+ * whatever the object happened to have; the UI now computes its key the same
+ * canonical way, and relocation re-emits the stored value canonically too, so a
+ * verbatim head could stop matching. A head that does not parse as a reference
+ * drops the whole slot: an unreadable anchor is worse than none, and absent is
+ * exactly what "not initialized" means.
  */
 function splitInitializedForAnchor(stored: string | undefined): InitializedForAnchor | undefined {
   if (stored === undefined) return undefined;
   const separator = stored.lastIndexOf("::");
-  if (separator < 0) return { anchor: stored, preset: "none" };
-  return {
-    anchor: stored.slice(0, separator),
-    preset: stored.slice(separator + 2) as InitializedForAnchor["preset"],
-  };
+  const head = separator < 0 ? stored : stored.slice(0, separator);
+  const preset = separator < 0 ? "none" : stored.slice(separator + 2);
+
+  const parsed = parseJsonSafely(head);
+  // `isPlRef` only demands the two fields be present, so their types are checked
+  // here too: the id constructor would happily canonicalize a non-string.
+  if (!isPlRef(parsed) || typeof parsed.blockId !== "string" || typeof parsed.name !== "string")
+    return undefined;
+
+  const anchor = anchorInitializedId(parsed);
+  if (anchor === undefined) return undefined;
+
+  return { anchor, preset: preset as InitializedForAnchor["preset"] };
 }
 
 export const blockDataModel = new DataModelBuilder({ kind })
@@ -111,7 +128,8 @@ export const blockDataModel = new DataModelBuilder({ kind })
   })
   // The defaults-init guards were one `JSON.stringify(anchor) + "::" + preset`
   // string; they are two fields now, so the anchor half stays a bare stringified
-  // `PlRef`. See `splitInitializedForAnchor` for why the split is from the right.
+  // `PlRef` — canonically serialized, since that is what relocates and what the
+  // UI compares against. See `splitInitializedForAnchor`.
   .migrate<BlockData>("Ver_2026_08_20", (prev) => ({
     ...prev,
     filtersInitializedForAnchor: splitInitializedForAnchor(prev.filtersInitializedForAnchor),
