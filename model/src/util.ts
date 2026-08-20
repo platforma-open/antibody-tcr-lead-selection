@@ -2,8 +2,10 @@ import {
   Annotation,
   Column,
   ColumnsCollection,
+  createGlobalPObjectId,
   DataColumn,
   extractPObjectId,
+  isGlobalPObjectId,
   readAnnotationJson,
   type AxisSpec,
   type ColumnRecipe,
@@ -15,11 +17,34 @@ import {
 import type {
   BlockData,
   ColumnsMeta,
+  InitializedForAnchor,
   PlTableFiltersDefault,
   RankingOrder,
   ScopedColumnId,
   WorkflowPreset,
 } from "./types";
+
+/**
+ * The canonical column identifier for an anchor, as the defaults-init guard
+ * stores it.
+ *
+ * The single place it is minted: the UI computes the current key with it and the
+ * `Ver_2026_08_20` migration rewrites stored values with it, so the two can never
+ * disagree on bytes for the same anchor — which they would if one used
+ * `JSON.stringify` and the other canonicalized, and which matters because
+ * relocation re-emits the stored value canonically when a template is applied.
+ *
+ * `createGlobalPObjectId` is the SDK's named constructor for this id form, and it
+ * takes the two fields rather than the object: an oddly-ordered `PlRef` cannot
+ * leak its key order in, and stray fields on the ref — `requireEnrichments`, say,
+ * which does not change which column is meant — cannot reach the id. The
+ * narrowing is what keeps this cast-free; the constructor always produces the
+ * global form, so the `undefined` branch is unreachable in practice.
+ */
+export function anchorInitializedId(ref: PlRef): InitializedForAnchor["anchor"] | undefined {
+  const id = createGlobalPObjectId(ref.blockId, ref.name);
+  return isGlobalPObjectId(id) ? id : undefined;
+}
 
 /** Underlying primary `PlRef` from `data.input` — undefined when no dataset is picked. */
 export function getInputAnchorRef(data: Pick<BlockData, "input">): PlRef | undefined {

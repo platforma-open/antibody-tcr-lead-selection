@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies",
-  "version": "4.1.0",
+  "version": "4.2.0",
   "files": [
     "dist",
     "block-pack"
@@ -26,6 +26,7 @@
   "devDependencies": {
     "@milaboratories/ts-builder": "catalog:",
     "@milaboratories/ts-configs": "catalog:",
+    "@platforma-open/milaboratories.top-antibodies.kind": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.model": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.ui": "workspace:*",
     "@platforma-open/milaboratories.top-antibodies.workflow": "workspace:*",

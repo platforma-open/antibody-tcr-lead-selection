@@ -5,11 +5,22 @@ import type {
   PlDataTableStateV2,
   PlMultiSequenceAlignmentModel,
   PlRef,
-  PObjectId,
 } from "@platforma-sdk/model";
-import type { PlTableFilter } from "./typesFilters";
+import type {
+  DiscreteFilter,
+  Filter,
+  InitializedForAnchor,
+  PlTableFilter,
+  RankingOrder,
+  ScopedColumnId,
+  WorkflowPreset,
+} from "@platforma-open/milaboratories.top-antibodies.kind";
 
-export * from "./typesFilters";
+// `ScopedColumnId`, `RankingOrder`, `Filter`, the discrete-filter shapes and the
+// filter predicate union are part of the block's init-params contract, so they
+// are declared by the kind and re-exported here: the model depends on the kind,
+// never the other way round.
+export type * from "@platforma-open/milaboratories.top-antibodies.kind";
 
 export type LegacyBlockArgs = {
   defaultBlockLabel: string;
@@ -75,7 +86,7 @@ export type BlockData_Ver_2026_05_21 = Omit<BlockData_Ver_2026_05_08, "inputAnch
   input?: DatasetSelection;
 };
 
-export type BlockData = BlockData_Ver_2026_05_21 & {
+export type BlockData_Ver_2026_07_28 = BlockData_Ver_2026_05_21 & {
   /**
    * Set by the `Ver_2026_07_28` migration when it dropped the block's former
    * built-in "In Vivo Score" from the stored ranking. Drives a one-time notice
@@ -83,6 +94,23 @@ export type BlockData = BlockData_Ver_2026_05_21 & {
    */
   inVivoScoreRemovedNotice?: boolean;
 };
+
+export type BlockData_Ver_2026_08_20 = Omit<
+  BlockData_Ver_2026_07_28,
+  "filtersInitializedForAnchor" | "rankingsInitializedForAnchor"
+> & {
+  /**
+   * The anchor the filter defaults were last applied for, with the preset they
+   * were applied under. Replaces the previous single `anchor::preset` string:
+   * split into two fields, the anchor half stays a bare stringified `PlRef`,
+   * which is what lets a template relocate it to the project it is applied in.
+   */
+  filtersInitializedForAnchor?: InitializedForAnchor;
+  /** As {@link filtersInitializedForAnchor}, for the ranking defaults. */
+  rankingsInitializedForAnchor?: InitializedForAnchor;
+};
+
+export type BlockData = BlockData_Ver_2026_08_20;
 
 export type BlockArgs = {
   defaultBlockLabel: string;
@@ -102,54 +130,9 @@ export type BlockArgs = {
   diversificationColumn?: PlRef;
 };
 
-export type ScopedColumnId = {
-  /**
-   * Anchor the column was discovered against. The UI uses it to tell a freshly
-   * arrived filter/ranking config from a stale one left over from the previous
-   * dataset; nothing on the workflow side reads it.
-   */
-  anchorRef: PlRef;
-  /**
-   * Terminal storage id of the column, as `extractPObjectId(recipe.id)`.
-   *
-   * Deliberately *not* the full `ColumnUniversalId` the new API hands out:
-   * `bundleBuilder.addSingle` resolves a global `PObjectId` by ref and has no
-   * branch for the `ColumnDiscoveredId` that a linker-reached hit carries.
-   * Keeping the leaf id reproduces the pre-migration contract, where the model
-   * said *which* column and the workflow re-derived *how* to reach it.
-   */
-  column: PObjectId;
-};
-
-export type RankingOrder = {
-  value?: ScopedColumnId;
-  rankingOrder: "increasing" | "decreasing";
-};
-
 export type RankingOrderUI = RankingOrder & {
   id?: string;
   isExpanded?: boolean;
-};
-
-/** Filter for matching any of a set of discrete string values */
-export type StringInFilter = {
-  type: "string_in";
-  /** JSON-encoded string array, e.g. '["Yes","No"]' */
-  reference: string;
-};
-
-/** Filter for excluding a set of discrete string values */
-export type StringNotInFilter = {
-  type: "string_notIn";
-  /** JSON-encoded string array, e.g. '["Yes","No"]' */
-  reference: string;
-};
-
-export type DiscreteFilter = StringInFilter | StringNotInFilter;
-
-export type Filter = {
-  value?: ScopedColumnId;
-  filter?: PlTableFilter | DiscreteFilter;
 };
 
 export type FilterUI = Filter & {
@@ -161,8 +144,6 @@ export type PlTableFiltersDefault = {
   column: ScopedColumnId;
   default: PlTableFilter | DiscreteFilter;
 };
-
-export type WorkflowPreset = "in-vivo" | "in-vitro" | "peptide";
 
 export type PresetDefaults = {
   rankingOrder: RankingOrder[];

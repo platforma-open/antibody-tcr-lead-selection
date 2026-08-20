@@ -98,13 +98,20 @@ useAnchorSyncedDefaults({
     const count = app.model.data.rankingOrder?.length ?? 0;
     return count > 0;
   },
-  // Persisted tracking of which anchor's defaults have been applied
+  // Persisted tracking of which anchor's defaults have been applied, and under
+  // which preset. One slot, because there is one ranking list: a stored preset
+  // that differs from the current one means the list belongs to the other preset
+  // and must be replaced, so the read reports "not initialized" and the
+  // composable falls through to the defaults path. The anchor is kept as its own
+  // field, a bare stringified `PlRef`, so a project template can relocate it.
   getInitializedAnchorKey: () => {
-    const key = app.model.data.rankingsInitializedForAnchor;
-    return key;
+    const stored = app.model.data.rankingsInitializedForAnchor;
+    if (stored === undefined) return undefined;
+    return stored.preset === (app.model.data.preset ?? "none") ? stored.anchor : undefined;
   },
   setInitializedAnchorKey: (key) => {
-    app.model.data.rankingsInitializedForAnchor = key;
+    app.model.data.rankingsInitializedForAnchor =
+      key === undefined ? undefined : { anchor: key, preset: app.model.data.preset ?? "none" };
   },
 });
 </script>

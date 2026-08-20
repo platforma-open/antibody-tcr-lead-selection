@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies.model",
-  "version": "5.0.1",
+  "version": "5.1.0",
   "private": true,
   "description": "Block model",
   "type": "module",
@@ -27,6 +27,7 @@
     "@milaboratories/graph-maker": "catalog:",
     "@milaboratories/helpers": "catalog:",
     "@milaboratories/strings": "catalog:",
+    "@platforma-open/milaboratories.top-antibodies.kind": "workspace:*",
     "@platforma-sdk/model": "catalog:"
   },
   "devDependencies": {
