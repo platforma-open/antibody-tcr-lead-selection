@@ -3,7 +3,18 @@ import { name, version } from "../package.json" with { type: "json" };
 import { parseInitializationParams } from "./params";
 import type { BlockParams } from "./types";
 
-export type { BlockParams, WorkflowPreset } from "./types";
+export type {
+  BlockParams,
+  DiscreteFilter,
+  Filter,
+  InitializedForAnchor,
+  RankingOrder,
+  ScopedColumnId,
+  StringInFilter,
+  StringNotInFilter,
+  WorkflowPreset,
+} from "./types";
+export type * from "./typesFilters";
 
 // Identity (`name`/`version`) comes from this package's own `package.json`, so
 // the on-wire `{name}@{version}` reference can never drift from what npm

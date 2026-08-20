@@ -1,42 +1,103 @@
-import type { DatasetSelection } from "@platforma-sdk/model";
+import type { DatasetSelection, PlRef, PObjectId } from "@platforma-sdk/model";
+import type { PlTableFilter } from "./typesFilters";
+
+export * from "./typesFilters";
 
 /**
- * Which bundle of ranking and filter defaults the block applies once a dataset
- * is picked. The concrete rankings and filters are re-derived from it against
- * whatever columns the dataset actually carries, so this is the portable form
- * of "how leads are selected".
+ * Which bundle of ranking and filter defaults the block offers once a dataset is
+ * picked. Changing it re-derives both lists, so it is configuration in its own
+ * right and not just a shortcut for them.
  */
 export type WorkflowPreset = "in-vivo" | "in-vitro" | "peptide";
+
+/**
+ * The anchor the UI last applied ranking / filter defaults for, and the preset it
+ * applied them under.
+ *
+ * One slot, not one per preset: the block holds a single ranking list and a
+ * single filter list, and the preset selects which defaults fill them. A stored
+ * preset differing from the current one is therefore exactly the signal that the
+ * lists belong to the other preset and must be replaced — which is why the
+ * comparison lives here rather than being dissolved into per-preset memory.
+ *
+ * The anchor is its own field rather than being joined onto the preset. A bare
+ * stringified `PlRef` parses as a column identifier, so `relocateBlockIds`
+ * rewrites it when a template is applied; `anchor + "::" + preset` parses as
+ * nothing and would arrive still naming the project it was exported from. The
+ * preset is not an identifier, so it is carried through untouched.
+ */
+export type InitializedForAnchor = { anchor: string; preset: WorkflowPreset | "none" };
+
+/** A column the user picked, together with the anchor it was picked against. */
+export type ScopedColumnId = {
+  /**
+   * Anchor the column was discovered against. The UI uses it to tell a freshly
+   * arrived filter/ranking config from a stale one left over from the previous
+   * dataset; nothing on the workflow side reads it.
+   */
+  anchorRef: PlRef;
+  /**
+   * Terminal storage id of the column, as `extractPObjectId(recipe.id)`.
+   *
+   * Deliberately *not* the full `ColumnUniversalId` the new API hands out:
+   * `bundleBuilder.addSingle` resolves a global `PObjectId` by ref and has no
+   * branch for the `ColumnDiscoveredId` that a linker-reached hit carries.
+   * Keeping the leaf id reproduces the pre-migration contract, where the model
+   * said *which* column and the workflow re-derived *how* to reach it.
+   */
+  column: PObjectId;
+};
+
+export type RankingOrder = {
+  value?: ScopedColumnId;
+  rankingOrder: "increasing" | "decreasing";
+};
+
+/** Filter for matching any of a set of discrete string values */
+export type StringInFilter = {
+  type: "string_in";
+  /** JSON-encoded string array, e.g. '["Yes","No"]' */
+  reference: string;
+};
+
+/** Filter for excluding a set of discrete string values */
+export type StringNotInFilter = {
+  type: "string_notIn";
+  /** JSON-encoded string array, e.g. '["Yes","No"]' */
+  reference: string;
+};
+
+export type DiscreteFilter = StringInFilter | StringNotInFilter;
+
+export type Filter = {
+  value?: ScopedColumnId;
+  filter?: PlTableFilter | DiscreteFilter;
+};
 
 /**
  * This block's init-params contract — the shape a block of this kind receives
  * at creation, and exactly what a project template serializes for it.
  *
- * Every field is optional. A block with no dataset picked and no preset chosen
- * is an ordinary state the UI reaches, so export has to be able to write it and
- * apply has to be able to take it back; a contract that demanded `input` would
- * make export and apply stop being inverses. Whether a configuration is
- * runnable is settled by the model's `args` lambda, not here.
+ * Every field is optional. A block with no dataset picked, no preset chosen and
+ * an empty ranking is an ordinary state the UI reaches, so export has to be able
+ * to write it and apply has to be able to take it back; a contract that demanded
+ * `input` would make export and apply stop being inverses. Whether a
+ * configuration is runnable is settled by the model's `args` lambda, not here.
  *
- * The stored ranking and filter lists are deliberately absent. Each of their
- * entries carries a `PObjectId`, whose global form is a canonicalized `PlRef` —
- * it names a column of the *exporting* project's block and resolves to nothing
- * anywhere else. The UI also rebuilds both lists from the `rankingConfig` /
- * `filterConfig` outputs whenever the config it holds does not match the anchor
- * the block landed on, so a carried list would be overwritten in the good case
- * and stranded in the bad one. `preset` is what actually travels: it names the
- * defaults, and the target project fills in its own ids.
+ * The ranking and filter entries carry column identifiers naming a block of the
+ * project they were exported from, and they travel anyway: `relocateBlockIds`
+ * points every identifier in these params at the blocks of the project being
+ * built before the kind ever sees them, walking plain strings as well as
+ * ref-shaped objects, so both halves of a {@link ScopedColumnId} — the nested
+ * `PlRef` and the canonicalized id string — arrive already rewritten.
  *
- * `diversificationColumn` is absent for the same reason — the UI writes it from
- * the `clusterColumnOptions` output, picking the first linker the landing
- * dataset offers, and only when it is unset. A carried ref would name the
- * exporting project's linker column and would suppress that re-derivation
- * rather than be corrected by it.
+ * View state is absent: the table's grid state, the four graph states and the
+ * alignment model are what one user was looking at, not the recipe a template
+ * exists to reproduce.
  *
- * View state — table grid state, the four graph states, the alignment model,
- * the panel-init guards, the dismissed one-time notice — is absent because it
- * is what one user was looking at, not the recipe a template exists to
- * reproduce.
+ * `inVivoScoreRemovedNotice` is absent: a migration sets it for a stored project
+ * that lost the built-in in-vivo score, so carrying it would show that notice to
+ * a project which never had the column.
  */
 export type BlockParams = {
   // Input wiring — the dataset bundle a template engine fills from an earlier
@@ -47,6 +108,19 @@ export type BlockParams = {
   preset?: WorkflowPreset;
   topClonotypes?: number;
   kabatNumbering?: boolean;
+  rankingOrder?: RankingOrder[];
+  filters?: Filter[];
+  diversificationColumn?: PlRef;
+
+  // Which anchor the UI last applied the ranking / filter defaults for, and
+  // under which preset. Carried because it relocates: `anchor` is a bare
+  // stringified `PlRef`, which `relocateBlockIds` rewrites to the corresponding
+  // block of the project being built, while `preset` is left alone. It therefore
+  // matches what the target project computes, so the carried ranking and filter
+  // lists are recognized as already applied and kept, rather than being replaced
+  // by the landing dataset's defaults.
+  filtersInitializedForAnchor?: InitializedForAnchor;
+  rankingsInitializedForAnchor?: InitializedForAnchor;
 
   // Display naming.
   defaultBlockLabel?: string;
