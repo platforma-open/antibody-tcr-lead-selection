@@ -7,7 +7,7 @@ import type {
 } from "@platforma-open/milaboratories.top-antibodies.model";
 import { getInputAnchorRef } from "@platforma-open/milaboratories.top-antibodies.model";
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from "@platforma-sdk/ui-vue";
-import { ref } from "vue";
+import { ref, toRaw } from "vue";
 import { useApp } from "../../app";
 import { useAnchorSyncedDefaults } from "../../composables/useAnchorSyncedDefaults";
 import FilterCard from "./FilterCard.vue";
@@ -61,7 +61,10 @@ const resetToDefaults = () => {
     defaults?.map(
       (defaultFilter: { column: ScopedColumnId; default: PlTableFilter | DiscreteFilter }) => ({
         id: generateUniqueId(),
-        value: defaultFilter.column,
+        // Deep copy: the defaults live inside `outputs`, which the SDK patches in
+        // place on every recompute. Storing the object by reference would let an
+        // outputs patch rewrite this row's column in the block's persisted data.
+        value: structuredClone(toRaw(defaultFilter.column)),
         filter: { ...defaultFilter.default },
         isExpanded: false,
       }),

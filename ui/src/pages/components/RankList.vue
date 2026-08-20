@@ -2,7 +2,7 @@
 import type { ScopedColumnId } from "@platforma-open/milaboratories.top-antibodies.model";
 import { getInputAnchorRef } from "@platforma-open/milaboratories.top-antibodies.model";
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from "@platforma-sdk/ui-vue";
-import { ref } from "vue";
+import { ref, toRaw } from "vue";
 import { useApp } from "../../app";
 import { useAnchorSyncedDefaults } from "../../composables/useAnchorSyncedDefaults";
 import RankCard from "./RankCard.vue";
@@ -55,7 +55,10 @@ const resetToDefaults = () => {
     defaults?.map(
       (defaultRank: { value?: ScopedColumnId; rankingOrder: "increasing" | "decreasing" }) => ({
         id: generateUniqueId(),
-        value: defaultRank.value,
+        // Deep copy: the defaults live inside `outputs`, which the SDK patches in
+        // place on every recompute. Storing the object by reference would let an
+        // outputs patch rewrite this row's column in the block's persisted data.
+        value: structuredClone(toRaw(defaultRank.value)),
         rankingOrder: defaultRank.rankingOrder,
         isExpanded: false,
       }),
