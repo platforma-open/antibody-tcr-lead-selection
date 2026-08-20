@@ -1,6 +1,7 @@
 import { assertParamsObject } from "@platforma-sdk/block-kind";
 import { isDatasetSelection } from "@platforma-sdk/model";
 import { isBoolean, isString } from "es-toolkit";
+import { isNumber } from "es-toolkit/compat";
 import type { BlockParams, WorkflowPreset } from "./types";
 
 /**
@@ -40,9 +41,6 @@ function check<T>(is: Guard<T>, must: string): Check<T> {
   return { is, must };
 }
 
-/** `Number.isInteger` already rejects non-numbers; this only adds the narrowing. */
-const isInteger: Guard<number> = (v): v is number => Number.isInteger(v);
-
 function oneOf<T extends string>(...allowed: readonly T[]): Guard<T> {
   return (v): v is T => allowed.includes(v as T);
 }
@@ -69,7 +67,7 @@ const CONTRACT = {
     oneOf<WorkflowPreset>("in-vivo", "in-vitro", "peptide"),
     "one of: in-vivo, in-vitro, peptide",
   ),
-  topClonotypes: check(isInteger, "an integer"),
+  topClonotypes: check(isNumber, "a number"),
   kabatNumbering: check(isBoolean, "a boolean"),
 
   defaultBlockLabel: check(isString, "a string"),
