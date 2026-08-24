@@ -105,6 +105,12 @@ const CLUSTER_ID_SELECTORS: RelaxedColumnSelector[] = [...CLUSTER_ID_AXIS_NAMES]
   name: exactMatch(name),
 }));
 
+// Internal columns to be hidden from the table
+const OWN_PLUMBING_SELECTORS: RelaxedColumnSelector[] = [
+  { name: exactMatch("pl7.app/selectionStage") },
+  { name: exactMatch("pl7.app/lead-selection") },
+];
+
 /**
  * Adapt column recipes to `PColumn`s for the helpers that still take
  * materialised `PColumn[]` and have no id form (`createPFrameForGraphs`,
@@ -592,6 +598,7 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
           // Clone-to-cluster mapping is always hidden — it duplicates the
           // clusterId axis label column.
           { match: CLUSTER_ID_SELECTORS, visibility: "hidden" },
+          { match: OWN_PLUMBING_SELECTORS, visibility: "hidden" },
           // Catch-all: everything else optional (V3 manages linker columns).
           { match: {}, visibility: "optional" },
         ],
