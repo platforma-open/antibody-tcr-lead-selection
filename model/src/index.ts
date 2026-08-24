@@ -340,11 +340,17 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
 
     // `type: "String"` is a valid ValueType, so the non-string filter goes
     // host-side too — only File / lead-selection-produced survive to isSelectableMatch.
+    // Subset columns carry no orderable value and are excluded here, not in
+    // `discoveryExcludeSelectors`: the filter list keeps them.
     const rankableMatches = dedupByLeafId(
       result.collection
         .discover({
           anchors: { main: result.anchorSpec },
-          exclude: [...discoveryExcludeSelectors(result.sampleAxisName), { type: "String" }],
+          exclude: [
+            ...discoveryExcludeSelectors(result.sampleAxisName),
+            { type: "String" },
+            { annotations: { [Annotation.IsSubset]: "true" } },
+          ],
         })
         .getColumns(),
     ).filter(isSelectableMatch);
