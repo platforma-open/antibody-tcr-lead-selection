@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 4.2.2
+
+### Patch Changes
+
+- 846f9eb: Hide unneeded columns from main table
+
 ## 4.2.1
 
 ### Patch Changes
