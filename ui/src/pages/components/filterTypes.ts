@@ -1,4 +1,4 @@
-// Which predicates a column admits, and how a fresh filter of each type is built.
+// Which predicates a column admits. How to build a fresh filter of each type.
 
 import type {
   DiscreteFilter,
@@ -28,7 +28,7 @@ export type AnyFilter = PlTableFilter | DiscreteFilter;
 /** The column half of a "Filter by" option, as `filterConfig` builds it. */
 export type FilterColumnOption = {
   column?: { spec: { valueType?: string; annotations?: Record<string, string> } };
-  /** Set by `filterConfig`. The column carries no readable value. */
+  /** `filterConfig` sets this. The column carries no readable value. */
   presenceOnly?: boolean;
 };
 
@@ -61,11 +61,11 @@ export const isDiscreteFilterType = (type?: string): type is DiscreteFilterType 
 export const isNAFilterType = (type?: string): type is NAFilterType =>
   type === "isNA" || type === "isNotNA";
 
-/** Presence-only column. Decided by `filterConfig`, which has the anchor spec. */
+/** Presence-only column. `filterConfig` decides this. It has the anchor spec. */
 export const isPresenceOnlyOption = (option?: FilterColumnOption): boolean =>
   option?.presenceOnly === true;
 
-/** Column declaring a closed vocabulary, filtered by multi-select. */
+/** Column that declares a closed vocabulary. Multi-select filters it. */
 export const isMultiSelectColumn = (option?: FilterColumnOption): boolean => {
   const ann = option?.column?.spec?.annotations;
   if (!ann) return false;

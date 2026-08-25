@@ -48,8 +48,8 @@ const col = (over: Partial<PColumnSpec> & { axesSpec: AxisSpec[] }): PColumnSpec
 
 describe("isPresenceOnlyColumn", () => {
   test("a repertoire-labeling label column is presence-only", () => {
-    // github.com/platforma-open/repertoire-labeling PR #1: one sparse Int column per
-    // label, value is the literal 1, single entity axis taken from the anchor.
+    // github.com/platforma-open/repertoire-labeling PR #1. The block emits one sparse Int
+    // column per label. The value is the literal 1. The anchor supplies the entity axis.
     const label = col({
       name: "pl7.app/tag",
       valueType: "Int",
@@ -61,9 +61,9 @@ describe("isPresenceOnlyColumn", () => {
   });
 
   test("NON-REGRESSION: differential-clonotype-abundance Log2FC is not presence-only", () => {
-    // Annotated isSubset, but it carries a Contrast axis the anchor lacks, so it is not a
-    // subset of the dataset and its values are real. It must keep its numeric operators
-    // and stay rankable.
+    // The column carries the annotation. It also carries a Contrast axis the anchor lacks,
+    // so it is not a subset of the dataset. Its values are real. It keeps its numeric
+    // operators and stays rankable.
     const log2fc = col({
       name: "pl7.app/dea/log2foldchange",
       valueType: "Double",
@@ -73,8 +73,8 @@ describe("isPresenceOnlyColumn", () => {
     expect(isPresenceOnlyColumn(log2fc, anchor)).toBe(false);
   });
 
-  // Axis identity includes domain, so a same-named axis with an extra key is a
-  // different axis keying different entities.
+  // Axis identity includes domain. A same-named axis with an extra key is a different
+  // axis. It keys different entities.
   test("an axis with an extra domain key is not presence-only", () => {
     const narrower = col({
       axesSpec: [narrowerClonotypeAxis],
@@ -84,7 +84,7 @@ describe("isPresenceOnlyColumn", () => {
   });
 
   // The same rule in the other direction. A label column whose axis lost the anchor's
-  // domain keeps its full operator list, which is the symptom this check exists to fix.
+  // domain keeps its full operator list.
   test("an axis carrying no domain is not presence-only against a domained anchor", () => {
     const undomained = col({
       axesSpec: [undomainedClonotypeAxis],
@@ -112,8 +112,8 @@ describe("isPresenceOnlyColumn", () => {
 });
 
 describe("isPresenceOnlyColumn invariants", () => {
-  // Includes the two domain variants, so the generator reaches name collisions that
-  // differ only in domain.
+  // The two domain variants let the generator reach name collisions that differ only
+  // in domain.
   const anyAxis = fc.constantFrom(
     sampleAxis,
     clonotypeAxis,
@@ -142,7 +142,7 @@ describe("isPresenceOnlyColumn invariants", () => {
     );
   });
 
-  // Both directions, so a constant-false implementation fails the first case.
+  // Both directions. A constant-false implementation fails the first case.
   test("the verdict tracks whether every axis id is one the anchor carries", () => {
     fc.assert(
       fc.property(anySpec, (spec) => {
@@ -165,7 +165,7 @@ describe("isPresenceOnlyColumn invariants", () => {
 });
 
 describe("isRankableMatch", () => {
-  // Real ids: `isRankableMatch` walks them through `extractPObjectId`.
+  // Real ids. `isRankableMatch` passes them to `extractPObjectId`.
   const idOf = (name: string) => createGlobalPObjectId("block1", name);
   const recipe = (name: string, spec: PColumnSpec) =>
     ({ id: idOf(name), getSpec: () => spec }) as unknown as ColumnRecipe;
@@ -188,8 +188,8 @@ describe("isRankableMatch", () => {
     expect(isRankableMatch(recipe("p", presenceOnly), anchor, new Set())).toBe(false);
   });
 
-  // The guard for saved projects. Without it, a ranking list of only presence-only
-  // columns is replaced by preset defaults, changing which clonotypes get selected.
+  // The guard for saved projects. Without it, preset defaults replace a ranking list of
+  // only presence-only columns. That changes which clonotypes the block selects.
   test("a presence-only column the saved ranking names stays rankable", () => {
     expect(isRankableMatch(recipe("p", presenceOnly), anchor, new Set([idOf("p")]))).toBe(true);
   });

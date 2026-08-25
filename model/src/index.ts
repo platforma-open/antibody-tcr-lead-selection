@@ -348,8 +348,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
 
     // `type: "String"` is a valid ValueType, so the non-string filter goes
     // host-side too — only File / lead-selection-produced survive to isSelectableMatch.
-    // Presence-only columns are excluded by `isRankableMatch`, not host-side: the test
-    // needs the anchor.
+    // `isRankableMatch` excludes presence-only columns. The test needs the anchor, so it
+    // cannot run host-side.
     const rankedColumnIds = new Set<PObjectId>(
       (ctx.data.rankingOrder ?? []).flatMap((r) => (r.value ? [r.value.column] : [])),
     );

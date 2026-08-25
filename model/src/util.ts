@@ -134,12 +134,12 @@ export function isProducedByLeadSelection(spec: PColumnSpec): boolean {
 /**
  * True when a column carries no readable value. Presence is the whole signal.
  *
- * Requires the annotation, and axes that are a subset of the anchor's. Axis identity is
- * name, type, domain and context-domain. An axis differing in any of them is a different
- * axis, so a column carrying one is not presence-only.
+ * Requires the annotation. Requires axes that are a subset of the anchor's. Axis identity
+ * is name, type, domain and context-domain. An axis that differs in any of them is a
+ * different axis. A column that carries one is not presence-only.
  *
- * Not `matchAxisId`: that treats an extra domain key on the column axis as a match.
- * Reached through a linker, a column keeps its own axes and reads as not presence-only.
+ * `matchAxisId` accepts an extra domain key on the column axis. This check does not.
+ * A column reached through a linker keeps its own axes and reads as not presence-only.
  */
 export function isPresenceOnlyColumn(spec: PColumnSpec, anchorSpec: PColumnSpec): boolean {
   if (spec.annotations?.[Annotation.IsSubset] !== "true") return false;
@@ -157,10 +157,10 @@ export function isSelectableMatch(c: ColumnRecipe): boolean {
 }
 
 /**
- * Whether a discovered column is offered for ranking.
+ * Whether the ranking options include a discovered column.
  *
- * Presence-only columns carry nothing to order by. One the saved ranking already names
- * stays offered: dropping the last one resets the list to preset defaults.
+ * Presence-only columns carry nothing to order by. A column the saved ranking names stays
+ * in the options. Dropping the last one resets the list to preset defaults.
  */
 export function isRankableMatch(
   c: ColumnRecipe,

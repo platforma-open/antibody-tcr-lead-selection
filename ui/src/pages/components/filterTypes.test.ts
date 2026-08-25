@@ -29,7 +29,7 @@ describe("presence-only columns", () => {
   });
 
   test("the model's flag decides, not the raw annotation", () => {
-    // differential-clonotype-abundance Log2FC: carries the annotation, but the model does
+    // differential-clonotype-abundance Log2FC. It carries the annotation. The model does
     // not flag it, so it keeps every numeric operator.
     const log2fc = option("Double", { "pl7.app/isSubset": "true", "pl7.app/format": ".2f" }, false);
     expect(types(log2fc)).toEqual(types(option("Double")));
@@ -40,8 +40,8 @@ describe("a saved predicate stays visible", () => {
   const presenceOnly = option("Int", {}, true);
 
   test("a numeric predicate saved before the column became presence-only is kept", () => {
-    // clonotype-browser / cell-browser annotation filters are presence-only columns that
-    // already exist in projects, where a saved `Filter > 0` must not vanish from the list.
+    // clonotype-browser and cell-browser annotation filters are presence-only columns.
+    // They already exist in projects. A saved `Filter > 0` must stay in the list.
     expect(types(presenceOnly)).toEqual(["isNA", "isNotNA"]);
     const withSaved = filterTypesFor(presenceOnly, "number_greaterThan").map((t) => t.value);
     expect(withSaved).toContain("number_greaterThan");
@@ -96,8 +96,8 @@ describe("non-presence-only columns keep their predicates", () => {
 });
 
 describe("createFilter", () => {
-  // The shape a fresh filter starts in. FilterCard writes this straight into block args,
-  // so a missing or wrongly-typed `reference` reaches the workflow.
+  // The shape a fresh filter starts in. FilterCard writes it into block args. A missing
+  // or wrongly-typed `reference` reaches the workflow.
   test.each([
     ["isNotNA", { type: "isNotNA" }],
     ["isNA", { type: "isNA" }],
@@ -134,8 +134,8 @@ describe("invariants", () => {
   );
   const knownType = fc.constantFrom(...filterTypeOptions.map((t) => t.value));
 
-  // The guard that protects saved projects: a predicate already in block args must never
-  // vanish from the dropdown, whatever the column now admits.
+  // The guard for saved projects. A predicate already in block args stays in the
+  // dropdown, whatever the column now admits.
   test("a known saved predicate is always offered", () => {
     fc.assert(
       fc.property(anyOption, knownType, (option, current) => {
