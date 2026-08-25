@@ -83,7 +83,24 @@ export const isMultiSelectColumn = (option?: FilterColumnOption): boolean => {
  * Precedence: presence-only, then discrete, then value type. A presence-only column admits
  * presence predicates only, whatever its value type says.
  */
-export function filterTypesFor(option?: FilterColumnOption) {
+export function filterTypesFor(option?: FilterColumnOption, currentType?: string) {
+  return admitCurrent(admissibleTypesFor(option), currentType);
+}
+
+/**
+ * Keeps a saved predicate visible even once the column no longer admits it.
+ *
+ * A project saved before a column became presence-only still holds e.g.
+ * `number_greaterThan`. The workflow keeps applying it unchanged; dropping it from the
+ * dropdown would show an out-of-list value and let an incidental reopen rewrite it.
+ */
+function admitCurrent(types: typeof filterTypeOptions, currentType?: string) {
+  if (!currentType || types.some((t) => t.value === currentType)) return types;
+  const saved = filterTypeOptions.find((t) => t.value === currentType);
+  return saved ? [...types, saved] : types;
+}
+
+function admissibleTypesFor(option?: FilterColumnOption) {
   if (!option) return filterTypeOptions;
 
   if (isPresenceOnlyOption(option)) {

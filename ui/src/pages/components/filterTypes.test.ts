@@ -31,6 +31,38 @@ describe("presence-only columns", () => {
   });
 });
 
+describe("a saved predicate stays visible", () => {
+  const presenceOnly = option("Int", {}, true);
+
+  test("a numeric predicate saved before the column became presence-only is kept", () => {
+    // clonotype-browser / cell-browser annotation filters are presence-only columns that
+    // already exist in projects, where a saved `Filter > 0` must not vanish from the list.
+    expect(types(presenceOnly)).toEqual(["isNA", "isNotNA"]);
+    expect(filterTypesFor(presenceOnly, "number_greaterThan").map((t) => t.value)).toEqual([
+      "isNA",
+      "isNotNA",
+      "number_greaterThan",
+    ]);
+  });
+
+  test("an admissible predicate is not duplicated", () => {
+    expect(filterTypesFor(presenceOnly, "isNotNA").map((t) => t.value)).toEqual([
+      "isNA",
+      "isNotNA",
+    ]);
+    expect(filterTypesFor(option("Double"), "number_lessThan").map((t) => t.value)).toEqual(
+      types(option("Double")),
+    );
+  });
+
+  test("an unknown predicate is ignored", () => {
+    expect(filterTypesFor(presenceOnly, "not_a_filter").map((t) => t.value)).toEqual([
+      "isNA",
+      "isNotNA",
+    ]);
+  });
+});
+
 describe("non-presence-only columns keep their predicates", () => {
   test("a numeric score gets numeric operators", () => {
     const t = types(option("Double", { "pl7.app/isScore": "true" }));

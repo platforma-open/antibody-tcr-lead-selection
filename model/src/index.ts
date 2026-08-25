@@ -348,6 +348,16 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     // host-side too — only File / lead-selection-produced survive to isSelectableMatch.
     // Presence-only columns carry nothing to order by. That test needs the anchor, so it
     // cannot be a host-side selector; it runs beside `isSelectableMatch` on the survivors.
+    // Columns the saved ranking already names stay selectable even when presence-only.
+    // Dropping one would leave `RankList.hasExistingStateForConfig` with no match and
+    // replace the whole saved list with preset defaults — a silent change to which
+    // clonotypes a finished project selects.
+    const rankedColumnIds = new Set<string>(
+      (ctx.data.rankingOrder ?? [])
+        .filter((r) => r.value?.column !== undefined)
+        .map((r) => r.value!.column as string),
+    );
+
     const rankableMatches = dedupByLeafId(
       result.collection
         .discover({
@@ -355,7 +365,12 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
           exclude: [...discoveryExcludeSelectors(result.sampleAxisName), { type: "String" }],
         })
         .getColumns(),
-    ).filter((c) => isSelectableMatch(c) && !isPresenceOnlyColumn(c.getSpec(), result.anchorSpec));
+    ).filter(
+      (c) =>
+        isSelectableMatch(c) &&
+        (rankedColumnIds.has(extractPObjectId(c.id) as string) ||
+          !isPresenceOnlyColumn(c.getSpec(), result.anchorSpec)),
+    );
 
     const labels = deriveDistinctLabels(
       rankableMatches.map((c) => c.getSpec()),

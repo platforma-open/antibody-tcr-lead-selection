@@ -33,8 +33,12 @@ const props = defineProps<{
 }>();
 
 const getFilterTypeOptions = (columnId?: ScopedColumnId) => {
-  if (!columnId) return filterTypesFor(undefined);
-  return filterTypesFor(props.options?.find((opt) => opt.value.column === columnId.column));
+  const current = model.value.filter?.type;
+  if (!columnId) return filterTypesFor(undefined, current);
+  return filterTypesFor(
+    props.options?.find((opt) => opt.value.column === columnId.column),
+    current,
+  );
 };
 
 const hasReference = (filter: AnyFilter): filter is AnyFilter & { reference: string | number } => {
