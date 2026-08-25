@@ -5,6 +5,7 @@ import {
   createGlobalPObjectId,
   DataColumn,
   extractPObjectId,
+  canonicalizeAxisId,
   isGlobalPObjectId,
   readAnnotationJson,
   type AxisSpec,
@@ -130,6 +131,22 @@ export function isProducedByLeadSelection(spec: PColumnSpec): boolean {
   );
 }
 
+/**
+ * True when a column carries no readable value. Presence is the whole signal.
+ *
+ * Requires the annotation. Requires axes that are a subset of the anchor's. Axis identity
+ * is name, type, domain and context-domain. An axis that differs in any of them is a
+ * different axis. A column that carries one is not presence-only.
+ *
+ * `matchAxisId` accepts an extra domain key on the column axis. This check does not.
+ * A column reached through a linker keeps its own axes and reads as not presence-only.
+ */
+export function isPresenceOnlyColumn(spec: PColumnSpec, anchorSpec: PColumnSpec): boolean {
+  if (spec.annotations?.[Annotation.IsSubset] !== "true") return false;
+  const anchorAxes = new Set(anchorSpec.axesSpec.map(canonicalizeAxisId));
+  return spec.axesSpec.every((axis) => anchorAxes.has(canonicalizeAxisId(axis)));
+}
+
 /** JS post-filter for the residual predicates that {@link discoveryExcludeSelectors}
  *  can't express host-side: File value type (`File` is not a matchable `ValueType`)
  *  and columns produced by a lead-selection block (last-trace-step check on parsed
@@ -137,6 +154,22 @@ export function isProducedByLeadSelection(spec: PColumnSpec): boolean {
 export function isSelectableMatch(c: ColumnRecipe): boolean {
   const spec = c.getSpec();
   return !isProducedByLeadSelection(spec);
+}
+
+/**
+ * Whether the ranking options include a discovered column.
+ *
+ * Presence-only columns carry nothing to order by. A column the saved ranking names stays
+ * in the options. Dropping the last one resets the list to preset defaults.
+ */
+export function isRankableMatch(
+  c: ColumnRecipe,
+  anchorSpec: PColumnSpec,
+  rankedColumnIds: ReadonlySet<PObjectId>,
+): boolean {
+  if (!isSelectableMatch(c)) return false;
+  if (rankedColumnIds.has(extractPObjectId(c.id))) return true;
+  return !isPresenceOnlyColumn(c.getSpec(), anchorSpec);
 }
 
 /**

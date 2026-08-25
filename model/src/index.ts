@@ -26,6 +26,7 @@ import {
   extractPObjectId,
   isDataColumn,
   isPColumnSpec,
+  type PObjectId,
 } from "@platforma-sdk/model";
 import {
   buildCollection,
@@ -37,7 +38,9 @@ import {
   getInputFilterRef,
   getSpecByRef,
   isClusterIdAxisName,
+  isPresenceOnlyColumn,
   isProducedByLeadSelection,
+  isRankableMatch,
   isSelectableMatch,
   matchToColumnId,
 } from "./util";
@@ -316,12 +319,17 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       filterableMatches.map((c) => c.getSpec()),
       { includeNativeLabel: true },
     );
-    const options = filterableMatches.map((c, i) => ({
-      label: labels[i],
-      value: matchToColumnId(c, inputAnchor!),
-      // FilterCard reads `option.column.spec` to pick the right filter control.
-      column: { id: c.id, spec: c.getSpec() },
-    }));
+    const options = filterableMatches.map((c, i) => {
+      const spec = c.getSpec();
+      return {
+        label: labels[i],
+        value: matchToColumnId(c, inputAnchor!),
+        // FilterCard reads `option.column.spec` to pick the filter control.
+        column: { id: c.id, spec },
+        // The card has no anchor spec, so the model decides.
+        presenceOnly: isPresenceOnlyColumn(spec, result.anchorSpec),
+      };
+    });
 
     return {
       options,
@@ -340,6 +348,12 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
 
     // `type: "String"` is a valid ValueType, so the non-string filter goes
     // host-side too — only File / lead-selection-produced survive to isSelectableMatch.
+    // `isRankableMatch` excludes presence-only columns. The test needs the anchor, so it
+    // cannot run host-side.
+    const rankedColumnIds = new Set<PObjectId>(
+      ctx.data.rankingOrder.flatMap((r) => (r.value ? [r.value.column] : [])),
+    );
+
     const rankableMatches = dedupByLeafId(
       result.collection
         .discover({
@@ -347,7 +361,7 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
           exclude: [...discoveryExcludeSelectors(result.sampleAxisName), { type: "String" }],
         })
         .getColumns(),
-    ).filter(isSelectableMatch);
+    ).filter((c) => isRankableMatch(c, result.anchorSpec, rankedColumnIds));
 
     const labels = deriveDistinctLabels(
       rankableMatches.map((c) => c.getSpec()),

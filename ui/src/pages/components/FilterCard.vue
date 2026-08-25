@@ -7,25 +7,17 @@ import type {
 } from "@platforma-open/milaboratories.top-antibodies.model";
 import { PlDropdown, PlDropdownMulti, PlTextField } from "@platforma-sdk/ui-vue";
 import { computed, watch } from "vue";
-
-// Define specific filter types to avoid 'as any'
-type NumberFilterType =
-  | "number_greaterThan"
-  | "number_greaterThanOrEqualTo"
-  | "number_lessThan"
-  | "number_lessThanOrEqualTo"
-  | "number_equals"
-  | "number_notEquals";
-
-type StringFilterType =
-  | "string_equals"
-  | "string_notEquals"
-  | "string_contains"
-  | "string_doesNotContain";
-
-type DiscreteFilterType = "string_in" | "string_notIn";
-
-type NAFilterType = "isNA" | "isNotNA";
+import type { AnyFilter, FilterColumnOption } from "./filterTypes";
+import {
+  createFilter,
+  filterTypesFor,
+  isDiscreteFilterType,
+  isMultiSelectColumn,
+  isNAFilterType,
+  isNumberFilter,
+  isStringFilter,
+  isPresenceOnlyOption,
+} from "./filterTypes";
 
 const model = defineModel<FilterUI>({
   default: {
@@ -34,91 +26,20 @@ const model = defineModel<FilterUI>({
 });
 
 const props = defineProps<{
-  options?: {
+  options?: ({
     label: string;
     value: ScopedColumnId;
-    column?: { spec: { valueType?: string; annotations?: Record<string, string> } };
-  }[];
+  } & FilterColumnOption)[];
 }>();
 
-const filterTypeOptions = [
-  { value: "number_greaterThan", label: "Greater than" },
-  { value: "number_greaterThanOrEqualTo", label: "Greater than or equal" },
-  { value: "number_lessThan", label: "Less than" },
-  { value: "number_lessThanOrEqualTo", label: "Less than or equal" },
-  { value: "number_equals", label: "Equals" },
-  { value: "number_notEquals", label: "Not equals" },
-  { value: "string_equals", label: "Equals" },
-  { value: "string_notEquals", label: "Not equals" },
-  { value: "string_contains", label: "Contains" },
-  { value: "string_doesNotContain", label: "Does not contain" },
-  { value: "string_in", label: "Is one of" },
-  { value: "string_notIn", label: "Is not one of" },
-  { value: "isNA", label: "Is empty (NA)" },
-  { value: "isNotNA", label: "Is not empty (NA)" },
-];
-
 const getFilterTypeOptions = (columnId?: ScopedColumnId) => {
-  if (!columnId) return filterTypeOptions;
-
-  // Find the selected option to access column spec
-  const selectedOption = props.options?.find((opt) => opt.value.column === columnId.column);
-
-  if (!selectedOption?.column?.spec?.valueType) {
-    // If we can't determine the type, return all options
-    return filterTypeOptions;
-  }
-
-  const valueType = selectedOption.column.spec.valueType;
-
-  // If String, return only string filters; otherwise return only number filters
-  // isNA/isNotNA is available for all column types
-  if (valueType === "String") {
-    // Multi-select discrete columns get "Is one of" / "Is not one of" options
-    if (isMultiSelectColumn(selectedOption)) {
-      return filterTypeOptions.filter(
-        (opt) => isDiscreteFilterType(opt.value) || isNAFilterType(opt.value),
-      );
-    }
-    return filterTypeOptions.filter(
-      (opt) =>
-        (opt.value.startsWith("string_") && !isDiscreteFilterType(opt.value)) ||
-        isNAFilterType(opt.value),
-    );
-  } else {
-    // Double, Int, Long, etc. - return only number filters + NA filters
-    return filterTypeOptions.filter(
-      (opt) => opt.value.startsWith("number_") || isNAFilterType(opt.value),
-    );
-  }
+  const current = model.value.filter?.type;
+  if (!columnId) return filterTypesFor(undefined, current);
+  return filterTypesFor(
+    props.options?.find((opt) => opt.value.column === columnId.column),
+    current,
+  );
 };
-
-const isNumberFilter = (type?: string): type is NumberFilterType => {
-  return type?.startsWith("number_") ?? false;
-};
-
-const isStringFilter = (type?: string): type is StringFilterType => {
-  return (type?.startsWith("string_") && type !== "string_in" && type !== "string_notIn") ?? false;
-};
-
-const isDiscreteFilterType = (type?: string): type is DiscreteFilterType => {
-  return type === "string_in" || type === "string_notIn";
-};
-
-const isNAFilterType = (type?: string): type is NAFilterType => {
-  return type === "isNA" || type === "isNotNA";
-};
-
-/** Check if a column option supports multi-select discrete filtering */
-const isMultiSelectColumn = (option?: {
-  column?: { spec: { annotations?: Record<string, string> } };
-}) => {
-  if (!option?.column?.spec?.annotations) return false;
-  const ann = option.column.spec.annotations;
-  return ann["pl7.app/isDiscreteFilter"] === "true" && !!ann["pl7.app/discreteValues"];
-};
-
-type AnyFilter = PlTableFilter | DiscreteFilter;
 
 const hasReference = (filter: AnyFilter): filter is AnyFilter & { reference: string | number } => {
   return "reference" in filter;
@@ -141,20 +62,6 @@ const setReferenceValue = (filter: AnyFilter, value: string | number) => {
       filter.reference = String(value);
     }
     // For discrete filters, reference is set via setDiscreteReferenceValues
-  }
-};
-
-const createFilter = (type: string): AnyFilter => {
-  if (isNAFilterType(type)) {
-    return { type } as AnyFilter;
-  } else if (isNumberFilter(type)) {
-    return { type, reference: 0 };
-  } else if (isDiscreteFilterType(type)) {
-    return { type, reference: "[]" };
-  } else if (isStringFilter(type)) {
-    return { type, reference: "" };
-  } else {
-    return { type: "number_greaterThan", reference: 0 };
   }
 };
 
@@ -308,10 +215,17 @@ watch(
     // isNA/isNotNA is compatible with all column types — keep it
     if (isNAFilterType(currentFilterType)) return;
 
-    // Check if the new column is multi-select discrete
     const selectedOption = props.options?.find(
       (opt) => opt.value.column === model.value.value?.column,
     );
+
+    // Presence-only columns admit presence predicates only.
+    if (isPresenceOnlyOption(selectedOption)) {
+      model.value.filter = createFilter("isNotNA");
+      return;
+    }
+
+    // Check if the new column is multi-select discrete
     const newIsMultiSelect = isMultiSelectColumn(selectedOption);
 
     if (newIsMultiSelect) {
