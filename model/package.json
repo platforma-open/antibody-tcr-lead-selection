@@ -21,7 +21,8 @@
     "type-check": "ts-builder type-check --target block-model",
     "do-pack": "shx rm -f *.tgz && pnpm pack && shx mv *.tgz package.tgz",
     "fmt": "ts-builder format",
-    "check": "ts-builder check --target block-model"
+    "check": "ts-builder check --target block-model",
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@milaboratories/graph-maker": "catalog:",
@@ -34,7 +35,8 @@
     "@milaboratories/ts-builder": "catalog:",
     "@milaboratories/ts-configs": "catalog:",
     "@platforma-sdk/block-tools": "catalog:",
-    "@platforma-sdk/ui-vue": "catalog:"
+    "@platforma-sdk/ui-vue": "catalog:",
+    "vitest": "catalog:"
   },
   "peerDependencies": {
     "@types/node": "*",

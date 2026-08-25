@@ -5,7 +5,9 @@ import {
   createGlobalPObjectId,
   DataColumn,
   extractPObjectId,
+  getAxisId,
   isGlobalPObjectId,
+  matchAxisId,
   readAnnotationJson,
   type AxisSpec,
   type ColumnRecipe,
@@ -128,6 +130,23 @@ export function isProducedByLeadSelection(spec: PColumnSpec): boolean {
     trace.length > 0 &&
     trace[trace.length - 1]?.type === LEAD_SELECTION_TRACE_TYPE
   );
+}
+
+/**
+ * True when a column carries no readable value: presence in the key space is the whole signal.
+ *
+ * Both halves are required. `pl7.app/isSubset` alone is not enough — a column may declare it
+ * while still carrying meaningful values, and a column whose axes are not a subset of the
+ * anchor's is not a subset of the dataset at all. The axes test is the same constraint the
+ * SDK's own filter-column discovery applies (`enrichment` mode, `allowFloatingHitAxes: false`).
+ */
+export function isPresenceOnlyColumn(spec: PColumnSpec, anchorSpec: PColumnSpec): boolean {
+  if (spec.annotations?.[Annotation.IsSubset] !== "true") return false;
+  const anchorAxes = anchorSpec.axesSpec.map(getAxisId);
+  return spec.axesSpec.every((axis) => {
+    const id = getAxisId(axis);
+    return anchorAxes.some((anchorAxis) => matchAxisId(id, anchorAxis));
+  });
 }
 
 /** JS post-filter for the residual predicates that {@link discoveryExcludeSelectors}

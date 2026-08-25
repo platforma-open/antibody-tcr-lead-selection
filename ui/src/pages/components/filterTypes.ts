@@ -29,6 +29,8 @@ export type AnyFilter = PlTableFilter | DiscreteFilter;
 /** The column half of a "Filter by" option, as `filterConfig` builds it. */
 export type FilterColumnOption = {
   column?: { spec: { valueType?: string; annotations?: Record<string, string> } };
+  /** Set by `filterConfig`: the column carries no readable value, only presence. */
+  presenceOnly?: boolean;
 };
 
 export const filterTypeOptions = [
@@ -60,9 +62,13 @@ export const isDiscreteFilterType = (type?: string): type is DiscreteFilterType 
 export const isNAFilterType = (type?: string): type is NAFilterType =>
   type === "isNA" || type === "isNotNA";
 
-/** Presence-only column: values carry no information, only whether a row is present. */
-export const isSubsetColumn = (option?: FilterColumnOption): boolean =>
-  option?.column?.spec?.annotations?.["pl7.app/isSubset"] === "true";
+/**
+ * Presence-only column: values carry no information, only whether a row is present.
+ *
+ * The model decides this — the test needs the anchor spec, which the card does not have.
+ */
+export const isPresenceOnlyOption = (option?: FilterColumnOption): boolean =>
+  option?.presenceOnly === true;
 
 /** Column declaring a closed vocabulary, filtered by multi-select. */
 export const isMultiSelectColumn = (option?: FilterColumnOption): boolean => {
@@ -74,13 +80,13 @@ export const isMultiSelectColumn = (option?: FilterColumnOption): boolean => {
 /**
  * The predicates a column admits.
  *
- * Precedence: subset, then discrete, then value type. A subset column admits presence
- * predicates only, whatever its value type says.
+ * Precedence: presence-only, then discrete, then value type. A presence-only column admits
+ * presence predicates only, whatever its value type says.
  */
 export function filterTypesFor(option?: FilterColumnOption) {
   if (!option) return filterTypeOptions;
 
-  if (isSubsetColumn(option)) {
+  if (isPresenceOnlyOption(option)) {
     return filterTypeOptions.filter((opt) => isNAFilterType(opt.value));
   }
 

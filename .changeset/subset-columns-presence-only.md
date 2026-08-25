@@ -3,4 +3,4 @@
 "@platforma-open/milaboratories.top-antibodies.model": patch
 ---
 
-Honor `pl7.app/isSubset`: subset columns admit presence predicates only, and are no longer offered for ranking
+Presence-only columns admit presence predicates only, and are no longer offered for ranking

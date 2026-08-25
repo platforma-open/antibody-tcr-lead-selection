@@ -1,53 +1,37 @@
 import { describe, expect, test } from "vitest";
-import { filterTypesFor, isSubsetColumn, type FilterColumnOption } from "./filterTypes";
+import { filterTypesFor, isPresenceOnlyOption, type FilterColumnOption } from "./filterTypes";
 
 const option = (
   valueType: string,
   annotations: Record<string, string> = {},
-): FilterColumnOption => ({ column: { spec: { valueType, annotations } } });
+  presenceOnly = false,
+): FilterColumnOption => ({ column: { spec: { valueType, annotations } }, presenceOnly });
 
 const types = (o: FilterColumnOption) => filterTypesFor(o).map((t) => t.value);
 
-/** repertoire-labeling: one sparse Int column per label, value is the literal 1. */
-const labelColumn = option("Int", {
-  "pl7.app/label": "Strong binders",
-  "pl7.app/isSubset": "true",
-  "pl7.app/table/visibility": "default",
-});
-
-/** This block's own Selected Leads column. */
-const leadSelectionColumn = option("Int", {
-  "pl7.app/label": "Selected Leads",
-  "pl7.app/isSubset": "true",
-});
-
-/** differential-clonotype-abundance Log2FC — a subset column whose values are meaningful. */
-const log2FcColumn = option("Double", {
-  "pl7.app/label": "Log2FC",
-  "pl7.app/isSubset": "true",
-  "pl7.app/format": ".2f",
-});
-
-describe("subset columns", () => {
-  test("a label column admits presence predicates only", () => {
-    expect(types(labelColumn)).toEqual(["isNA", "isNotNA"]);
+describe("presence-only columns", () => {
+  test("admit presence predicates only", () => {
+    expect(types(option("Int", { "pl7.app/label": "Strong binders" }, true))).toEqual([
+      "isNA",
+      "isNotNA",
+    ]);
   });
 
-  test("subset wins over the value type", () => {
-    expect(types(leadSelectionColumn)).not.toContain("number_greaterThan");
+  test("presence-only wins over the value type", () => {
+    expect(types(option("Double", {}, true))).not.toContain("number_greaterThan");
+    expect(types(option("String", {}, true))).not.toContain("string_contains");
   });
 
-  test("the annotation is what decides, not the label or value type", () => {
-    expect(isSubsetColumn(labelColumn)).toBe(true);
-    expect(isSubsetColumn(option("Int", { "pl7.app/label": "Rank" }))).toBe(false);
-  });
-
-  test("REGRESSION: a mis-annotated numeric column loses its operators", () => {
-    expect(types(log2FcColumn)).toEqual(["isNA", "isNotNA"]);
+  test("the model's flag decides, not the raw annotation", () => {
+    // A column carrying the annotation but NOT flagged by the model keeps its operators:
+    // this is the differential-clonotype-abundance Log2FC case.
+    const log2fc = option("Double", { "pl7.app/isSubset": "true", "pl7.app/format": ".2f" }, false);
+    expect(isPresenceOnlyOption(log2fc)).toBe(false);
+    expect(types(log2fc)).toContain("number_greaterThan");
   });
 });
 
-describe("non-subset columns keep their predicates", () => {
+describe("non-presence-only columns keep their predicates", () => {
   test("a numeric score gets numeric operators", () => {
     const t = types(option("Double", { "pl7.app/isScore": "true" }));
     expect(t).toContain("number_greaterThan");

@@ -37,6 +37,7 @@ import {
   getInputFilterRef,
   getSpecByRef,
   isClusterIdAxisName,
+  isPresenceOnlyColumn,
   isProducedByLeadSelection,
   isSelectableMatch,
   matchToColumnId,
@@ -316,12 +317,17 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       filterableMatches.map((c) => c.getSpec()),
       { includeNativeLabel: true },
     );
-    const options = filterableMatches.map((c, i) => ({
-      label: labels[i],
-      value: matchToColumnId(c, inputAnchor!),
-      // FilterCard reads `option.column.spec` to pick the right filter control.
-      column: { id: c.id, spec: c.getSpec() },
-    }));
+    const options = filterableMatches.map((c, i) => {
+      const spec = c.getSpec();
+      return {
+        label: labels[i],
+        value: matchToColumnId(c, inputAnchor!),
+        // FilterCard reads `option.column.spec` to pick the right filter control.
+        column: { id: c.id, spec },
+        // Decided here, not in the card: the card has the spec but not the anchor.
+        presenceOnly: isPresenceOnlyColumn(spec, result.anchorSpec),
+      };
+    });
 
     return {
       options,
@@ -340,20 +346,16 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
 
     // `type: "String"` is a valid ValueType, so the non-string filter goes
     // host-side too — only File / lead-selection-produced survive to isSelectableMatch.
-    // Subset columns carry no orderable value and are excluded here, not in
-    // `discoveryExcludeSelectors`: the filter list keeps them.
+    // Presence-only columns carry nothing to order by. That test needs the anchor, so it
+    // cannot be a host-side selector; it runs beside `isSelectableMatch` on the survivors.
     const rankableMatches = dedupByLeafId(
       result.collection
         .discover({
           anchors: { main: result.anchorSpec },
-          exclude: [
-            ...discoveryExcludeSelectors(result.sampleAxisName),
-            { type: "String" },
-            { annotations: { [Annotation.IsSubset]: "true" } },
-          ],
+          exclude: [...discoveryExcludeSelectors(result.sampleAxisName), { type: "String" }],
         })
         .getColumns(),
-    ).filter(isSelectableMatch);
+    ).filter((c) => isSelectableMatch(c) && !isPresenceOnlyColumn(c.getSpec(), result.anchorSpec));
 
     const labels = deriveDistinctLabels(
       rankableMatches.map((c) => c.getSpec()),

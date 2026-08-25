@@ -16,7 +16,7 @@ import {
   isNAFilterType,
   isNumberFilter,
   isStringFilter,
-  isSubsetColumn,
+  isPresenceOnlyOption,
 } from "./filterTypes";
 
 const model = defineModel<FilterUI>({
@@ -215,8 +215,8 @@ watch(
       (opt) => opt.value.column === model.value.value?.column,
     );
 
-    // Subset columns admit presence predicates only; isNotNA is the meaningful one.
-    if (isSubsetColumn(selectedOption)) {
+    // Presence-only columns admit presence predicates only; isNotNA is the meaningful one.
+    if (isPresenceOnlyOption(selectedOption)) {
       model.value.filter = createFilter("isNotNA");
       return;
     }
