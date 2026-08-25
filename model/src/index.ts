@@ -26,6 +26,7 @@ import {
   extractPObjectId,
   isDataColumn,
   isPColumnSpec,
+  type PObjectId,
 } from "@platforma-sdk/model";
 import {
   buildCollection,
@@ -349,10 +350,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     // host-side too — only File / lead-selection-produced survive to isSelectableMatch.
     // Presence-only columns are excluded by `isRankableMatch`, not host-side: the test
     // needs the anchor.
-    const rankedColumnIds = new Set<string>(
-      (ctx.data.rankingOrder ?? [])
-        .filter((r) => r.value?.column !== undefined)
-        .map((r) => r.value!.column as string),
+    const rankedColumnIds = new Set<PObjectId>(
+      (ctx.data.rankingOrder ?? []).flatMap((r) => (r.value ? [r.value.column] : [])),
     );
 
     const rankableMatches = dedupByLeafId(

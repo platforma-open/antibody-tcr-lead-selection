@@ -1,5 +1,5 @@
 import type { AxisSpec, ColumnRecipe, PColumnSpec } from "@platforma-sdk/model";
-import { createGlobalPObjectId } from "@platforma-sdk/model";
+import { canonicalizeAxisId, createGlobalPObjectId } from "@platforma-sdk/model";
 import fc from "fast-check";
 import { describe, expect, test } from "vitest";
 import { isPresenceOnlyColumn, isRankableMatch } from "./util";
@@ -10,6 +10,18 @@ const clonotypeAxis: AxisSpec = {
   name: "pl7.app/vdj/clonotypeKey",
   domain: { "pl7.app/vdj/clonotypingRunId": "run1" },
 };
+/** Same name and type as the anchor's clonotype axis, with one more domain key. */
+const narrowerClonotypeAxis: AxisSpec = {
+  type: "String",
+  name: "pl7.app/vdj/clonotypeKey",
+  domain: { "pl7.app/vdj/clonotypingRunId": "run1", "pl7.app/vdj/chain": "IGH" },
+};
+/** Same name and type as the anchor's clonotype axis, carrying no domain at all. */
+const undomainedClonotypeAxis: AxisSpec = {
+  type: "String",
+  name: "pl7.app/vdj/clonotypeKey",
+};
+
 /** The Contrast axis differential-clonotype-abundance mints; the anchor has no such axis. */
 const contrastAxis: AxisSpec = {
   type: "String",
@@ -48,15 +60,6 @@ describe("isPresenceOnlyColumn", () => {
     expect(isPresenceOnlyColumn(label, anchor)).toBe(true);
   });
 
-  test("this block's own Selected Leads column is presence-only", () => {
-    const leads = col({
-      name: "pl7.app/lead-selection",
-      axesSpec: [clonotypeAxis],
-      annotations: { "pl7.app/label": "Selected Leads", "pl7.app/isSubset": "true" },
-    });
-    expect(isPresenceOnlyColumn(leads, anchor)).toBe(true);
-  });
-
   test("NON-REGRESSION: differential-clonotype-abundance Log2FC is not presence-only", () => {
     // Annotated isSubset, but it carries a Contrast axis the anchor lacks, so it is not a
     // subset of the dataset and its values are real. It must keep its numeric operators
@@ -68,6 +71,26 @@ describe("isPresenceOnlyColumn", () => {
       annotations: { "pl7.app/label": "Log2FC", "pl7.app/isSubset": "true" },
     });
     expect(isPresenceOnlyColumn(log2fc, anchor)).toBe(false);
+  });
+
+  // Axis identity includes domain, so a same-named axis with an extra key is a
+  // different axis keying different entities.
+  test("an axis with an extra domain key is not presence-only", () => {
+    const narrower = col({
+      axesSpec: [narrowerClonotypeAxis],
+      annotations: { "pl7.app/isSubset": "true" },
+    });
+    expect(isPresenceOnlyColumn(narrower, anchor)).toBe(false);
+  });
+
+  // The same rule in the other direction. A label column whose axis lost the anchor's
+  // domain keeps its full operator list, which is the symptom this check exists to fix.
+  test("an axis carrying no domain is not presence-only against a domained anchor", () => {
+    const undomained = col({
+      axesSpec: [undomainedClonotypeAxis],
+      annotations: { "pl7.app/isSubset": "true" },
+    });
+    expect(isPresenceOnlyColumn(undomained, anchor)).toBe(false);
   });
 
   test("a subset-shaped column without the annotation is not presence-only", () => {
@@ -89,7 +112,15 @@ describe("isPresenceOnlyColumn", () => {
 });
 
 describe("isPresenceOnlyColumn invariants", () => {
-  const anyAxis = fc.constantFrom(sampleAxis, clonotypeAxis, contrastAxis);
+  // Includes the two domain variants, so the generator reaches name collisions that
+  // differ only in domain.
+  const anyAxis = fc.constantFrom(
+    sampleAxis,
+    clonotypeAxis,
+    contrastAxis,
+    narrowerClonotypeAxis,
+    undomainedClonotypeAxis,
+  );
   const anySpec = fc
     .record({
       axesSpec: fc.array(anyAxis, { minLength: 1, maxLength: 3 }),
@@ -97,42 +128,45 @@ describe("isPresenceOnlyColumn invariants", () => {
     })
     .map((over) => col(over));
 
-  // Without the annotation the shape never matters. This is what keeps every ordinary
-  // score column, whatever its axes, out of the presence-only path.
+  const anchorAxisIds = new Set(anchor.axesSpec.map(canonicalizeAxisId));
+  const annotate = (spec: PColumnSpec) => ({
+    ...spec,
+    annotations: { "pl7.app/isSubset": "true" },
+  });
+
   test("an unannotated column is never presence-only", () => {
     fc.assert(
       fc.property(anySpec, (spec) => {
-        const withoutAnnotation = { ...spec, annotations: {} };
-        expect(isPresenceOnlyColumn(withoutAnnotation, anchor)).toBe(false);
+        expect(isPresenceOnlyColumn({ ...spec, annotations: {} }, anchor)).toBe(false);
       }),
     );
   });
 
-  // The other half: a true verdict implies every axis is one the anchor carries.
-  test("a presence-only verdict implies every axis matches the anchor", () => {
-    const anchorNames = new Set(anchor.axesSpec.map((a) => a.name));
+  // Both directions, so a constant-false implementation fails the first case.
+  test("the verdict tracks whether every axis id is one the anchor carries", () => {
     fc.assert(
       fc.property(anySpec, (spec) => {
-        const annotated = { ...spec, annotations: { "pl7.app/isSubset": "true" } };
-        if (isPresenceOnlyColumn(annotated, anchor)) {
-          expect(annotated.axesSpec.every((a) => anchorNames.has(a.name))).toBe(true);
-        }
+        const allFromAnchor = spec.axesSpec.every((a) => anchorAxisIds.has(canonicalizeAxisId(a)));
+        expect(isPresenceOnlyColumn(annotate(spec), anchor)).toBe(allFromAnchor);
       }),
     );
   });
 
-  test("the anchor's own axis set is presence-only when annotated", () => {
-    const onAnchorAxes = col({
-      axesSpec: anchor.axesSpec,
-      annotations: { "pl7.app/isSubset": "true" },
-    });
-    expect(isPresenceOnlyColumn(onAnchorAxes, anchor)).toBe(true);
+  test("a column built only from the anchor's own axes is presence-only", () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.constantFrom(...anchor.axesSpec), { minLength: 1, maxLength: 3 }),
+        (axesSpec) => {
+          expect(isPresenceOnlyColumn(annotate(col({ axesSpec })), anchor)).toBe(true);
+        },
+      ),
+    );
   });
 });
 
 describe("isRankableMatch", () => {
   // Real ids: `isRankableMatch` walks them through `extractPObjectId`.
-  const idOf = (name: string) => createGlobalPObjectId("block1", name) as string;
+  const idOf = (name: string) => createGlobalPObjectId("block1", name);
   const recipe = (name: string, spec: PColumnSpec) =>
     ({ id: idOf(name), getSpec: () => spec }) as unknown as ColumnRecipe;
 

@@ -5,9 +5,8 @@ import {
   createGlobalPObjectId,
   DataColumn,
   extractPObjectId,
-  getAxisId,
+  canonicalizeAxisId,
   isGlobalPObjectId,
-  matchAxisId,
   readAnnotationJson,
   type AxisSpec,
   type ColumnRecipe,
@@ -135,15 +134,17 @@ export function isProducedByLeadSelection(spec: PColumnSpec): boolean {
 /**
  * True when a column carries no readable value. Presence is the whole signal.
  *
- * Requires both conditions: the annotation, and axes that are a subset of the anchor's.
+ * Requires the annotation, and axes that are a subset of the anchor's. Axis identity is
+ * name, type, domain and context-domain. An axis differing in any of them is a different
+ * axis, so a column carrying one is not presence-only.
+ *
+ * Not `matchAxisId`: that treats an extra domain key on the column axis as a match.
+ * Reached through a linker, a column keeps its own axes and reads as not presence-only.
  */
 export function isPresenceOnlyColumn(spec: PColumnSpec, anchorSpec: PColumnSpec): boolean {
   if (spec.annotations?.[Annotation.IsSubset] !== "true") return false;
-  const anchorAxes = anchorSpec.axesSpec.map(getAxisId);
-  return spec.axesSpec.every((axis) => {
-    const id = getAxisId(axis);
-    return anchorAxes.some((anchorAxis) => matchAxisId(id, anchorAxis));
-  });
+  const anchorAxes = new Set(anchorSpec.axesSpec.map(canonicalizeAxisId));
+  return spec.axesSpec.every((axis) => anchorAxes.has(canonicalizeAxisId(axis)));
 }
 
 /** JS post-filter for the residual predicates that {@link discoveryExcludeSelectors}
@@ -164,10 +165,10 @@ export function isSelectableMatch(c: ColumnRecipe): boolean {
 export function isRankableMatch(
   c: ColumnRecipe,
   anchorSpec: PColumnSpec,
-  rankedColumnIds: ReadonlySet<string>,
+  rankedColumnIds: ReadonlySet<PObjectId>,
 ): boolean {
   if (!isSelectableMatch(c)) return false;
-  if (rankedColumnIds.has(extractPObjectId(c.id) as string)) return true;
+  if (rankedColumnIds.has(extractPObjectId(c.id))) return true;
   return !isPresenceOnlyColumn(c.getSpec(), anchorSpec);
 }
 
