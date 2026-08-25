@@ -156,6 +156,22 @@ export function isSelectableMatch(c: ColumnRecipe): boolean {
 }
 
 /**
+ * Whether a discovered column is offered for ranking.
+ *
+ * Presence-only columns carry nothing to order by. One the saved ranking already names
+ * stays offered: dropping the last one resets the list to preset defaults.
+ */
+export function isRankableMatch(
+  c: ColumnRecipe,
+  anchorSpec: PColumnSpec,
+  rankedColumnIds: ReadonlySet<string>,
+): boolean {
+  if (!isSelectableMatch(c)) return false;
+  if (rankedColumnIds.has(extractPObjectId(c.id) as string)) return true;
+  return !isPresenceOnlyColumn(c.getSpec(), anchorSpec);
+}
+
+/**
  * Collapses discovery results to one recipe per storage column, first hit wins.
  *
  * Restores the pre-migration shape of a discovery result. The old

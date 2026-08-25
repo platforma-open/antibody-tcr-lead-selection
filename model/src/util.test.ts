@@ -1,7 +1,8 @@
-import type { AxisSpec, PColumnSpec } from "@platforma-sdk/model";
+import type { AxisSpec, ColumnRecipe, PColumnSpec } from "@platforma-sdk/model";
+import { createGlobalPObjectId } from "@platforma-sdk/model";
 import fc from "fast-check";
 import { describe, expect, test } from "vitest";
-import { isPresenceOnlyColumn } from "./util";
+import { isPresenceOnlyColumn, isRankableMatch } from "./util";
 
 const sampleAxis: AxisSpec = { type: "String", name: "pl7.app/sampleId" };
 const clonotypeAxis: AxisSpec = {
@@ -126,5 +127,50 @@ describe("isPresenceOnlyColumn invariants", () => {
       annotations: { "pl7.app/isSubset": "true" },
     });
     expect(isPresenceOnlyColumn(onAnchorAxes, anchor)).toBe(true);
+  });
+});
+
+describe("isRankableMatch", () => {
+  // Real ids: `isRankableMatch` walks them through `extractPObjectId`.
+  const idOf = (name: string) => createGlobalPObjectId("block1", name) as string;
+  const recipe = (name: string, spec: PColumnSpec) =>
+    ({ id: idOf(name), getSpec: () => spec }) as unknown as ColumnRecipe;
+
+  const presenceOnly = col({
+    axesSpec: [clonotypeAxis],
+    annotations: { "pl7.app/isSubset": "true" },
+  });
+  const score = col({
+    valueType: "Double",
+    axesSpec: [clonotypeAxis],
+    annotations: { "pl7.app/isScore": "true" },
+  });
+
+  test("an ordinary score column is rankable", () => {
+    expect(isRankableMatch(recipe("s", score), anchor, new Set())).toBe(true);
+  });
+
+  test("a presence-only column is not rankable", () => {
+    expect(isRankableMatch(recipe("p", presenceOnly), anchor, new Set())).toBe(false);
+  });
+
+  // The guard for saved projects. Without it, a ranking list of only presence-only
+  // columns is replaced by preset defaults, changing which clonotypes get selected.
+  test("a presence-only column the saved ranking names stays rankable", () => {
+    expect(isRankableMatch(recipe("p", presenceOnly), anchor, new Set([idOf("p")]))).toBe(true);
+  });
+
+  test("a lead-selection-produced column is never rankable, saved or not", () => {
+    const produced = col({
+      valueType: "Double",
+      axesSpec: [clonotypeAxis],
+      annotations: {
+        "pl7.app/trace": JSON.stringify([
+          { type: "milaboratories.antibody-tcr-lead-selection", label: "Lead Selection" },
+        ]),
+      },
+    });
+    expect(isRankableMatch(recipe("l", produced), anchor, new Set())).toBe(false);
+    expect(isRankableMatch(recipe("l", produced), anchor, new Set([idOf("l")]))).toBe(false);
   });
 });

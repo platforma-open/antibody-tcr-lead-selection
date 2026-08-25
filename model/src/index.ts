@@ -39,6 +39,7 @@ import {
   isClusterIdAxisName,
   isPresenceOnlyColumn,
   isProducedByLeadSelection,
+  isRankableMatch,
   isSelectableMatch,
   matchToColumnId,
 } from "./util";
@@ -346,10 +347,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
 
     // `type: "String"` is a valid ValueType, so the non-string filter goes
     // host-side too — only File / lead-selection-produced survive to isSelectableMatch.
-    // Presence-only columns carry nothing to order by. The test needs the anchor, so it
-    // runs on the survivors instead of as a host-side selector.
-    // Columns the saved ranking names stay selectable. Dropping the last one resets the
-    // list to preset defaults.
+    // Presence-only columns are excluded by `isRankableMatch`, not host-side: the test
+    // needs the anchor.
     const rankedColumnIds = new Set<string>(
       (ctx.data.rankingOrder ?? [])
         .filter((r) => r.value?.column !== undefined)
@@ -363,12 +362,7 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
           exclude: [...discoveryExcludeSelectors(result.sampleAxisName), { type: "String" }],
         })
         .getColumns(),
-    ).filter(
-      (c) =>
-        isSelectableMatch(c) &&
-        (rankedColumnIds.has(extractPObjectId(c.id) as string) ||
-          !isPresenceOnlyColumn(c.getSpec(), result.anchorSpec)),
-    );
+    ).filter((c) => isRankableMatch(c, result.anchorSpec, rankedColumnIds));
 
     const labels = deriveDistinctLabels(
       rankableMatches.map((c) => c.getSpec()),
