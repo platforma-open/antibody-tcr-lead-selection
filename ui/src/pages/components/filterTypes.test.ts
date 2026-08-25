@@ -1,4 +1,3 @@
-import fc from "fast-check";
 import { describe, expect, test } from "vitest";
 import {
   createFilter,
@@ -120,59 +119,57 @@ describe("createFilter", () => {
 });
 
 describe("invariants", () => {
-  const anyOption = fc.record(
-    {
-      presenceOnly: fc.boolean(),
-      column: fc.record({
-        spec: fc.record({
-          valueType: fc.constantFrom("Int", "Long", "Float", "Double", "String"),
-          annotations: fc.dictionary(fc.string(), fc.string()),
-        }),
-      }),
-    },
-    { requiredKeys: ["column"] },
-  );
-  const knownType = fc.constantFrom(...filterTypeOptions.map((t) => t.value));
+  // The input space is small enough to enumerate, so these cover it exhaustively rather
+  // than by sampling: every option shape against every known predicate.
+  const shapes: FilterColumnOption[] = [];
+  for (const presenceOnly of [true, false]) {
+    for (const valueType of ["Int", "Long", "Float", "Double", "String"]) {
+      const annotationSets: Record<string, string>[] = [
+        {},
+        {
+          "pl7.app/isDiscreteFilter": "true",
+          "pl7.app/discreteValues": JSON.stringify(["a", "b"]),
+        },
+      ];
+      for (const annotations of annotationSets) {
+        shapes.push({ column: { spec: { valueType, annotations } }, presenceOnly });
+      }
+    }
+  }
+  const knownTypes = filterTypeOptions.map((t) => t.value);
+  const known = new Set(knownTypes);
 
-  // The guard for saved projects. A predicate already in block args stays in the
-  // dropdown, whatever the column now admits.
   test("a known saved predicate is always offered", () => {
-    fc.assert(
-      fc.property(anyOption, knownType, (option, current) => {
-        expect(filterTypesFor(option as FilterColumnOption, current).map((t) => t.value)).toContain(
-          current,
-        );
-      }),
-    );
+    for (const shape of shapes) {
+      for (const current of knownTypes) {
+        expect(filterTypesFor(shape, current).map((t) => t.value)).toContain(current);
+      }
+    }
   });
 
   test("the result is always a duplicate-free subset of the known predicates", () => {
-    const known = new Set(filterTypeOptions.map((t) => t.value));
-    fc.assert(
-      fc.property(anyOption, fc.option(knownType, { nil: undefined }), (option, current) => {
-        const out = filterTypesFor(option as FilterColumnOption, current).map((t) => t.value);
+    for (const shape of shapes) {
+      for (const current of [...knownTypes, undefined]) {
+        const out = filterTypesFor(shape, current).map((t) => t.value);
         expect(out.every((v) => known.has(v))).toBe(true);
         expect(new Set(out).size).toBe(out.length);
-      }),
-    );
+      }
+    }
   });
 
-  // Passing a saved predicate only ever adds to the list.
   test("a saved predicate never removes an otherwise-admissible one", () => {
-    fc.assert(
-      fc.property(anyOption, knownType, (option, current) => {
-        const base = filterTypesFor(option as FilterColumnOption).map((t) => t.value);
-        const withSaved = filterTypesFor(option as FilterColumnOption, current).map((t) => t.value);
+    for (const shape of shapes) {
+      const base = filterTypesFor(shape).map((t) => t.value);
+      for (const current of knownTypes) {
+        const withSaved = filterTypesFor(shape, current).map((t) => t.value);
         expect(base.every((v) => withSaved.includes(v))).toBe(true);
-      }),
-    );
+      }
+    }
   });
 
   test("every column offers at least one predicate", () => {
-    fc.assert(
-      fc.property(anyOption, (option) => {
-        expect(filterTypesFor(option as FilterColumnOption).length).toBeGreaterThan(0);
-      }),
-    );
+    for (const shape of shapes) {
+      expect(filterTypesFor(shape).length).toBeGreaterThan(0);
+    }
   });
 });

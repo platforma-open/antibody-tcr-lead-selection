@@ -29,7 +29,6 @@
     "@milaboratories/ts-builder": "catalog:",
     "@milaboratories/ts-configs": "catalog:",
     "eslint": "catalog:",
-    "fast-check": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {

@@ -36,7 +36,6 @@
     "@milaboratories/ts-configs": "catalog:",
     "@platforma-sdk/block-tools": "catalog:",
     "@platforma-sdk/ui-vue": "catalog:",
-    "fast-check": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {

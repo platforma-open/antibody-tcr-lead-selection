@@ -1,6 +1,5 @@
 import type { AxisSpec, ColumnRecipe, PColumnSpec } from "@platforma-sdk/model";
 import { canonicalizeAxisId, createGlobalPObjectId } from "@platforma-sdk/model";
-import fc from "fast-check";
 import { describe, expect, test } from "vitest";
 import { isPresenceOnlyColumn, isRankableMatch } from "./util";
 
@@ -112,55 +111,47 @@ describe("isPresenceOnlyColumn", () => {
 });
 
 describe("isPresenceOnlyColumn invariants", () => {
-  // The two domain variants let the generator reach name collisions that differ only
-  // in domain.
-  const anyAxis = fc.constantFrom(
+  // Five axes, arrays of one to three: 155 combinations, so these enumerate the space
+  // rather than sample it. The pool holds two axes that collide with the anchor's
+  // clonotype axis on name and differ only in domain.
+  const pool: AxisSpec[] = [
     sampleAxis,
     clonotypeAxis,
     contrastAxis,
     narrowerClonotypeAxis,
     undomainedClonotypeAxis,
-  );
-  const anySpec = fc
-    .record({
-      axesSpec: fc.array(anyAxis, { minLength: 1, maxLength: 3 }),
-      annotations: fc.dictionary(fc.string(), fc.string()),
-    })
-    .map((over) => col(over));
+  ];
+  const axisCombinations: AxisSpec[][] = [];
+  for (const a of pool) {
+    axisCombinations.push([a]);
+    for (const b of pool) {
+      axisCombinations.push([a, b]);
+      for (const c of pool) axisCombinations.push([a, b, c]);
+    }
+  }
 
   const anchorAxisIds = new Set(anchor.axesSpec.map(canonicalizeAxisId));
-  const annotate = (spec: PColumnSpec) => ({
-    ...spec,
-    annotations: { "pl7.app/isSubset": "true" },
-  });
+  const annotated = (axesSpec: AxisSpec[]) =>
+    col({ axesSpec, annotations: { "pl7.app/isSubset": "true" } });
 
   test("an unannotated column is never presence-only", () => {
-    fc.assert(
-      fc.property(anySpec, (spec) => {
-        expect(isPresenceOnlyColumn({ ...spec, annotations: {} }, anchor)).toBe(false);
-      }),
-    );
+    for (const axesSpec of axisCombinations) {
+      expect(isPresenceOnlyColumn(col({ axesSpec, annotations: {} }), anchor)).toBe(false);
+    }
   });
 
-  // Both directions. A constant-false implementation fails the first case.
+  // Both directions, so a constant-false implementation fails this test.
   test("the verdict tracks whether every axis id is one the anchor carries", () => {
-    fc.assert(
-      fc.property(anySpec, (spec) => {
-        const allFromAnchor = spec.axesSpec.every((a) => anchorAxisIds.has(canonicalizeAxisId(a)));
-        expect(isPresenceOnlyColumn(annotate(spec), anchor)).toBe(allFromAnchor);
-      }),
-    );
+    for (const axesSpec of axisCombinations) {
+      const allFromAnchor = axesSpec.every((a) => anchorAxisIds.has(canonicalizeAxisId(a)));
+      expect(isPresenceOnlyColumn(annotated(axesSpec), anchor)).toBe(allFromAnchor);
+    }
   });
 
-  test("a column built only from the anchor's own axes is presence-only", () => {
-    fc.assert(
-      fc.property(
-        fc.array(fc.constantFrom(...anchor.axesSpec), { minLength: 1, maxLength: 3 }),
-        (axesSpec) => {
-          expect(isPresenceOnlyColumn(annotate(col({ axesSpec })), anchor)).toBe(true);
-        },
-      ),
-    );
+  test("the combinations reach both verdicts", () => {
+    const verdicts = axisCombinations.map((a) => isPresenceOnlyColumn(annotated(a), anchor));
+    expect(verdicts).toContain(true);
+    expect(verdicts).toContain(false);
   });
 });
 

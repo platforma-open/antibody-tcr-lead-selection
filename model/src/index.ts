@@ -351,7 +351,7 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     // `isRankableMatch` excludes presence-only columns. The test needs the anchor, so it
     // cannot run host-side.
     const rankedColumnIds = new Set<PObjectId>(
-      (ctx.data.rankingOrder ?? []).flatMap((r) => (r.value ? [r.value.column] : [])),
+      ctx.data.rankingOrder.flatMap((r) => (r.value ? [r.value.column] : [])),
     );
 
     const rankableMatches = dedupByLeafId(
