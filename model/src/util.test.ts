@@ -1,4 +1,5 @@
 import type { AxisSpec, PColumnSpec } from "@platforma-sdk/model";
+import fc from "fast-check";
 import { describe, expect, test } from "vitest";
 import { isPresenceOnlyColumn } from "./util";
 
@@ -83,5 +84,47 @@ describe("isPresenceOnlyColumn", () => {
       annotations: { "pl7.app/isSubset": "true" },
     });
     expect(isPresenceOnlyColumn(perSample, anchor)).toBe(true);
+  });
+});
+
+describe("isPresenceOnlyColumn invariants", () => {
+  const anyAxis = fc.constantFrom(sampleAxis, clonotypeAxis, contrastAxis);
+  const anySpec = fc
+    .record({
+      axesSpec: fc.array(anyAxis, { minLength: 1, maxLength: 3 }),
+      annotations: fc.dictionary(fc.string(), fc.string()),
+    })
+    .map((over) => col(over));
+
+  // Without the annotation the shape never matters. This is what keeps every ordinary
+  // score column, whatever its axes, out of the presence-only path.
+  test("an unannotated column is never presence-only", () => {
+    fc.assert(
+      fc.property(anySpec, (spec) => {
+        const withoutAnnotation = { ...spec, annotations: {} };
+        expect(isPresenceOnlyColumn(withoutAnnotation, anchor)).toBe(false);
+      }),
+    );
+  });
+
+  // The other half: a true verdict implies every axis is one the anchor carries.
+  test("a presence-only verdict implies every axis matches the anchor", () => {
+    const anchorNames = new Set(anchor.axesSpec.map((a) => a.name));
+    fc.assert(
+      fc.property(anySpec, (spec) => {
+        const annotated = { ...spec, annotations: { "pl7.app/isSubset": "true" } };
+        if (isPresenceOnlyColumn(annotated, anchor)) {
+          expect(annotated.axesSpec.every((a) => anchorNames.has(a.name))).toBe(true);
+        }
+      }),
+    );
+  });
+
+  test("the anchor's own axis set is presence-only when annotated", () => {
+    const onAnchorAxes = col({
+      axesSpec: anchor.axesSpec,
+      annotations: { "pl7.app/isSubset": "true" },
+    });
+    expect(isPresenceOnlyColumn(onAnchorAxes, anchor)).toBe(true);
   });
 });

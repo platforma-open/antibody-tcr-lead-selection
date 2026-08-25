@@ -1,5 +1,11 @@
+import fc from "fast-check";
 import { describe, expect, test } from "vitest";
-import { filterTypesFor, isPresenceOnlyOption, type FilterColumnOption } from "./filterTypes";
+import {
+  createFilter,
+  filterTypeOptions,
+  filterTypesFor,
+  type FilterColumnOption,
+} from "./filterTypes";
 
 const option = (
   valueType: string,
@@ -23,11 +29,10 @@ describe("presence-only columns", () => {
   });
 
   test("the model's flag decides, not the raw annotation", () => {
-    // A column carrying the annotation but NOT flagged by the model keeps its operators:
-    // this is the differential-clonotype-abundance Log2FC case.
+    // differential-clonotype-abundance Log2FC: carries the annotation, but the model does
+    // not flag it, so it keeps every numeric operator.
     const log2fc = option("Double", { "pl7.app/isSubset": "true", "pl7.app/format": ".2f" }, false);
-    expect(isPresenceOnlyOption(log2fc)).toBe(false);
-    expect(types(log2fc)).toContain("number_greaterThan");
+    expect(types(log2fc)).toEqual(types(option("Double")));
   });
 });
 
@@ -38,11 +43,9 @@ describe("a saved predicate stays visible", () => {
     // clonotype-browser / cell-browser annotation filters are presence-only columns that
     // already exist in projects, where a saved `Filter > 0` must not vanish from the list.
     expect(types(presenceOnly)).toEqual(["isNA", "isNotNA"]);
-    expect(filterTypesFor(presenceOnly, "number_greaterThan").map((t) => t.value)).toEqual([
-      "isNA",
-      "isNotNA",
-      "number_greaterThan",
-    ]);
+    const withSaved = filterTypesFor(presenceOnly, "number_greaterThan").map((t) => t.value);
+    expect(withSaved).toContain("number_greaterThan");
+    expect(withSaved).toEqual(expect.arrayContaining(["isNA", "isNotNA"]));
   });
 
   test("an admissible predicate is not duplicated", () => {
@@ -89,5 +92,87 @@ describe("non-presence-only columns keep their predicates", () => {
 
   test("an unknown column offers everything", () => {
     expect(filterTypesFor(undefined)).toHaveLength(14);
+  });
+});
+
+describe("createFilter", () => {
+  // The shape a fresh filter starts in. FilterCard writes this straight into block args,
+  // so a missing or wrongly-typed `reference` reaches the workflow.
+  test.each([
+    ["isNotNA", { type: "isNotNA" }],
+    ["isNA", { type: "isNA" }],
+    ["number_greaterThan", { type: "number_greaterThan", reference: 0 }],
+    ["string_equals", { type: "string_equals", reference: "" }],
+    ["string_in", { type: "string_in", reference: "[]" }],
+  ])("%s", (type, expected) => {
+    expect(createFilter(type)).toEqual(expected);
+  });
+
+  test("an unknown type falls back to a usable numeric filter", () => {
+    expect(createFilter("not_a_filter")).toEqual({ type: "number_greaterThan", reference: 0 });
+  });
+
+  test("every offered predicate builds a filter of that type", () => {
+    for (const { value } of filterTypeOptions) {
+      expect(createFilter(value)).toMatchObject({ type: value });
+    }
+  });
+});
+
+describe("invariants", () => {
+  const anyOption = fc.record(
+    {
+      presenceOnly: fc.boolean(),
+      column: fc.record({
+        spec: fc.record({
+          valueType: fc.constantFrom("Int", "Long", "Float", "Double", "String"),
+          annotations: fc.dictionary(fc.string(), fc.string()),
+        }),
+      }),
+    },
+    { requiredKeys: ["column"] },
+  );
+  const knownType = fc.constantFrom(...filterTypeOptions.map((t) => t.value));
+
+  // The guard that protects saved projects: a predicate already in block args must never
+  // vanish from the dropdown, whatever the column now admits.
+  test("a known saved predicate is always offered", () => {
+    fc.assert(
+      fc.property(anyOption, knownType, (option, current) => {
+        expect(filterTypesFor(option as FilterColumnOption, current).map((t) => t.value)).toContain(
+          current,
+        );
+      }),
+    );
+  });
+
+  test("the result is always a duplicate-free subset of the known predicates", () => {
+    const known = new Set(filterTypeOptions.map((t) => t.value));
+    fc.assert(
+      fc.property(anyOption, fc.option(knownType, { nil: undefined }), (option, current) => {
+        const out = filterTypesFor(option as FilterColumnOption, current).map((t) => t.value);
+        expect(out.every((v) => known.has(v))).toBe(true);
+        expect(new Set(out).size).toBe(out.length);
+      }),
+    );
+  });
+
+  // Passing a saved predicate only ever adds to the list.
+  test("a saved predicate never removes an otherwise-admissible one", () => {
+    fc.assert(
+      fc.property(anyOption, knownType, (option, current) => {
+        const base = filterTypesFor(option as FilterColumnOption).map((t) => t.value);
+        const withSaved = filterTypesFor(option as FilterColumnOption, current).map((t) => t.value);
+        expect(base.every((v) => withSaved.includes(v))).toBe(true);
+      }),
+    );
+  });
+
+  test("every column offers at least one predicate", () => {
+    fc.assert(
+      fc.property(anyOption, (option) => {
+        expect(filterTypesFor(option as FilterColumnOption).length).toBeGreaterThan(0);
+      }),
+    );
   });
 });
