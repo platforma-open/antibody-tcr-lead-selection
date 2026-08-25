@@ -1,5 +1,4 @@
-// Which filter predicates a column admits, and what a fresh filter of a given type looks like.
-// Extracted from FilterCard so the branch order is testable without mounting the component.
+// Which predicates a column admits, and how a fresh filter of each type is built.
 
 import type {
   DiscreteFilter,
@@ -29,7 +28,7 @@ export type AnyFilter = PlTableFilter | DiscreteFilter;
 /** The column half of a "Filter by" option, as `filterConfig` builds it. */
 export type FilterColumnOption = {
   column?: { spec: { valueType?: string; annotations?: Record<string, string> } };
-  /** Set by `filterConfig`: the column carries no readable value, only presence. */
+  /** Set by `filterConfig`. The column carries no readable value. */
   presenceOnly?: boolean;
 };
 
@@ -62,11 +61,7 @@ export const isDiscreteFilterType = (type?: string): type is DiscreteFilterType 
 export const isNAFilterType = (type?: string): type is NAFilterType =>
   type === "isNA" || type === "isNotNA";
 
-/**
- * Presence-only column: values carry no information, only whether a row is present.
- *
- * The model decides this — the test needs the anchor spec, which the card does not have.
- */
+/** Presence-only column. Decided by `filterConfig`, which has the anchor spec. */
 export const isPresenceOnlyOption = (option?: FilterColumnOption): boolean =>
   option?.presenceOnly === true;
 
@@ -80,20 +75,13 @@ export const isMultiSelectColumn = (option?: FilterColumnOption): boolean => {
 /**
  * The predicates a column admits.
  *
- * Precedence: presence-only, then discrete, then value type. A presence-only column admits
- * presence predicates only, whatever its value type says.
+ * Precedence: presence-only, then discrete, then value type.
  */
 export function filterTypesFor(option?: FilterColumnOption, currentType?: string) {
   return admitCurrent(admissibleTypesFor(option), currentType);
 }
 
-/**
- * Keeps a saved predicate visible even once the column no longer admits it.
- *
- * A project saved before a column became presence-only still holds e.g.
- * `number_greaterThan`. The workflow keeps applying it unchanged; dropping it from the
- * dropdown would show an out-of-list value and let an incidental reopen rewrite it.
- */
+/** Keeps a saved predicate in the list after the column stops admitting it. */
 function admitCurrent(types: typeof filterTypeOptions, currentType?: string) {
   if (!currentType || types.some((t) => t.value === currentType)) return types;
   const saved = filterTypeOptions.find((t) => t.value === currentType);

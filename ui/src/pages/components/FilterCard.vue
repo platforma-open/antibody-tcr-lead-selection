@@ -219,7 +219,7 @@ watch(
       (opt) => opt.value.column === model.value.value?.column,
     );
 
-    // Presence-only columns admit presence predicates only; isNotNA is the meaningful one.
+    // Presence-only columns admit presence predicates only.
     if (isPresenceOnlyOption(selectedOption)) {
       model.value.filter = createFilter("isNotNA");
       return;

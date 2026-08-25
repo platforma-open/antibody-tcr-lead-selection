@@ -133,12 +133,9 @@ export function isProducedByLeadSelection(spec: PColumnSpec): boolean {
 }
 
 /**
- * True when a column carries no readable value: presence in the key space is the whole signal.
+ * True when a column carries no readable value. Presence is the whole signal.
  *
- * Both halves are required. `pl7.app/isSubset` alone is not enough — a column may declare it
- * while still carrying meaningful values, and a column whose axes are not a subset of the
- * anchor's is not a subset of the dataset at all. The axes test is the same constraint the
- * SDK's own filter-column discovery applies (`enrichment` mode, `allowFloatingHitAxes: false`).
+ * Requires both conditions: the annotation, and axes that are a subset of the anchor's.
  */
 export function isPresenceOnlyColumn(spec: PColumnSpec, anchorSpec: PColumnSpec): boolean {
   if (spec.annotations?.[Annotation.IsSubset] !== "true") return false;

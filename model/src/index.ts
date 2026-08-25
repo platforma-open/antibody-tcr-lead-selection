@@ -322,9 +322,9 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       return {
         label: labels[i],
         value: matchToColumnId(c, inputAnchor!),
-        // FilterCard reads `option.column.spec` to pick the right filter control.
+        // FilterCard reads `option.column.spec` to pick the filter control.
         column: { id: c.id, spec },
-        // Decided here, not in the card: the card has the spec but not the anchor.
+        // The card has no anchor spec, so the model decides.
         presenceOnly: isPresenceOnlyColumn(spec, result.anchorSpec),
       };
     });
@@ -346,12 +346,10 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
 
     // `type: "String"` is a valid ValueType, so the non-string filter goes
     // host-side too — only File / lead-selection-produced survive to isSelectableMatch.
-    // Presence-only columns carry nothing to order by. That test needs the anchor, so it
-    // cannot be a host-side selector; it runs beside `isSelectableMatch` on the survivors.
-    // Columns the saved ranking already names stay selectable even when presence-only.
-    // Dropping one would leave `RankList.hasExistingStateForConfig` with no match and
-    // replace the whole saved list with preset defaults — a silent change to which
-    // clonotypes a finished project selects.
+    // Presence-only columns carry nothing to order by. The test needs the anchor, so it
+    // runs on the survivors instead of as a host-side selector.
+    // Columns the saved ranking names stay selectable. Dropping the last one resets the
+    // list to preset defaults.
     const rankedColumnIds = new Set<string>(
       (ctx.data.rankingOrder ?? [])
         .filter((r) => r.value?.column !== undefined)
