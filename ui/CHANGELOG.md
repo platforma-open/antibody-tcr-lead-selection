@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 5.0.5
+
+### Patch Changes
+
+- 931d9b9: Presence-only columns admit presence predicates only, and are no longer offered for ranking
+- Updated dependencies [931d9b9]
+  - @platforma-open/milaboratories.top-antibodies.model@5.1.2
+
 ## 5.0.4
 
 ### Patch Changes
