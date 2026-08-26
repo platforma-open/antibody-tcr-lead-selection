@@ -45,7 +45,7 @@ const defaultOptions = computed((): PredefinedGraphOption<"discrete">[] => {
 </script>
 
 <template>
-  <PlBlockPage>
+  <PlBlockPage no-body-gutters>
     <GraphMaker
       v-model="app.model.data.cdr3StackedBarPlotState"
       chartType="discrete"

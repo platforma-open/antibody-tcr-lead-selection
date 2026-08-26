@@ -59,7 +59,7 @@ const multipleSequenceAlignmentOpen = ref(false);
 </script>
 
 <template>
-  <PlBlockPage>
+  <PlBlockPage no-body-gutters>
     <GraphMaker
       v-model="app.model.data.graphStateUMAP"
       v-model:selection="selection"
