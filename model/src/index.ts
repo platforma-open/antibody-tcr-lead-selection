@@ -116,14 +116,14 @@ const OWN_PLUMBING_SELECTORS: RelaxedColumnSelector[] = [
 
 /**
  * Adapt column recipes to `PColumn`s for the helpers that still take
- * materialised `PColumn[]` and have no id form (`createPFrameForGraphs`,
- * `PColumnIdAndSpec`).
+ * materialised `PColumn[]` and have no id form (`getRelatedColumns`,
+ * `createPFrameForGraphs`, `PColumnIdAndSpec`).
  *
  * Only bare leaves qualify: `PColumn.id` is typed `PObjectId`, which no wrapper
  * recipe carries — hence `isDataColumn` rather than `hasReachableData`, which
- * also admits spec-overrides over a leaf. Deduped by id: the same leaf can be
- * reachable via more than one path and `createPFrameForGraphs` rejects
- * duplicates.
+ * also admits spec-overrides over a leaf. Deduped by id: these lists travel as
+ * block columns, and a repeated id aborts the collection scan inside
+ * `getRelatedColumns`.
  */
 function toGraphColumns(recipes: ColumnRecipe[]): PColumn<undefined | PColumnDataUniversal>[] {
   return dedupColumns(
@@ -141,24 +141,14 @@ function accessorGraphColumns(
   return toGraphColumns(ColumnsCollection([accessor]).getColumns());
 }
 
-/**
- * UMAP columns from the sequence-space block plus this block's own sampled-rows
- * markers, materialised for `createPFrameForGraphs` / `PColumnIdAndSpec`.
- *
- * The legacy `{ anchor: "main", idx: 1 }` axis binding has no selector form, so
- * the clonotype axis name is read off the resolved anchor spec and matched by
- * name. Omitting `partialAxesMatch` keeps the old exact-axis-set semantics.
- */
-function umapGraphColumns(
+function umapPoolColumns(
   ctx: RenderCtx<BlockArgs, BlockData>,
 ): PColumn<undefined | PColumnDataUniversal>[] | undefined {
-  const anchorSpec = getSpecByRef(getInputAnchorRef(ctx.data));
-  const clonotypeAxisName = anchorSpec?.axesSpec[1]?.name;
-  if (anchorSpec === undefined || clonotypeAxisName === undefined) return undefined;
+  const clonotypeAxisName = getSpecByRef(getInputAnchorRef(ctx.data))?.axesSpec[1]?.name;
+  if (clonotypeAxisName === undefined) return undefined;
 
   const umap = ColumnsCollection(["result_pool"])
-    .discover({
-      anchors: { main: anchorSpec },
+    .filter({
       include: {
         name: "^pl7\\.app/umap[12]$",
         axes: [{ name: exactMatch(clonotypeAxisName) }],
@@ -167,17 +157,47 @@ function umapGraphColumns(
     .getColumns();
   if (umap.length === 0) return undefined;
 
-  const sampledRows = ColumnsCollection(
-    [
-      ctx.outputs?.resolve({
-        field: "sampledRows",
-        assertFieldType: "Input",
-        allowPermanentAbsence: true,
-      }),
-    ].filter((a) => a !== undefined),
-  ).getColumns();
+  return toGraphColumns(umap);
+}
 
-  return toGraphColumns([...umap, ...sampledRows]);
+/**
+ * Ids of the columns that join the UMAP projection, discovered once per UMAP
+ * column and unioned, so a second clonotype-space block keyed on its own axis
+ * still contributes.
+ *
+ * Anchors are specs, never ids, so the pool's own copy of a UMAP column cannot
+ * collide with one handed in here.
+ */
+function umapRelatedIds(umap: PColumn<undefined | PColumnDataUniversal>[]) {
+  return [
+    ...new Set(
+      umap.flatMap((c) =>
+        ColumnsCollection()
+          .discover({
+            mode: "enrichment",
+            maxHops: 4,
+            anchors: { main: c.spec },
+            exclude: [
+              { annotations: { [Annotation.HideDataFromUi]: exactMatch("true") } },
+              { annotations: { [Annotation.HideDataFromGraphs]: exactMatch("true") } },
+            ],
+          })
+          .getColumnIds(),
+      ),
+    ),
+  ];
+}
+
+function sampledRowsGraphColumns(
+  ctx: RenderCtx<BlockArgs, BlockData>,
+): PColumn<undefined | PColumnDataUniversal>[] | undefined {
+  return accessorGraphColumns(
+    ctx.outputs?.resolve({
+      field: "sampledRows",
+      assertFieldType: "Input",
+      allowPermanentAbsence: true,
+    }),
+  );
 }
 
 export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind })
@@ -415,7 +435,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     // columns are excluded (the hide-* annotations are StringifiedJson<boolean>,
     // so an exact "true" match is faithful). With no JS predicate left we take
     // ids straight from the host — zero spec round-trips. Set-dedup the ids since
-    // the same leaf can surface via multiple paths and createPFrame rejects dupes.
+    // the same leaf can surface via multiple paths; createPFrame drops exact
+    // repeats itself.
     const msaIds = result.collection
       .discover({
         anchors: { main: result.anchorSpec },
@@ -633,17 +654,21 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
 
   // Use UMAP output from ctx from clonotype-space block
   .outputWithStatus("umapPf", (ctx) => {
-    const pCols = umapGraphColumns(ctx);
-    if (pCols === undefined) return undefined;
+    const umap = umapPoolColumns(ctx);
+    if (umap === undefined) return undefined;
+    if (umap.some((c) => c.data === undefined)) return undefined;
 
-    return createPFrameForGraphs(ctx, pCols);
+    // The UMAP columns go on X and Y, so the pFrame is anchored on them: it holds
+    // exactly what joins them, plus the columns themselves. createPFrame drops the
+    // repeat when discovery already returned an anchor.
+    return ctx.createPFrame([...umapRelatedIds(umap), ...umap.map((c) => c.id)]);
   })
 
   .outputWithStatus("umapPcols", (ctx) => {
-    const pCols = umapGraphColumns(ctx);
-    if (pCols === undefined) return undefined;
+    const umap = umapPoolColumns(ctx);
+    if (umap === undefined) return undefined;
 
-    return pCols.map(
+    return [...umap, ...(sampledRowsGraphColumns(ctx) ?? [])].map(
       (c) =>
         ({
           columnId: c.id,
