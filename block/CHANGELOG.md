@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 4.3.0
+
+### Minor Changes
+
+- 5b6c053: Empty changeset release
+
 ## 4.2.2
 
 ### Patch Changes
