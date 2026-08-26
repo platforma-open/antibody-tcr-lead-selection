@@ -37,11 +37,14 @@ import {
   getInputAnchorRef,
   getInputFilterRef,
   getSpecByRef,
+  hasGeneCalls,
   isClusterIdAxisName,
+  isPeptideOrAmplicon,
   isPresenceOnlyColumn,
   isProducedByLeadSelection,
   isRankableMatch,
   isSelectableMatch,
+  recordSource,
   matchToColumnId,
 } from "./util";
 import { kind } from "@platforma-open/milaboratories.top-antibodies.kind";
@@ -315,7 +318,11 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     (ctx) => {
       const spec = getSpecByRef(getInputAnchorRef(ctx.data));
       if (!spec) return undefined;
-      return spec.axesSpec[1]?.name === "pl7.app/variantKey" ? "peptide" : "antibody_tcr";
+      // Two values only, so "peptide" is the umbrella for both non-receptor producers —
+      // synthetic-repertoire-profiler included. The UI reads the axis domain separately when it
+      // needs to say "Variant" rather than "Peptide". Everything else, imported sets included,
+      // is a receptor dataset.
+      return isPeptideOrAmplicon(spec) ? "peptide" : "antibody_tcr";
     },
     { retentive: true },
   )
@@ -801,26 +808,25 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
 
   .sections((ctx) => {
     const ref = getInputAnchorRef(ctx.data);
-    const keyAxis = getSpecByRef(ref)?.axesSpec[1];
-    const isPeptide = keyAxis?.name === "pl7.app/variantKey";
-    // Amplicon (synthetic-repertoire-profiler) shares the variantKey axis with
-    // peptide-extraction; only the axis domain tells them apart. It takes the same
-    // non-VDJ path as peptide (so the isPeptide gating below stays) — only the
-    // sequence-space section label differs.
-    const isAmplicon =
-      isPeptide && keyAxis?.domain?.["pl7.app/repertoire/extractionRunId"] !== undefined;
-    const spaceLabel = isAmplicon
-      ? "Variant Space"
-      : isPeptide
-        ? "Peptide Space"
-        : "Clonotype Space";
+    const anchorSpec = getSpecByRef(ref);
+    // The page is named after what a row is. Receptor datasets, imported or assembled, are
+    // clonotypes.
+    const source = anchorSpec !== undefined ? recordSource(anchorSpec) : "unknown";
+    const spaceLabel =
+      source === "amplicon"
+        ? "Variant Space"
+        : source === "peptide"
+          ? "Peptide Space"
+          : "Clonotype Space";
 
     const sections: Array<{ type: "link"; href: `/${string}`; label: string }> = [
       { type: "link", href: "/", label: strings.titles.main },
       { type: "link", href: "/umap", label: spaceLabel },
       { type: "link", href: "/selection", label: "Selection Plot" },
     ];
-    if (!isPeptide) {
+    // Gated on the columns, not on what produced them: an imported set has no V gene to bin by
+    // and nothing to count.
+    if (anchorSpec !== undefined && hasGeneCalls(anchorSpec)) {
       sections.push(
         { type: "link", href: "/spectratype", label: "CDR3 V Spectratype" },
         { type: "link", href: "/usage", label: "V/J Gene Usage" },

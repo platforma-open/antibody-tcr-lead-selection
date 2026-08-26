@@ -457,13 +457,74 @@ function computeDefaultFilters(scores: ColumnRecipe[], anchorRef: PlRef): PlTabl
   return defaultFilters;
 }
 
+/** Which pipeline produced the anchor's records. */
+export type RecordSource = "peptide" | "amplicon" | "vdj" | "unknown";
+
+/**
+ * Which pipeline produced the anchor's records, from the run-id key on its record axis:
+ *
+ *   pl7.app/peptide/extractionRunId      peptide-extraction
+ *   pl7.app/repertoire/extractionRunId   synthetic-repertoire-profiler
+ *   pl7.app/vdj/clonotypingRunId         MiXCR, and import-vdj-data's imported sets
+ *
+ * Reads the domain, not the axis name: clonotypeKey and scClonotypeKey are migrating to
+ * pl7.app/variantKey, after which the name discriminates nothing. The axis-name checks below are
+ * a fallback for producers that have not migrated yet.
+ *
+ * Does not say how a receptor dataset arrived. Uploaded sequences and MiXCR output are both
+ * `vdj`. Whether specific columns exist is a separate question — see {@link hasGeneCalls}.
+ */
+export function recordSource(anchorSpec: PColumnSpec): RecordSource {
+  const keyAxis = anchorSpec.axesSpec[1];
+  if (keyAxis === undefined) return "unknown";
+
+  const domain = keyAxis.domain ?? {};
+  if (domain["pl7.app/peptide/extractionRunId"] !== undefined) return "peptide";
+  if (domain["pl7.app/repertoire/extractionRunId"] !== undefined) return "amplicon";
+  if (domain["pl7.app/vdj/clonotypingRunId"] !== undefined) return "vdj";
+
+  // Producers that predate the run-id convention.
+  if (
+    keyAxis.name === "pl7.app/vdj/clonotypeKey" ||
+    keyAxis.name === "pl7.app/vdj/scClonotypeKey"
+  ) {
+    return "vdj";
+  }
+
+  return "unknown";
+}
+
+/** True for the two producers whose records are peptides or synthetic variants, not receptors. */
+export function isPeptideOrAmplicon(anchorSpec: PColumnSpec): boolean {
+  const source = recordSource(anchorSpec);
+  return source === "peptide" || source === "amplicon";
+}
+
+/**
+ * Whether the dataset carries V/J gene calls — needed by CDR3 V Spectratype, V/J Gene Usage and
+ * Kabat renumbering.
+ *
+ * Separate from {@link recordSource} on purpose: an uploaded set and a MiXCR set are both `vdj`,
+ * but only MiXCR's has gene calls.
+ *
+ * TEMPORARY. This infers from the axis, and no variantKey producer emits gene calls today. When
+ * MiXCR migrates to that axis this returns false for MiXCR too and both sections silently
+ * disappear. Nothing structural separates the cases then — same axis name, same
+ * clonotypingRunId — so replace it with a result-pool query for the gene columns.
+ */
+export function hasGeneCalls(anchorSpec: PColumnSpec): boolean {
+  return anchorSpec.axesSpec[1]?.name !== "pl7.app/variantKey";
+}
+
 function computePresets(
   scores: ColumnRecipe[],
   defaultFilters: PlTableFiltersDefault[],
   anchorRef: PlRef,
   anchorSpec: PColumnSpec,
 ): Omit<ColumnsMeta, "allMatches" | "scores" | "defaultFilters"> {
-  const isPeptide = anchorSpec.axesSpec[1]?.name === "pl7.app/variantKey";
+  // Named for the preset, not the data: the preset is called "peptide" and amplicon datasets use
+  // it too. A variable called isPeptide here would claim something false about amplicon.
+  const usesPeptidePreset = isPeptideOrAmplicon(anchorSpec);
 
   // The Repertoire Score (repertoire-score block), when present upstream, is the
   // In Vivo preset's primary ranking.
@@ -474,9 +535,9 @@ function computePresets(
     name.startsWith("pl7.app/enrichment") || name.startsWith("pl7.app/vdj/enrichment");
   const hasEnrichmentScores = scores.some((s) => isEnrichmentColumn(s.getSpec().name));
 
-  // Peptide anchors always auto-select the peptide preset, regardless of which
+  // Peptide and amplicon anchors always auto-select the peptide preset, regardless of which
   // score columns are upstream.
-  const detectedPreset: WorkflowPreset | undefined = isPeptide
+  const detectedPreset: WorkflowPreset | undefined = usesPeptidePreset
     ? "peptide"
     : hasRepertoireScore
       ? "in-vivo"

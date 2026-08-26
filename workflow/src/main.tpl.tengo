@@ -180,7 +180,16 @@ wf.body(func(args) {
 
         // Needed conditional variable
 	    isSingleCell := datasetSpec.axesSpec[1].name == "pl7.app/vdj/scClonotypeKey"
-	    isPeptide := datasetSpec.axesSpec[1].name == "pl7.app/variantKey"
+
+	    // Whether V/J gene calls are absent — gates the spectratype and gene-usage step below.
+	    // A question about which columns exist, not about what produced the dataset: an imported
+	    // set is a receptor dataset with no gene calls. Same line the model draws in hasGeneCalls
+	    // (model/src/util.ts).
+	    //
+	    // TEMPORARY, same as there: when MiXCR migrates to the variantKey axis this reads true for
+	    // MiXCR and both analyses quietly stop being computed. Look for the gene columns in the
+	    // bundle instead.
+	    hasNoGeneCalls := datasetSpec.axesSpec[1].name == "pl7.app/variantKey"
     
         ////////// Clonotype Filtering //////////
         // Initialize and build clone table with all columns. When the user
@@ -240,7 +249,7 @@ wf.body(func(args) {
             outputs["selectionStagePf"] = filterSampleResult.output("selectionStagePf", 24 * 60 * 60 * 1000)
 
             // CDR3 spectratype, V/J gene usage, and Kabat numbering are VDJ-only — skip for peptide inputs.
-            if !isPeptide {
+            if !hasNoGeneCalls {
                 ////////// CDR3 Length Calculation //////////
                 // Initialize and build CDR3 sequence table
                 cdr3SeqTableBuilt := utils.initializeCdr3SeqTable(pframes, columns, datasetSpec, isSingleCell)
