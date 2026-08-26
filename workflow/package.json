@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies.workflow",
-  "version": "5.1.1",
+  "version": "5.1.2",
   "private": true,
   "description": "Block Workflow",
   "type": "module",
