@@ -7,11 +7,13 @@ import {
   extractPObjectId,
   canonicalizeAxisId,
   isGlobalPObjectId,
+  isPColumnSpec,
   readAnnotationJson,
   type AxisSpec,
   type ColumnRecipe,
   type PColumnSpec,
   type PlRef,
+  type PObjectSpec,
   type PObjectId,
   type RelaxedColumnSelector,
 } from "@platforma-sdk/model";
@@ -129,6 +131,15 @@ export function isProducedByLeadSelection(spec: PColumnSpec): boolean {
     trace.length > 0 &&
     trace[trace.length - 1]?.type === LEAD_SELECTION_TRACE_TYPE
   );
+}
+
+/** Repertoire-labeling emits one such column per label. `PColumnName` has no entry for it. */
+const LABELING_TAG_COLUMN_NAME = "pl7.app/tag";
+
+/** `pl7.app/isSubset` marks both a dataset restriction and a presence-only column. A labeling
+ *  tag is only the second, so the dataset picker must not offer it. */
+export function isDatasetScopingSubset(spec: PObjectSpec): boolean {
+  return isPColumnSpec(spec) && spec.name !== LABELING_TAG_COLUMN_NAME;
 }
 
 /**
