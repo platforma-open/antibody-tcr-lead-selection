@@ -1,7 +1,7 @@
 import type { AxisSpec, ColumnRecipe, PColumnSpec } from "@platforma-sdk/model";
 import { canonicalizeAxisId, createGlobalPObjectId } from "@platforma-sdk/model";
 import { describe, expect, test } from "vitest";
-import { isPresenceOnlyColumn, isRankableMatch } from "./util";
+import { isDatasetScopingSubset, isPresenceOnlyColumn, isRankableMatch } from "./util";
 
 const sampleAxis: AxisSpec = { type: "String", name: "pl7.app/sampleId" };
 const clonotypeAxis: AxisSpec = {
@@ -197,5 +197,26 @@ describe("isRankableMatch", () => {
     });
     expect(isRankableMatch(recipe("l", produced), anchor, new Set())).toBe(false);
     expect(isRankableMatch(recipe("l", produced), anchor, new Set([idOf("l")]))).toBe(false);
+  });
+});
+
+describe("isDatasetScopingSubset", () => {
+  test("a repertoire-labeling tag cannot scope a dataset", () => {
+    const tag = col({
+      name: "pl7.app/tag",
+      axesSpec: [clonotypeAxis],
+      domain: { "pl7.app/tag/name": "AAAAAAAAAAAAAAAAAAAAAAAA" },
+      annotations: { "pl7.app/label": "Strong binders", "pl7.app/isSubset": "true" },
+    });
+    expect(isDatasetScopingSubset(tag)).toBe(false);
+  });
+
+  test("a lead-selection subset can", () => {
+    const selected = col({
+      name: "pl7.app/lead-selection",
+      axesSpec: [clonotypeAxis],
+      annotations: { "pl7.app/label": "Selected Leads", "pl7.app/isSubset": "true" },
+    });
+    expect(isDatasetScopingSubset(selected)).toBe(true);
   });
 });

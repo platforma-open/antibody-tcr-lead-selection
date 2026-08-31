@@ -39,6 +39,7 @@ import {
   getSpecByRef,
   hasGeneCalls,
   isClusterIdAxisName,
+  isDatasetScopingSubset,
   isPeptideOrAmplicon,
   isPresenceOnlyColumn,
   isProducedByLeadSelection,
@@ -281,6 +282,7 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
           rowAxis === "pl7.app/variantKey"
         );
       },
+      filter: isDatasetScopingSubset,
     });
     if (!opts) return opts;
 
