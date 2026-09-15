@@ -17,3 +17,6 @@ ui/tsconfig.node.tsbuildinfo
 .DS_Store
 .vscode/sftp.json
 test-dry-run.json
+__pycache__/
+.venv/
+.pytest_cache/

@@ -81,6 +81,30 @@ def validate_column_format(df):
     return clonotype_col_columns, cluster_col_columns, linker_col_columns
 
 
+def coerce_ranking_columns(df, ranking_cols):
+    """Cast string-typed ranking columns to Float64. "" becomes null.
+
+    The clone table is written by parquetFileBuilder with naStr and nullStr "".
+    A numeric column with one missing value arrives as Utf8 with "" in the gaps.
+    The model offers only non-String columns for ranking, so every ranking
+    column holds numbers. The cast is non-strict. A strict cast raises on "".
+    """
+    for col in ranking_cols:
+        if col not in df.columns or df.schema[col] != pl.Utf8:
+            continue
+
+        blank = df[col].is_null().sum() + (df[col] == "").sum()
+        df = df.with_columns(pl.col(col).cast(pl.Float64, strict=False))
+        print(f"Cast ranking column '{col}' from string to numeric")
+
+        unparsed = df[col].null_count() - blank
+        if unparsed > 0:
+            print(f"Ranking column '{col}': {unparsed} values did not parse as numbers. "
+                  f"They are not eligible for selection.")
+
+    return df
+
+
 def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversification_column=None):
     """
     Rank and select top N rows using diversified ranking.
@@ -93,14 +117,7 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
     3. Take top N
     4. Add ranked_order column
     """
-    # Convert ranking columns to numeric types if they're strings
-    for col in all_ranking_cols:
-        if col in df.columns and df[col].dtype == pl.Utf8:
-            try:
-                df = df.with_columns(pl.col(col).cast(pl.Float64))
-                print(f"Converted ranking column '{col}' from string to numeric")
-            except Exception as e:
-                print(f"Warning: Could not convert column '{col}' to numeric: {e}")
+    df = coerce_ranking_columns(df, all_ranking_cols)
 
     # A null in a column actively used for ranking or diversification means the
     # clonotype can't be placed by that criterion, so it is not eligible for
