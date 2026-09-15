@@ -153,7 +153,7 @@ export type PresetDefaults = {
 export type ColumnsMeta = {
   /** All discovered columns (direct + linked via linker traversal) */
   allMatches: ColumnRecipe[];
-  /** Score columns (subset of allMatches with pl7.app/isScore annotation) */
+  /** Score columns: the subset of allMatches with pl7.app/isScore that lie on the anchor's own axes */
   scores: ColumnRecipe[];
   defaultFilters: PlTableFiltersDefault[];
   defaultRankingOrder: RankingOrder[];
