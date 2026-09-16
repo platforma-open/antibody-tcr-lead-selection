@@ -27,91 +27,101 @@ Options:
 
 import argparse
 import itertools
+import os
+import sys
+
 import numpy as np
 import pandas as pd
-import sys
-import os
-from scipy.spatial.distance import pdist, squareform
-from sklearn.metrics.pairwise import euclidean_distances
-from sklearn.decomposition import TruncatedSVD
 import umap
+from sklearn.decomposition import TruncatedSVD
+
 
 def kmer_count_vectors(sequences, k=6):
     """
     Convert amino acid sequences to k-mer count vectors.
-    
+
     Args:
         sequences (list): List of amino acid sequences
         k (int): Size of k-mers to count
-        
+
     Returns:
         numpy.ndarray: Matrix of k-mer counts
     """
     print(f"Generating {k}-mer count vectors...")
     # Standard amino acid alphabet
-    amino_acids = ['A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 
-                   'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y']
-    all_kmers = [''.join(p) for p in itertools.product(amino_acids, repeat=k)]
+    amino_acids = ["A", "C", "D", "E", "F", "G", "H", "I", "K", "L", "M", "N", "P", "Q", "R", "S", "T", "V", "W", "Y"]
+    all_kmers = ["".join(p) for p in itertools.product(amino_acids, repeat=k)]
     kmer_to_index = {kmer: idx for idx, kmer in enumerate(all_kmers)}
 
     num_seqs = len(sequences)
     num_kmers = len(all_kmers)
-    
+
     # Use sparse matrix for memory efficiency
     from scipy import sparse
+
     matrix = sparse.lil_matrix((num_seqs, num_kmers), dtype=np.int32)
 
     # Process sequences in batches
     batch_size = 1000
     for i in range(0, num_seqs, batch_size):
         batch_end = min(i + batch_size, num_seqs)
-        print(f"Processing sequences {i+1} to {batch_end} of {num_seqs}...")
-        
+        print(f"Processing sequences {i + 1} to {batch_end} of {num_seqs}...")
+
         for j in range(i, batch_end):
             seq = str(sequences[j]).upper().strip("_")
             for pos in range(len(seq) - k + 1):
-                kmer = seq[pos:pos + k]
+                kmer = seq[pos : pos + k]
                 idx = kmer_to_index.get(kmer)
                 if idx is not None:
                     matrix[j, idx] += 1
-    
+
     # Convert to CSR format for efficient operations
     return matrix.tocsr()
 
+
 def main():
     parser = argparse.ArgumentParser(
-        description='Compute UMAP embeddings from amino acid sequences via k-mer counts and PCA.')
-    parser.add_argument('-i', '--input', required=True,
-                        help='Input TSV file with sequence column')
-    parser.add_argument('-c', '--seq-col-start', default='aaSequence',
-                        help='Starting string of the column containing amino acid sequences')
-    parser.add_argument('-u', '--umap-output', required=True,
-                        help='Output TSV file for UMAP embeddings')
-    parser.add_argument('--dr-components', type=int, default=5,
-                        help='Number of dimensionality reduction components before UMAP (default: 5)')
-    parser.add_argument('--umap-components', type=int, default=2,
-                        help='Number of UMAP dimensions (default: 2)')
-    parser.add_argument('--umap-neighbors', type=int, default=8,
-                        help='UMAP n_neighbors (default: 8)')
-    parser.add_argument('--umap-min-dist', type=float, default=0.05,
-                        help='UMAP min_dist (default: 0.05)')
-    parser.add_argument('--k-mer-size', type=int, default=3,
-                        help='Size of k-mers to use for sequence analysis (default: 3 for amino acids)')
-    parser.add_argument('--output-dir', default='.',
-                        help='Directory to save output files')
+        description="Compute UMAP embeddings from amino acid sequences via k-mer counts and PCA."
+    )
+    parser.add_argument("-i", "--input", required=True, help="Input TSV file with sequence column")
+    parser.add_argument(
+        "-c",
+        "--seq-col-start",
+        default="aaSequence",
+        help="Starting string of the column containing amino acid sequences",
+    )
+    parser.add_argument("-u", "--umap-output", required=True, help="Output TSV file for UMAP embeddings")
+    parser.add_argument(
+        "--dr-components",
+        type=int,
+        default=5,
+        help="Number of dimensionality reduction components before UMAP (default: 5)",
+    )
+    parser.add_argument("--umap-components", type=int, default=2, help="Number of UMAP dimensions (default: 2)")
+    parser.add_argument("--umap-neighbors", type=int, default=8, help="UMAP n_neighbors (default: 8)")
+    parser.add_argument("--umap-min-dist", type=float, default=0.05, help="UMAP min_dist (default: 0.05)")
+    parser.add_argument(
+        "--k-mer-size",
+        type=int,
+        default=3,
+        help="Size of k-mers to use for sequence analysis (default: 3 for amino acids)",
+    )
+    parser.add_argument("--output-dir", default=".", help="Directory to save output files")
     args = parser.parse_args()
 
     # Create output directory if it doesn't exist
     os.makedirs(args.output_dir, exist_ok=True)
-    
+
     print("Starting k-mer UMAP analysis for amino acid sequences")
     print(f"Input file: {args.input}")
     print(f"Output file: {args.umap_output}")
-    print(f"Parameters: k-mer size={args.k_mer_size}, "
-          f"DR components={args.dr_components}, "
-          f"UMAP components={args.umap_components}, "
-          f"UMAP neighbors={args.umap_neighbors}, "
-          f"UMAP min_dist={args.umap_min_dist}")
+    print(
+        f"Parameters: k-mer size={args.k_mer_size}, "
+        f"DR components={args.dr_components}, "
+        f"UMAP components={args.umap_components}, "
+        f"UMAP neighbors={args.umap_neighbors}, "
+        f"UMAP min_dist={args.umap_min_dist}"
+    )
 
     # Validate input parameters
     if args.dr_components < 1:
@@ -133,7 +143,7 @@ def main():
     # Load input with better error handling
     try:
         print("Loading input file...")
-        df_input = pd.read_csv(args.input, sep='\t', dtype=str)
+        df_input = pd.read_csv(args.input, sep="\t", dtype=str)
         print(f"Loaded {len(df_input)} sequences")
     except FileNotFoundError:
         print(f"Error: Input file '{args.input}' not found")
@@ -145,24 +155,47 @@ def main():
         print(f"Error reading input file: {e}")
         sys.exit(1)
 
-    seq_col_list = sorted([c for c in df_input.columns 
-                        if c.startswith(args.seq_col_start)])
+    seq_col_list = sorted([c for c in df_input.columns if c.startswith(args.seq_col_start)])
     if len(seq_col_list) == 0:
-        print(f"Error: Columns starting with '{args.seq_col_start}' not found in input TSV. Available columns: {', '.join(df_input.columns)}")
+        print(
+            f"Error: Columns starting with '{args.seq_col_start}' not found in input "
+            f"TSV. Available columns: {', '.join(df_input.columns)}"
+        )
         sys.exit(1)
 
     # Concatenate sequence columns
     seq_col = "aaSequence"
-    df_input[seq_col] = df_input[seq_col_list].agg(''.join, axis=1)
-    
+    df_input[seq_col] = df_input[seq_col_list].agg("".join, axis=1)
+
     sequences = df_input[seq_col].tolist()
     if not sequences:
-        print('Error: No sequences found in the specified column.')
+        print("Error: No sequences found in the specified column.")
         sys.exit(1)
-    
+
     # Validate sequences for amino acids
-    valid_aas = {'A', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'K', 'L', 
-                 'M', 'N', 'P', 'Q', 'R', 'S', 'T', 'V', 'W', 'Y', '*'}
+    valid_aas = {
+        "A",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "K",
+        "L",
+        "M",
+        "N",
+        "P",
+        "Q",
+        "R",
+        "S",
+        "T",
+        "V",
+        "W",
+        "Y",
+        "*",
+    }
     invalid_seqs = []
     for i, seq in enumerate(sequences):
         # Remove trailing underscore and check each character
@@ -176,33 +209,32 @@ def main():
     # Compute k-mer counts
     print("Computing k-mer counts...")
     matrix = kmer_count_vectors(sequences, k=args.k_mer_size)
-    
+
     # Run truncated SVD
     print("Running Truncated SVD...")
     svd = TruncatedSVD(n_components=args.dr_components)
     svd_embed = svd.fit_transform(matrix)
     print(f"Explained variance ratio: {sum(svd.explained_variance_ratio_):.3f}")
-    
+
     # Run UMAP
     print("Running UMAP...")
     umap_model = umap.UMAP(
         n_components=args.umap_components,
         n_neighbors=args.umap_neighbors,
         min_dist=args.umap_min_dist,
-        n_jobs=-1  # Use all available cores
+        n_jobs=-1,  # Use all available cores
     )
     umap_embed = umap_model.fit_transform(svd_embed)
 
     # Save UMAP embeddings
     output_path = os.path.join(args.output_dir, args.umap_output)
     umap_df = pd.DataFrame(
-        umap_embed,
-        index=df_input.clonotypeKey,
-        columns=[f'UMAP{i+1}' for i in range(args.umap_components)]
+        umap_embed, index=df_input.clonotypeKey, columns=[f"UMAP{i + 1}" for i in range(args.umap_components)]
     )
-    umap_df.to_csv(output_path, index=True, sep='\t')
-    print(f'UMAP embeddings saved to {output_path}')
+    umap_df.to_csv(output_path, index=True, sep="\t")
+    print(f"UMAP embeddings saved to {output_path}")
     print("Analysis complete")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

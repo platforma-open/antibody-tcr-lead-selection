@@ -1,6 +1,6 @@
 import argparse
 import os
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Optional, Tuple
 
 import polars as pl
 
@@ -101,5 +101,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-

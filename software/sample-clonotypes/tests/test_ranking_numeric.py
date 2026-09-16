@@ -7,7 +7,6 @@ holds one is kept, not dropped, and keeps its position on every other
 criterion."""
 
 import polars as pl
-
 from main import diversified_rank_and_select
 
 
@@ -145,9 +144,7 @@ def test_missing_second_criterion_does_not_cost_first_criterion_standing():
         }
     )
 
-    result = diversified_rank_and_select(
-        df, 2, {"Col0": "decreasing", "Col1": "decreasing"}, ["Col0", "Col1"]
-    )
+    result = diversified_rank_and_select(df, 2, {"Col0": "decreasing", "Col1": "decreasing"}, ["Col0", "Col1"])
 
     assert result["clonotypeKey"].to_list() == ["c0", "c1"]
 
@@ -163,9 +160,7 @@ def test_missing_second_criterion_loses_a_tie_on_the_first():
         }
     )
 
-    result = diversified_rank_and_select(
-        df, 2, {"Col0": "decreasing", "Col1": "decreasing"}, ["Col0", "Col1"]
-    )
+    result = diversified_rank_and_select(df, 2, {"Col0": "decreasing", "Col1": "decreasing"}, ["Col0", "Col1"])
 
     assert result["clonotypeKey"].to_list() == ["c1", "c0"]
 
@@ -202,9 +197,7 @@ def test_diversification_still_applies_after_coercion():
         }
     )
 
-    result = diversified_rank_and_select(
-        df, 2, {"Col0": "decreasing"}, ["Col0"], diversification_column="cluster_0"
-    )
+    result = diversified_rank_and_select(df, 2, {"Col0": "decreasing"}, ["Col0"], diversification_column="cluster_0")
 
     assert result["clonotypeKey"].to_list() == ["c0", "c2"]
 
@@ -222,9 +215,7 @@ def test_diversification_spreads_before_it_ranks():
         }
     )
 
-    result = diversified_rank_and_select(
-        df, 4, {"Col0": "decreasing"}, ["Col0"], diversification_column="cluster_0"
-    )
+    result = diversified_rank_and_select(df, 4, {"Col0": "decreasing"}, ["Col0"], diversification_column="cluster_0")
 
     assert result["clonotypeKey"].to_list() == ["c0", "c2", "c3", "c1"]
 
@@ -239,9 +230,7 @@ def test_unassigned_diversification_group_is_still_dropped():
         }
     )
 
-    result = diversified_rank_and_select(
-        df, 3, {"Col0": "decreasing"}, ["Col0"], diversification_column="cluster_0"
-    )
+    result = diversified_rank_and_select(df, 3, {"Col0": "decreasing"}, ["Col0"], diversification_column="cluster_0")
 
     assert result["clonotypeKey"].to_list() == ["c0", "c1"]
 

@@ -1,0 +1,72 @@
+name: Python Tests
+
+# Only the python packages under software/ are linted and tested here, so the
+# pull_request and push triggers are scoped to that tree. merge_group does not
+# support a path filter, so the jobs always run in the merge queue.
+#
+# Keep this workflow OUT of the "Main Branch" ruleset's required status checks:
+# a required check that a path filter skips never reports, and the PR blocks.
+on:
+  merge_group:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches:
+      - 'main'
+    paths:
+      - 'software/**'
+      - 'ruff.toml'
+      - '.github/workflows/python-tests.yaml'
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'software/**'
+      - 'ruff.toml'
+      - '.github/workflows/python-tests.yaml'
+  workflow_dispatch: {}
+
+env:
+  UV_VERSION: "0.11.16"
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "${{ env.UV_VERSION }}"
+          enable-cache: true
+          cache-dependency-glob: software/sample-clonotypes/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --all-groups --locked --project software/sample-clonotypes
+
+      # ruff.toml sits at the repo root so it covers every package under
+      # software/, not just the one that carries a pyproject.toml.
+      - name: Ruff check
+        run: uv run --project software/sample-clonotypes ruff check software/
+
+      - name: Ruff format check
+        run: uv run --project software/sample-clonotypes ruff format --check software/
+
+  pytest:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: software/sample-clonotypes
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "${{ env.UV_VERSION }}"
+          enable-cache: true
+          cache-dependency-glob: software/sample-clonotypes/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --all-groups --locked
+
+      - name: Run pytest
+        run: uv run pytest
