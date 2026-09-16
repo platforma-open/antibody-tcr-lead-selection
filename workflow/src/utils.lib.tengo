@@ -698,17 +698,18 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec, inputFilterCol
  * @return Header name with chain information
  */
 makeHeaderName := func(col, baseHeaderName, isSingleCell) {
+    // Slot letters are diversity-ordered by the producer blocks: A is the more diverse chain.
     chainMapping := {
-        "IG": { "A": "Heavy", "B": "Light" },
-        "TCRAB": { "A": "TRA", "B": "TRB" },
-        "TCRGD": { "A": "TRG", "B": "TRD" }
+        "IG": { "A": "IGHeavy", "B": "IGLight" },
+        "TCRAB": { "A": "TCRBeta", "B": "TCRAlpha" },
+        "TCRGD": { "A": "TCRDelta", "B": "TCRGamma" }
     }
     
     if isSingleCell {
         chain := col.spec.domain["pl7.app/vdj/scClonotypeChain"]  // e.g., "A", "B"
         receptor := col.spec.axesSpec[0].domain["pl7.app/vdj/receptor"]  // e.g., "IG", "TCRAB", "TCRGD"
         chainLabel := chainMapping[receptor][chain]
-        return baseHeaderName + "." + chainLabel // e.g., "cdr3Sequence.Heavy"
+        return baseHeaderName + "." + chainLabel // e.g., "cdr3Sequence.IGHeavy"
     } else {
         // For bulk, if chain info is available (e.g. IGH, IGK, IGL)
         chainFromDomain := col.spec.axesSpec[0].domain["pl7.app/vdj/chain"] // e.g. "IGH", "IGK"
