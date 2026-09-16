@@ -103,7 +103,7 @@ wheels = [
 ]
 
 [[package]]
-name = "sample-clonotypes"
+name = "top-antibodies-software"
 version = "0.1.0"
 source = { virtual = "." }
 

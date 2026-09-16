@@ -1,0 +1,19 @@
+[project]
+name = "top-antibodies-software"
+version = "0.1.0"
+description = "Dev environment for the python software packages of the Top Antibodies block"
+requires-python = ">=3.12"
+
+[dependency-groups]
+dev = [
+    "polars==1.33.1",
+    "pytest>=8.0.0",
+    "ruff>=0.14.0",
+]
+
+[tool.pytest.ini_options]
+# Collect from every package under software/, so a new package's tests are
+# picked up without touching this file. Each package puts its own src/ on
+# sys.path from tests/conftest.py.
+testpaths = ["."]
+norecursedirs = ["node_modules", ".venv", "dist", "build", "src", ".git"]

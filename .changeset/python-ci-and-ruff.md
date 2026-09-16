@@ -14,6 +14,11 @@ Adds a repo-root ruff.toml and runs ruff check, ruff format --check and pytest
 from a new Python Tests workflow. The workflow runs only when something under
 software/ changes.
 
+The dev environment moves from software/sample-clonotypes/ to software/, so one
+pyproject.toml and one uv.lock cover every package. pytest collects every
+<package>/tests/ directory, and each package puts its own src/ on sys.path from
+its tests/conftest.py.
+
 Every python source under software/ is reformatted. ruff also removed four
 unused imports: os in sample-clonotypes main.py and filter.py, and pdist,
 squareform and euclidean_distances in umap main.py. No behaviour changes.

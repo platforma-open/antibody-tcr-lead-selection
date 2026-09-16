@@ -26,11 +26,14 @@ on:
   workflow_dispatch: {}
 
 env:
-  UV_VERSION: "0.11.16"
+  UV_VERSION: "0.12.15"
 
 jobs:
   ruff:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: software
     steps:
       - uses: actions/checkout@v4
 
@@ -38,24 +41,24 @@ jobs:
         with:
           version: "${{ env.UV_VERSION }}"
           enable-cache: true
-          cache-dependency-glob: software/sample-clonotypes/uv.lock
+          cache-dependency-glob: software/uv.lock
 
       - name: Install dependencies
-        run: uv sync --all-groups --locked --project software/sample-clonotypes
+        run: uv sync --all-groups --locked
 
-      # ruff.toml sits at the repo root so it covers every package under
-      # software/, not just the one that carries a pyproject.toml.
+      # Targets software/ as a whole, so every package under it is covered.
+      # ruff.toml sits at the repo root, which ruff finds by walking up.
       - name: Ruff check
-        run: uv run --project software/sample-clonotypes ruff check software/
+        run: uv run ruff check .
 
       - name: Ruff format check
-        run: uv run --project software/sample-clonotypes ruff format --check software/
+        run: uv run ruff format --check .
 
   pytest:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: software/sample-clonotypes
+        working-directory: software
     steps:
       - uses: actions/checkout@v4
 
@@ -63,10 +66,11 @@ jobs:
         with:
           version: "${{ env.UV_VERSION }}"
           enable-cache: true
-          cache-dependency-glob: software/sample-clonotypes/uv.lock
+          cache-dependency-glob: software/uv.lock
 
       - name: Install dependencies
         run: uv sync --all-groups --locked
 
+      # Collects every <package>/tests/ under software/.
       - name: Run pytest
         run: uv run pytest
