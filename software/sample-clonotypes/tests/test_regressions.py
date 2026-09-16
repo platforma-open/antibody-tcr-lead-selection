@@ -1,10 +1,10 @@
-"""Regression tests for three defects found while reviewing PR #187.
+"""Regressions in main.py: behaviours that broke once and must not break again.
 
-Each one was committed failing, then fixed in its own commit. They assert the
-behaviour a caller or an operator can observe, not the internal shape of the
-fix, so they keep holding if the implementation changes.
+Each test asserts what a caller or an operator can observe, so it keeps holding
+if the implementation changes.
 """
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -38,7 +38,7 @@ def run_main(tmp_path, values, n):
             "--out",
             str(out),
             "--ranking-map",
-            '{"Col0":"decreasing"}',
+            json.dumps({"Col0": "decreasing"}),
             "--selection-in",
             str(selection_in),
             "--selection-out",
@@ -54,9 +54,10 @@ def run_main(tmp_path, values, n):
     return process, selected, stages
 
 
-def test_missing_clonotype_key_reports_its_error_instead_of_raising():
-    """validate_column_format used to return a bare False, which the caller
-    unpacked into three names and died on. It now always returns three lists."""
+def test_missing_clonotype_key_is_reported_not_raised():
+    """validate_column_format always returns three lists, and the caller checks
+    for clonotypeKey itself. Returning a single sentinel instead would make the
+    caller's three-way unpack raise, hiding the message it had just printed."""
     df = pl.DataFrame({"Col0": [1.0, 2.0]})
 
     clonotype_cols, cluster_cols, linker_cols = validate_column_format(df)
@@ -79,14 +80,10 @@ def test_n_larger_than_the_table_selects_every_row(tmp_path):
 
 
 def test_only_the_sampled_clonotypes_are_bumped_to_the_final_stage(tmp_path):
-    """main.py marks the sampled clonotypes with is_in. Passing a bare Series
-    is deprecated in polars, which will read it element-wise and bump rows by
-    position instead of by membership.
-
-    This asserts the outcome, not the warning: when polars drops the warning the
-    danger arrives, and a test that only watched stderr would turn green exactly
-    then. With four keys and two selected, positional matching would mark the
-    wrong rows and this fails."""
+    """The stage update must mark clonotypes by membership in the sampled set,
+    never by row position. With four keys and two selected, a positional match
+    marks the wrong two, and nothing downstream would notice: the block would
+    just report leads the ranking never chose."""
     process, selected, stages = run_main(tmp_path, ["9.5", "3.1", "100.7", "50.0"], n=2)
 
     assert process.returncode == 0
@@ -102,8 +99,9 @@ def test_only_the_sampled_clonotypes_are_bumped_to_the_final_stage(tmp_path):
 
 
 def test_selection_stage_update_emits_no_deprecation_warning(tmp_path):
-    """Secondary to the test above: the warning is the early signal, the stage
-    assignment is the thing that must stay correct."""
+    """Secondary to the test above: a polars deprecation warning here is the
+    early signal that the membership form is being dropped. The stage
+    assignment is the thing that must stay correct either way."""
     process, _, _ = run_main(tmp_path, ["9.5", "3.1", "100.7", "50.0"], n=2)
 
     assert process.returncode == 0

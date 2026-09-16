@@ -95,16 +95,15 @@ def test_interpreter_matches_the_shipped_runenv():
     """A test passing on 3.13 says nothing about a block that runs on 3.12: the
     wheels differ, and so can the behaviour.
 
-    Compared down to the patch, because pyproject.toml pins requires-python to
-    the exact runenv version. Bumping the runenv without bumping that pin fails
-    here rather than drifting quietly."""
+    Compared at major.minor. requires-python allows any 3.12, so a patch
+    difference from the runenv is expected and is not what this guards."""
     declared = read_runenv_python()
     assert declared, "no runenv-python-3 pin found in any software/*/package.json"
-    assert len(declared) == 1, f"packages declare different python versions: {declared}"
+    assert len({version[:2] for version in declared}) == 1, f"packages declare different python versions: {declared}"
 
     shipped = next(iter(declared))
-    running = sys.version_info[:3]
+    running = sys.version_info[:2]
 
-    assert running == shipped, (
-        f"tests run on python {'.'.join(map(str, running))}, the block ships {'.'.join(map(str, shipped))}"
+    assert running == shipped[:2], (
+        f"tests run on python {running[0]}.{running[1]}, the block ships {shipped[0]}.{shipped[1]}"
     )

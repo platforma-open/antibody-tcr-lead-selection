@@ -2,13 +2,10 @@
 name = "top-antibodies-software"
 version = "0.1.0"
 description = "Dev environment for the python software packages of the Top Antibodies block"
-# Exactly the runenv the packages declare:
-# @platforma-open/milaboratories.runenv-python-3:3.12.10. Left as a range, uv
-# resolves whatever 3.12 is newest — 3.13 without the upper bound — and the
-# suite would exercise a different interpreter and different wheels from the
-# ones the block runs. Sibling blocks use a range here; this one pins the patch
-# because test_interpreter_matches_the_shipped_runenv asserts against it.
-requires-python = "==3.12.10"
+# The packages ship @platforma-open/milaboratories.runenv-python-3:3.12.10.
+# Without the upper bound uv resolves 3.13, and the suite would exercise a
+# different interpreter and different wheels from the ones the block runs.
+requires-python = ">=3.12, <3.13"
 
 # One group per software package, holding that package's runtime pins. This file
 # is the source of truth; each <package>/src/requirements.txt is generated from

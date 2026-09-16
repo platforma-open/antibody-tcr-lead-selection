@@ -25,10 +25,10 @@ group per package with that package's runtime pins, and each
 scripts/deps-export.sh. A requirements-sync CI job fails when the two drift.
 uv sync --all-groups therefore installs exactly what pl-pkg ships.
 
-requires-python pins 3.12.10 exactly, the runenv version the packages declare;
-uv was resolving 3.13.5 before, so neither the interpreter nor the wheels under
-test were the ones the block runs. New tests assert the interpreter and every
-runtime version match the shipped pins.
+requires-python is capped below 3.13, the major.minor the packages' runenv
+declares; uv was resolving 3.13.5 before, so neither the interpreter nor the
+wheels under test were the ones the block runs. New tests assert the
+interpreter and every runtime version match the shipped pins.
 
 Every python source under software/ is reformatted. ruff also removed four
 unused imports: os in sample-clonotypes main.py and filter.py, and pdist,

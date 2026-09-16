@@ -22,7 +22,7 @@ def clone_table(values, key_prefix="c"):
 
 
 def test_string_column_with_empty_gaps_ranks_numerically():
-    """MILAB-6954: as text, "9.5" > "100.7", so the highest value ranked last."""
+    """Sorted as text, "9.5" > "100.7", which puts the highest value last."""
     df = clone_table(["9.5", "10.2", "", "100.7"])
 
     result = diversified_rank_and_select(df, 3, {"Col0": "decreasing"}, ["Col0"])
