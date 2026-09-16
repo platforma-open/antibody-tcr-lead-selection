@@ -10,7 +10,7 @@ The clone table writes a missing number as "". A ranking column with one missing
 value reaches the sampler as a string column. The sampler cast that column back
 to Float64 with a strict cast. The strict cast raised on "". The sampler swallowed
 the error and sorted the column as text. Ranking by Overall Log2FC from highest
-put the largest value at rank 475, behind every single-digit value.
+put the largest value, 10.15, at rank 475, behind every single-digit value.
 
 The cast is now non-strict. "" and any text that is not a number become null.
 
