@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies.model",
-  "version": "5.1.5",
+  "version": "5.1.6",
   "private": true,
   "description": "Block model",
   "type": "module",
@@ -36,10 +36,10 @@
     "@milaboratories/ts-configs": "catalog:",
     "@platforma-sdk/block-tools": "catalog:",
     "@platforma-sdk/ui-vue": "catalog:",
+    "@types/node": "*",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@types/node": "*",
     "typescript": "*"
   }
 }

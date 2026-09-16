@@ -42,6 +42,7 @@ import {
   isDatasetScopingSubset,
   isPeptideOrAmplicon,
   isPresenceOnlyColumn,
+  ANCHORED_DISCOVERY,
   isProducedByLeadSelection,
   isRankableMatch,
   isSelectableMatch,
@@ -339,6 +340,7 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       result.collection
         .discover({
           anchors: { main: result.anchorSpec },
+          ...ANCHORED_DISCOVERY,
           exclude: discoveryExcludeSelectors(result.sampleAxisName),
         })
         .getColumns(),
@@ -387,6 +389,7 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       result.collection
         .discover({
           anchors: { main: result.anchorSpec },
+          ...ANCHORED_DISCOVERY,
           exclude: [...discoveryExcludeSelectors(result.sampleAxisName), { type: "String" }],
         })
         .getColumns(),
@@ -449,6 +452,7 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     const msaIds = result.collection
       .discover({
         anchors: { main: result.anchorSpec },
+        ...ANCHORED_DISCOVERY,
         include: { axes: [{ name: exactMatch(anchorClonotypeAxisName) }], partialAxesMatch: true },
         exclude: [
           { annotations: { [Annotation.IsLinkerColumn]: "true" } },
@@ -540,7 +544,7 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     if (!clonotypeAxisMatches) return undefined;
 
     const poolDiscovered = ColumnsCollection()
-      .discover({ anchors: { main: leadSelectionSpec } })
+      .discover({ anchors: { main: leadSelectionSpec }, ...ANCHORED_DISCOVERY })
       .getColumns()
       .filter((c) => {
         const spec = c.getSpec();
