@@ -8,14 +8,41 @@ description = "Dev environment for the python software packages of the Top Antib
 # .python-version pins the patch.
 requires-python = ">=3.12,<3.13"
 
-# Tooling only. Every runtime library comes from the packages' own
-# src/requirements.txt, which is what pl-pkg ships, so the tests run the exact
-# versions the block runs. Adding a runtime library here would let the tested
-# version drift from the shipped one. Use scripts/pytest.sh to run the suite.
+# One group per software package, holding that package's runtime pins. This file
+# is the source of truth; each <package>/src/requirements.txt is generated from
+# its group by scripts/deps-export.sh and checked by the requirements-sync CI
+# job. `uv sync --all-groups` therefore installs exactly what the block ships,
+# so the suite never runs a version the block does not.
 [dependency-groups]
 dev = [
     "pytest>=8.0.0",
     "ruff>=0.14.0",
+]
+
+anarci-kabat = [
+    "polars-lts-cpu==1.33.1",
+]
+
+assembling-fasta = [
+    "polars-lts-cpu==1.33.1",
+]
+
+sample-clonotypes = [
+    "pandas==2.2.3",
+    "polars-lts-cpu==1.33.1",
+]
+
+spectratype = [
+    "pandas==2.2.3",
+    "pyarrow==21.0.0",
+]
+
+umap = [
+    "numpy==2.2.6",
+    "pandas==2.2.3",
+    "scikit-learn==1.6.1",
+    "scipy==1.15.3",
+    "umap-learn==0.5.7",
 ]
 
 [tool.pytest.ini_options]
@@ -24,3 +51,4 @@ dev = [
 # sys.path from tests/conftest.py.
 testpaths = ["."]
 norecursedirs = ["node_modules", ".venv", "dist", "build", "src", ".git"]
+addopts = "-ra --strict-markers"

@@ -71,8 +71,40 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-groups --locked
 
-      # scripts/pytest.sh layers every package's src/requirements.txt into the
-      # environment, so the suite runs the versions the block ships rather than
-      # whatever the dev group resolves. It collects every <package>/tests/.
+      # --all-groups installs every package's runtime pins alongside the dev
+      # tooling, so the suite runs the versions the block ships. It collects
+      # every <package>/tests/.
       - name: Run pytest
-        run: ./scripts/pytest.sh
+        run: uv run pytest
+
+  requirements-sync:
+    # Each <package>/src/requirements.txt is generated from its dependency group
+    # in pyproject.toml, and pl-pkg builds the shipped environment from it. This
+    # job fails when the committed file has drifted — someone changed a pin but
+    # did not regenerate.
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: software
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "${{ env.UV_VERSION }}"
+          enable-cache: true
+          cache-dependency-glob: software/uv.lock
+
+      - name: Regenerate requirements.txt from pyproject.toml
+        run: ./scripts/deps-export.sh
+
+      - name: Verify the committed files are in sync
+        run: |
+          if ! git diff --exit-code -- '*/src/requirements.txt'; then
+            echo "::error::software/*/src/requirements.txt is out of sync with pyproject.toml"
+            echo "Dependencies are defined in software/pyproject.toml, one group per package."
+            echo "Resolve locally with:"
+            echo "    cd software && ./scripts/deps-export.sh"
+            echo "then commit the updated requirements.txt files."
+            exit 1
+          fi

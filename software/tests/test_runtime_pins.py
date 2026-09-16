@@ -1,9 +1,13 @@
-"""The suite must run the versions the block ships.
+"""The suite must run the versions and the interpreter the block ships.
 
-Runtime pins live in each package's src/requirements.txt, which is what pl-pkg
-builds from. scripts/pytest.sh layers those files into the test environment.
-These tests prove that happened, so a green suite means the code was exercised
-against the shipped versions and not against whatever the dev group resolved.
+pyproject.toml holds one dependency group per software package. Each
+<package>/src/requirements.txt is generated from its group by
+scripts/deps-export.sh, and pl-pkg builds the shipped environment from that
+file. These tests prove the environment the suite runs in matches it, so a
+green suite means the code was exercised against what the block actually runs.
+
+The requirements-sync CI job covers the other direction: pyproject -> generated
+file.
 """
 
 import importlib.metadata as metadata
@@ -17,27 +21,40 @@ import pytest
 SOFTWARE = Path(__file__).resolve().parents[1]
 
 
-def read_pins():
-    """Map dependency name -> {package: version} across every requirements.txt."""
+def parse_requirements():
+    """Return (pins, malformed).
+
+    pins maps dependency name -> {package: version}. malformed collects lines
+    that are not exact pins, so a bad line surfaces as a test failure rather
+    than an error while pytest is still collecting.
+    """
     pins = defaultdict(dict)
-    for req in sorted(SOFTWARE.glob("*/src/requirements.txt")):
-        package = req.parts[-3]
-        for line in req.read_text().splitlines():
+    malformed = []
+    for requirements in sorted(SOFTWARE.glob("*/src/requirements.txt")):
+        package = requirements.parts[-3]
+        for line in requirements.read_text().splitlines():
             line = line.strip()
             if not line or line.startswith("#"):
                 continue
-            name, sep, version = line.partition("==")
-            assert sep, f"{req}: '{line}' is not pinned with =="
+            name, separator, version = line.partition("==")
+            if not separator or not version:
+                malformed.append(f"{requirements}: {line}")
+                continue
             pins[name.strip()][package] = version.strip()
-    return pins
+    return dict(pins), malformed
 
 
-PINS = read_pins()
+PINS, MALFORMED = parse_requirements()
 
 
 def test_requirements_files_were_found():
     """A glob that silently matches nothing would make every test below vacuous."""
     assert PINS, "no src/requirements.txt found under software/"
+
+
+def test_every_requirement_is_an_exact_pin():
+    """A range would let the tested version drift from the shipped one."""
+    assert not MALFORMED, f"not pinned with ==: {MALFORMED}"
 
 
 def test_no_two_packages_pin_the_same_dependency_differently():
@@ -49,18 +66,20 @@ def test_no_two_packages_pin_the_same_dependency_differently():
 
 
 @pytest.mark.parametrize("name", sorted(PINS))
-def test_installed_version_matches_the_shipped_pin(name):
-    pinned = sorted(set(PINS[name].values()))[0]
+def test_installed_version_matches_every_package_that_pins_it(name):
+    """Compared against every distinct pinned version, not an arbitrary one, so
+    a conflict cannot pass here by picking the version that happens to match."""
+    pinned = set(PINS[name].values())
 
     try:
         installed = metadata.version(name)
     except metadata.PackageNotFoundError:
         pytest.fail(
-            f"{name} is pinned at {pinned} by {sorted(PINS[name])} but is not installed. "
-            f"Run the suite with scripts/pytest.sh, which layers in src/requirements.txt."
+            f"{name} is pinned at {sorted(pinned)} by {sorted(PINS[name])} but is not installed. "
+            f"Run `uv sync --all-groups` from software/."
         )
 
-    assert installed == pinned, f"{name}: shipped pin {pinned}, test environment has {installed}"
+    assert pinned == {installed}, f"{name}: packages pin {sorted(pinned)}, the environment has {installed}"
 
 
 def read_runenv_python():
@@ -68,7 +87,7 @@ def read_runenv_python():
     versions = set()
     for manifest in sorted(SOFTWARE.glob("*/package.json")):
         for match in re.finditer(r"runenv-python-3:(\d+)\.(\d+)\.(\d+)", manifest.read_text()):
-            versions.add(tuple(int(g) for g in match.groups()))
+            versions.add(tuple(int(group) for group in match.groups()))
     return versions
 
 
@@ -77,7 +96,7 @@ def test_interpreter_matches_the_shipped_runenv():
     wheels differ, and so can the behaviour."""
     declared = read_runenv_python()
     assert declared, "no runenv-python-3 pin found in any software/*/package.json"
-    assert len({v[:2] for v in declared}) == 1, f"packages declare different python versions: {declared}"
+    assert len({version[:2] for version in declared}) == 1, f"packages declare different python versions: {declared}"
 
     shipped = next(iter(declared))
     running = sys.version_info[:2]
