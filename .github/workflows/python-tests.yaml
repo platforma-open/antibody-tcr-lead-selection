@@ -72,9 +72,11 @@ jobs:
 
       # --all-groups installs every package's runtime pins alongside the dev
       # tooling, so the suite runs the versions the block ships. It collects
-      # every <package>/tests/.
+      # every <package>/tests/. --cov reports coverage but gates nothing. The
+      # CLI tests run the entrypoints in a subprocess, and conftest.py points
+      # those at the coverage config so their lines are counted.
       - name: Run pytest
-        run: uv run pytest
+        run: uv run pytest --cov
 
   requirements-sync:
     # Each <package>/src/requirements.txt is generated from its dependency group
