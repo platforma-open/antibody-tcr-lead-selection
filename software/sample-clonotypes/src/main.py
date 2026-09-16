@@ -90,11 +90,14 @@ def coerce_ranking_columns(df, ranking_cols):
     column holds numbers. The cast is non-strict. "" and any text that is not a
     number become null.
 
-    "NaN", "inf", "-inf" and "Infinity" parse to real floats. Polars sorts NaN
-    ahead of every finite value. Under a decreasing direction it sorts inf ahead
-    of every finite value. Both become null here. A Float64 column that already
-    holds NaN or inf gets the same cast. Null ranks last. See
-    diversified_rank_and_select.
+    "inf" and "Infinity" parse to a real float that ranks as the largest value.
+    "-inf" parses to a real float that ranks as the smallest value. Both keep
+    that value here.
+
+    "NaN" also parses to a real float, but it has no place on the scale, and
+    polars sorts it ahead of every finite value. It becomes null. A NaN in a
+    column that is already numeric gets the same cast. Null ranks last in either
+    direction. See diversified_rank_and_select.
     """
     for col in ranking_cols:
         if col not in df.columns:
@@ -114,18 +117,18 @@ def coerce_ranking_columns(df, ranking_cols):
             dtype = df.schema[col]
 
         if dtype in (pl.Float32, pl.Float64):
-            # is_finite() is null where the value is null, so this counts NaN and
-            # +/-inf only.
-            nonfinite = (~df[col].is_finite()).sum()
-            if nonfinite:
+            # is_nan() is null where the value is null, so this counts NaN only.
+            # +/-inf is left alone: it ranks as the largest or smallest value.
+            nan_count = df[col].is_nan().sum()
+            if nan_count:
                 df = df.with_columns(
-                    pl.when(pl.col(col).is_finite())
+                    pl.when(pl.col(col).is_not_nan())
                     .then(pl.col(col))
                     .otherwise(None)
                     .alias(col)
                 )
-                print(f"Ranking column '{col}': {nonfinite} values are NaN or "
-                      f"inf. They rank last.")
+                print(f"Ranking column '{col}': {nan_count} values are NaN. "
+                      f"They rank last.")
 
     return df
 
@@ -143,8 +146,9 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
     4. Add ranked_order column
 
     A clonotype with no value in a ranking column stays in the result. It ranks
-    last in the column where its value is missing. It keeps its position on every
-    other criterion. A clonotype with no diversification group is dropped.
+    last in the column where its value is missing, behind inf and -inf. It keeps
+    its position on every other criterion. A clonotype with no diversification
+    group is dropped.
     """
     df = coerce_ranking_columns(df, all_ranking_cols)
 

@@ -1,8 +1,10 @@
 """Ranking must treat numeric columns as numbers even when the clone table
 delivers them as strings with "" in the gaps.
 
-A clonotype with no usable value is kept, not dropped. It ranks last inside the
-column that is missing, and keeps its standing on every other criterion."""
+inf ranks as the largest value and -inf as the smallest. "" and NaN have no
+place on the scale, so they rank last, behind inf and -inf. A clonotype that
+holds one is kept, not dropped, and keeps its position on every other
+criterion."""
 
 import polars as pl
 
@@ -47,19 +49,43 @@ def test_empty_value_row_ranks_last_when_increasing():
     assert result["clonotypeKey"].to_list() == ["c0", "c1", "c3", "c2"]
 
 
-def test_nan_and_inf_strings_rank_last():
-    """A literal "NaN" or "inf" parses to a real float that polars sorts ahead of
-    every finite value. Both must rank last instead."""
+def test_inf_is_the_largest_and_minus_inf_the_smallest():
+    """A literal "inf" or "-inf" parses to a real float and keeps it. Both sit on
+    the scale, at the two ends."""
+    df = clone_table(["9.5", "inf", "100.7", "-inf"])
+
+    result = diversified_rank_and_select(df, 4, {"Col0": "decreasing"}, ["Col0"])
+
+    assert result["clonotypeKey"].to_list() == ["c1", "c2", "c0", "c3"]
+
+
+def test_inf_ends_swap_when_the_direction_is_increasing():
+    df = clone_table(["9.5", "inf", "100.7", "-inf"])
+
+    result = diversified_rank_and_select(df, 4, {"Col0": "increasing"}, ["Col0"])
+
+    assert result["clonotypeKey"].to_list() == ["c3", "c0", "c2", "c1"]
+
+
+def test_nan_and_empty_rank_behind_inf_and_minus_inf():
+    """NaN has no place on the scale, so it ranks with "" — behind -inf, which
+    does."""
     df = clone_table(["9.5", "NaN", "inf", "100.7", "-inf", ""])
 
     result = diversified_rank_and_select(df, 6, {"Col0": "decreasing"}, ["Col0"])
 
-    ranked = result["clonotypeKey"].to_list()
-    assert ranked[:2] == ["c3", "c0"]
-    assert sorted(ranked[2:]) == ["c1", "c2", "c4", "c5"]
+    assert result["clonotypeKey"].to_list() == ["c2", "c3", "c0", "c4", "c1", "c5"]
 
 
-def test_nan_and_inf_floats_rank_last():
+def test_nan_and_empty_still_rank_last_when_increasing():
+    df = clone_table(["9.5", "NaN", "inf", "100.7", "-inf", ""])
+
+    result = diversified_rank_and_select(df, 6, {"Col0": "increasing"}, ["Col0"])
+
+    assert result["clonotypeKey"].to_list() == ["c4", "c0", "c3", "c2", "c1", "c5"]
+
+
+def test_nan_and_inf_floats_get_the_same_treatment():
     """Same when the column already arrives as Float64 — no "" anywhere."""
     df = pl.DataFrame(
         {
@@ -70,9 +96,7 @@ def test_nan_and_inf_floats_rank_last():
 
     result = diversified_rank_and_select(df, 4, {"Col0": "decreasing"}, ["Col0"])
 
-    ranked = result["clonotypeKey"].to_list()
-    assert ranked[:2] == ["c3", "c0"]
-    assert sorted(ranked[2:]) == ["c1", "c2"]
+    assert result["clonotypeKey"].to_list() == ["c2", "c3", "c0", "c1"]
 
 
 def test_unparseable_text_ranks_last():
