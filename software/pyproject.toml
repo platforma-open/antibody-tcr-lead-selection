@@ -15,6 +15,7 @@ requires-python = ">=3.12,<3.13"
 # so the suite never runs a version the block does not.
 [dependency-groups]
 dev = [
+    "hypothesis>=6.100",
     "pytest>=8.0.0",
     "ruff>=0.14.0",
 ]
@@ -50,5 +51,5 @@ umap = [
 # picked up without touching this file. Each package puts its own src/ on
 # sys.path from tests/conftest.py.
 testpaths = ["."]
-norecursedirs = ["node_modules", ".venv", "dist", "build", "src", ".git"]
+norecursedirs = ["node_modules", ".venv", "dist", "build", "src", ".git", ".hypothesis"]
 addopts = "-ra --strict-markers"
