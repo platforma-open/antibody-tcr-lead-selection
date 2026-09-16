@@ -82,19 +82,19 @@ def validate_column_format(df):
 
 
 def coerce_ranking_columns(df, ranking_cols):
-    """Make every ranking column a float whose unrankable entries are null.
+    """Cast every ranking column to float. A value that cannot rank becomes null.
 
-    The clone table is written by parquetFileBuilder with naStr and nullStr "".
-    A numeric column with one missing value arrives as Utf8 with "" in the gaps.
+    parquetFileBuilder writes the clone table with naStr and nullStr "". A
+    numeric column with one missing value arrives as Utf8 with "" in the gaps.
     The model offers only non-String columns for ranking, so every ranking
-    column holds numbers. The cast is non-strict: "" and any text that is not a
+    column holds numbers. The cast is non-strict. "" and any text that is not a
     number become null.
 
     "NaN", "inf", "-inf" and "Infinity" parse to real floats. Polars sorts NaN
-    ahead of every finite value and inf ahead of every finite value when the
-    direction is decreasing, so they are folded into null as well. Null ranks
-    last (see diversified_rank_and_select). A Float64 column that already holds
-    NaN or inf gets the same treatment.
+    ahead of every finite value. Under a decreasing direction it sorts inf ahead
+    of every finite value. Both become null here. A Float64 column that already
+    holds NaN or inf gets the same cast. Null ranks last. See
+    diversified_rank_and_select.
     """
     for col in ranking_cols:
         if col not in df.columns:
@@ -124,8 +124,8 @@ def coerce_ranking_columns(df, ranking_cols):
                     .otherwise(None)
                     .alias(col)
                 )
-                print(f"Ranking column '{col}': {nonfinite} NaN/inf values. "
-                      f"They rank last.")
+                print(f"Ranking column '{col}': {nonfinite} values are NaN or "
+                      f"inf. They rank last.")
 
     return df
 
@@ -142,28 +142,27 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
     3. Take top N
     4. Add ranked_order column
 
-    A clonotype with no value in a ranking column is kept. It ranks last within
-    that column and keeps its standing on every other criterion.
-    A clonotype with no diversification group is dropped.
+    A clonotype with no value in a ranking column stays in the result. It ranks
+    last in the column where its value is missing. It keeps its position on every
+    other criterion. A clonotype with no diversification group is dropped.
     """
     df = coerce_ranking_columns(df, all_ranking_cols)
 
-    # A null diversification value means the clonotype belongs to no group, so it
-    # cannot be diversified against and is not eligible for selection. It still
-    # appears in the funnel at its "passed filters" stage; it is simply never
-    # sampled. Ranking columns are NOT dropped — see the sort below.
+    # A null diversification value puts the clonotype in no group. Diversification
+    # cannot place it, so it is not eligible for selection. It still appears in the
+    # funnel at its "passed filters" stage. Ranking columns are not dropped here.
+    # See the sort below.
     if diversification_column and diversification_column in df.columns:
         before_null_drop = df.height
         df = df.drop_nulls(subset=[diversification_column])
         print(f"Dropped null '{diversification_column}' rows: "
               f"{before_null_drop} -> {df.height}")
 
-    # A clonotype with no cluster assigned cannot be diversified against, so it is
-    # not eligible for selection. It arrives here as an EMPTY STRING, not a null:
-    # pframes.parquetFileBuilder defaults naStr/nullStr to "" when writing the
-    # clone table, so the Full join's unmatched keys become "" and drop_nulls above
-    # never sees them. Scoped to the diversification column only — ranking columns
-    # are cast to numeric above, where a missing value is already a real null.
+    # Diversification cannot place a clonotype with no cluster, so it is not
+    # eligible for selection. It arrives here as an empty string, not a null.
+    # pframes.parquetFileBuilder defaults naStr and nullStr to "" when it writes
+    # the clone table, so the Full join's unmatched keys become "". The drop_nulls
+    # above never sees them. This filter covers the diversification column only.
     if diversification_column and diversification_column in df.columns:
         if df[diversification_column].dtype == pl.Utf8:
             before_empty_drop = df.height
@@ -181,11 +180,11 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
         sort_descending = [False]
         print("No ranking columns, sorting by clonotypeKey only")
 
-    # A missing ranking value costs the clonotype only inside its own column:
-    # nulls_last puts it behind every clonotype that holds a value there, in either
-    # direction. Its standing on the other criteria is untouched, and it is never
-    # dropped. The criteria are one sort, so a later criterion only separates
-    # clonotypes that tie exactly on every earlier one.
+    # nulls_last puts a missing value behind every clonotype that holds a value in
+    # the same column, in either direction. The clonotype keeps its position on
+    # every other criterion. It is never dropped. The criteria are one sort. A
+    # later criterion separates only clonotypes that tie exactly on every earlier
+    # one.
     if all_ranking_cols:
         missing = int(
             df.select(
