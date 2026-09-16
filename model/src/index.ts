@@ -40,6 +40,7 @@ import {
   hasGeneCalls,
   isClusterIdAxisName,
   isDatasetScopingSubset,
+  isOnAnchorAxes,
   isPeptideOrAmplicon,
   isPresenceOnlyColumn,
   ANCHORED_DISCOVERY,
@@ -529,8 +530,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     // Don't render table if sampledRows aren't finalized
     if (!sampledRowsCollection.isFinal()) return undefined;
 
-    // Use lead-selection column as anchor — it has [clonotypeKey] axis only,
-    // so the inner join core is keyed by clonotypeKey (no sampleId duplication).
+    // Use lead-selection column as anchor — it carries the clonotype axis alone,
+    // so it pins the table's row space to one row per selected lead.
     const leadSelectionCol = sampledRowsCollection
       .filter({ include: { name: [{ type: "exact", value: "pl7.app/lead-selection" }] } })
       .getColumns()[0];
@@ -548,7 +549,17 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       .getColumns()
       .filter((c) => {
         const spec = c.getSpec();
-        return !isProducedByLeadSelection(spec);
+        // Drop any column carrying an axis the lead-selection column does not have.
+        // Such a column shares only the clonotype axis with the table's core, so the
+        // join keys on that axis alone and carries the extra axis into the result:
+        // every lead row is repeated once per value of it (once per sample, once per
+        // cluster, ...). Choosing a single-axis anchor does not prevent this — the
+        // anchor fixes the core, while the joined axis set is the union over all
+        // columns. The extra axis is then marked hidden, because axis visibility is
+        // keyed off the primary column's axes, so the repetition is invisible in the
+        // UI while the join still materialises the full product. One per-sample
+        // column over a many-sample dataset is enough to exhaust memory.
+        return isOnAnchorAxes(spec, leadSelectionSpec) && !isProducedByLeadSelection(spec);
       });
 
     const primaryColumns = poolDiscovered.filter((c) => c.id === leadSelectionCol.id);
