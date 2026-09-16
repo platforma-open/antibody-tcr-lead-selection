@@ -1,0 +1,133 @@
+name: Python Tests
+
+# This workflow lints and tests the python packages under software/. The
+# pull_request and push triggers cover that tree only. merge_group takes no path
+# filter, so both jobs always run in the merge queue.
+#
+# Keep this workflow out of the "Main Branch" ruleset's required status checks.
+# A path filter can skip a run. A required check that never runs never reports,
+# and GitHub then blocks the pull request.
+on:
+  merge_group:
+  pull_request:
+    types: [opened, reopened, synchronize]
+    branches:
+      - 'main'
+    paths:
+      - 'software/**'
+      - '.github/workflows/python-tests.yaml'
+  push:
+    branches:
+      - 'main'
+    paths:
+      - 'software/**'
+      - '.github/workflows/python-tests.yaml'
+  workflow_dispatch: {}
+
+env:
+  UV_VERSION: "0.12.15"
+
+jobs:
+  ruff:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: software
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "${{ env.UV_VERSION }}"
+          enable-cache: true
+          cache-dependency-glob: software/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --all-groups --locked
+
+      # Targets software/ as a whole, so every package under it is covered.
+      # The config lives in software/pyproject.toml under [tool.ruff].
+      - name: Ruff check
+        run: uv run ruff check .
+
+      - name: Ruff format check
+        run: uv run ruff format --check .
+
+  pytest:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: software
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "${{ env.UV_VERSION }}"
+          enable-cache: true
+          cache-dependency-glob: software/uv.lock
+
+      - name: Install dependencies
+        run: uv sync --all-groups --locked
+
+      # --all-groups installs every package's runtime pins alongside the dev
+      # tooling, so the suite runs the versions the block ships. It collects
+      # every <package>/tests/. --cov reports coverage but gates nothing. The
+      # CLI tests run the entrypoints in a subprocess, and conftest.py points
+      # those at the coverage config so their lines are counted.
+      - name: Run pytest
+        run: uv run pytest --cov
+
+      # Puts the table on the run's summary page, so a reviewer reads it without
+      # opening the log. always() so it still appears when a test failed, which
+      # is when the uncovered lines are most worth seeing.
+      - name: Publish the coverage table to the run summary
+        if: always()
+        run: |
+          if [ ! -f .coverage ]; then
+            echo "No coverage data: pytest did not get far enough to write it." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "## Python coverage"
+            echo
+            uv run coverage report --format=markdown
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  requirements-sync:
+    # Each <package>/src/requirements.txt is generated from its dependency group
+    # in pyproject.toml, and pl-pkg builds the shipped environment from it. This
+    # job runs the same command a developer runs and fails when the committed
+    # file has drifted.
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - uses: astral-sh/setup-uv@v5
+        with:
+          version: "${{ env.UV_VERSION }}"
+          enable-cache: true
+          cache-dependency-glob: software/uv.lock
+
+      - name: Regenerate requirements.txt from pyproject.toml
+        run: pnpm software:reqs
+
+      - name: Verify the committed files are in sync
+        run: |
+          if ! git diff --exit-code -- 'software/*/src/requirements.txt'; then
+            echo "::error::software/*/src/requirements.txt is out of sync with pyproject.toml"
+            echo "Dependencies are defined in software/pyproject.toml, one group per package."
+            echo "Resolve locally with:"
+            echo "    pnpm software:reqs"
+            echo "then commit the updated requirements.txt files."
+            exit 1
+          fi

@@ -1,0 +1,96 @@
+[project]
+name = "top-antibodies-software"
+version = "0.1.0"
+description = "Dev environment for the python software packages of the Top Antibodies block"
+# The packages ship @platforma-open/milaboratories.runenv-python-3:3.12.10.
+# Without the upper bound uv resolves 3.13, and the suite would exercise a
+# different interpreter and different wheels from the ones the block runs.
+requires-python = ">=3.12, <3.13"
+
+# One group per software package, holding that package's runtime pins. This file
+# is the source of truth. `pnpm software:reqs` generates each
+# <package>/src/requirements.txt from its group, and the requirements-sync CI job
+# fails when the two drift. `uv sync --all-groups` therefore installs what the
+# block ships, so the suite runs no version the block does not run.
+[dependency-groups]
+dev = [
+    "hypothesis>=6.100",
+    "pytest>=8.0.0",
+    "pytest-cov>=5.0.0",
+    "ruff>=0.14.0",
+]
+
+anarci-kabat = [
+    "polars-lts-cpu==1.33.1",
+]
+
+assembling-fasta = [
+    "polars-lts-cpu==1.33.1",
+]
+
+sample-clonotypes = [
+    "pandas==2.2.3",
+    "polars-lts-cpu==1.33.1",
+]
+
+spectratype = [
+    "pandas==2.2.3",
+    "pyarrow==21.0.0",
+]
+
+umap = [
+    "numpy==2.2.6",
+    "pandas==2.2.3",
+    "scikit-learn==1.6.1",
+    "scipy==1.15.3",
+    "umap-learn==0.5.7",
+]
+
+# Matches the house set every other block uses: pycodestyle import (E4),
+# statement (E7) and runtime (E9) errors, line length (E501), pyflakes (F) and
+# import sorting (I). Covers every package under software/, since ruff walks up
+# from each file to this file.
+[tool.ruff]
+exclude = [
+    ".venv",
+    "dist",
+    "node_modules",
+    "build",
+    ".hypothesis",
+]
+line-length = 120
+indent-width = 4
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "E501", "F", "I"]
+
+[tool.ruff.lint.isort]
+# The package directory software/umap/ has the same name as the umap module
+# that umap-learn installs. With the config here, software/ is the project
+# root, so isort would read `import umap` as first-party and move it out of the
+# third-party block. Name it explicitly.
+known-third-party = ["umap"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.pytest.ini_options]
+# Collect from every package under software/, so a new package's tests are
+# picked up without touching this file. Each package puts its own src/ on
+# sys.path from tests/conftest.py.
+testpaths = ["."]
+norecursedirs = ["node_modules", ".venv", "dist", "build", "src", ".git", ".hypothesis"]
+addopts = "-ra --strict-markers"
+
+# parallel writes one data file per process, which is what lets the CLI tests'
+# subprocesses be counted. conftest.py points them here. combine merges the
+# files before the report.
+[tool.coverage.run]
+source = ["sample-clonotypes/src"]
+parallel = true
+branch = true
+
+[tool.coverage.report]
+show_missing = true

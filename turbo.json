@@ -45,6 +45,10 @@
     "fmt": {
       "cache": false
     },
+    "software:reqs": {
+      "cache": false,
+      "outputs": ["./src/requirements.txt"]
+    },
     "check": {
       "dependsOn": ["^build"],
       "outputs": []

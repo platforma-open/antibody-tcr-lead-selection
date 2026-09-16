@@ -7,7 +7,6 @@ holds one is kept, not dropped, and keeps its position on every other
 criterion."""
 
 import polars as pl
-
 from main import diversified_rank_and_select
 
 
@@ -23,7 +22,7 @@ def clone_table(values, key_prefix="c"):
 
 
 def test_string_column_with_empty_gaps_ranks_numerically():
-    """MILAB-6954: as text, "9.5" > "100.7", so the highest value ranked last."""
+    """Sorted as text, "9.5" > "100.7", which puts the highest value last."""
     df = clone_table(["9.5", "10.2", "", "100.7"])
 
     result = diversified_rank_and_select(df, 3, {"Col0": "decreasing"}, ["Col0"])
@@ -41,7 +40,7 @@ def test_empty_value_row_ranks_last_and_is_still_selectable():
 
 
 def test_empty_value_row_ranks_last_when_increasing():
-    """Last means last in either direction — not "smallest, therefore first"."""
+    """Last means last in either direction, not "smallest, therefore first"."""
     df = clone_table(["9.5", "10.2", "", "100.7"])
 
     result = diversified_rank_and_select(df, 4, {"Col0": "increasing"}, ["Col0"])
@@ -68,8 +67,8 @@ def test_inf_ends_swap_when_the_direction_is_increasing():
 
 
 def test_nan_and_empty_rank_behind_inf_and_minus_inf():
-    """NaN has no place on the scale, so it ranks with "" — behind -inf, which
-    does."""
+    """NaN has no place on the scale, so it ranks with "". Both go behind -inf,
+    which does have a place."""
     df = clone_table(["9.5", "NaN", "inf", "100.7", "-inf", ""])
 
     result = diversified_rank_and_select(df, 6, {"Col0": "decreasing"}, ["Col0"])
@@ -86,7 +85,7 @@ def test_nan_and_empty_still_rank_last_when_increasing():
 
 
 def test_nan_and_inf_floats_get_the_same_treatment():
-    """Same when the column already arrives as Float64 — no "" anywhere."""
+    """Same when the column already arrives as Float64, with no "" anywhere."""
     df = pl.DataFrame(
         {
             "clonotypeKey": ["c0", "c1", "c2", "c3"],
@@ -145,16 +144,14 @@ def test_missing_second_criterion_does_not_cost_first_criterion_standing():
         }
     )
 
-    result = diversified_rank_and_select(
-        df, 2, {"Col0": "decreasing", "Col1": "decreasing"}, ["Col0", "Col1"]
-    )
+    result = diversified_rank_and_select(df, 2, {"Col0": "decreasing", "Col1": "decreasing"}, ["Col0", "Col1"])
 
     assert result["clonotypeKey"].to_list() == ["c0", "c1"]
 
 
 def test_missing_second_criterion_loses_a_tie_on_the_first():
-    """Where the first criterion does tie, the second decides — and having no
-    value there loses."""
+    """Where the first criterion does tie, the second decides. Having no value
+    there loses the tie."""
     df = pl.DataFrame(
         {
             "clonotypeKey": ["c0", "c1"],
@@ -163,9 +160,7 @@ def test_missing_second_criterion_loses_a_tie_on_the_first():
         }
     )
 
-    result = diversified_rank_and_select(
-        df, 2, {"Col0": "decreasing", "Col1": "decreasing"}, ["Col0", "Col1"]
-    )
+    result = diversified_rank_and_select(df, 2, {"Col0": "decreasing", "Col1": "decreasing"}, ["Col0", "Col1"])
 
     assert result["clonotypeKey"].to_list() == ["c1", "c0"]
 
@@ -202,9 +197,7 @@ def test_diversification_still_applies_after_coercion():
         }
     )
 
-    result = diversified_rank_and_select(
-        df, 2, {"Col0": "decreasing"}, ["Col0"], diversification_column="cluster_0"
-    )
+    result = diversified_rank_and_select(df, 2, {"Col0": "decreasing"}, ["Col0"], diversification_column="cluster_0")
 
     assert result["clonotypeKey"].to_list() == ["c0", "c2"]
 
@@ -222,15 +215,13 @@ def test_diversification_spreads_before_it_ranks():
         }
     )
 
-    result = diversified_rank_and_select(
-        df, 4, {"Col0": "decreasing"}, ["Col0"], diversification_column="cluster_0"
-    )
+    result = diversified_rank_and_select(df, 4, {"Col0": "decreasing"}, ["Col0"], diversification_column="cluster_0")
 
     assert result["clonotypeKey"].to_list() == ["c0", "c2", "c3", "c1"]
 
 
 def test_unassigned_diversification_group_is_still_dropped():
-    """No cluster means nothing to diversify against — that row stays ineligible."""
+    """No cluster means nothing to diversify against. That row stays ineligible."""
     df = pl.DataFrame(
         {
             "clonotypeKey": ["c0", "c1", "c2"],
@@ -239,9 +230,7 @@ def test_unassigned_diversification_group_is_still_dropped():
         }
     )
 
-    result = diversified_rank_and_select(
-        df, 3, {"Col0": "decreasing"}, ["Col0"], diversification_column="cluster_0"
-    )
+    result = diversified_rank_and_select(df, 3, {"Col0": "decreasing"}, ["Col0"], diversification_column="cluster_0")
 
     assert result["clonotypeKey"].to_list() == ["c0", "c1"]
 

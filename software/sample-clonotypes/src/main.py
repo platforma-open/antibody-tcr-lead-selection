@@ -1,25 +1,49 @@
 #!/usr/bin/env python3
 
 import argparse
-import polars as pl
-import re
-import os
-import time
 import json
+import re
+import time
+
+import polars as pl
 
 
 def parse_arguments():
-    parser = argparse.ArgumentParser(description="Rank rows based on Col* columns and output top N rows. Supports Col0, Col1 (clonotype properties), Col_cluster.0 (cluster properties), and Col_linker.0.0, Col_linker.0.1 (linker properties).")
+    parser = argparse.ArgumentParser(
+        description=(
+            "Rank rows based on Col* columns and output top N rows. Supports Col0, Col1 "
+            "(clonotype properties), Col_cluster.0 (cluster properties), and "
+            "Col_linker.0.0, Col_linker.0.1 (linker properties)."
+        )
+    )
     parser.add_argument("--parquet", required=True, help="Path to input Parquet file")
     parser.add_argument("--n", type=int, required=True, help="Number of top rows to output")
     parser.add_argument("--out", required=True, help="Path to output Parquet file")
-    parser.add_argument("--ranking-map", type=str, help='JSON string specifying ranking direction for each column, e.g., {"Col0":"decreasing","Col1":"increasing","Col_linker.0.0":"decreasing"}')
-    parser.add_argument("--diversification-column", type=str,
-                        help="Column header name to use for diversified ranking (e.g., 'cluster_0')")
-    parser.add_argument("--selection-in", type=str, required=False,
-                        help="Path to selection stage parquet from filter.py (clonotypeKey + selectionStage)")
-    parser.add_argument("--selection-out", type=str, required=False,
-                        help="Path to write updated selection stage parquet (sampled clones get bumped stage)")
+    parser.add_argument(
+        "--ranking-map",
+        type=str,
+        help=(
+            "JSON string specifying ranking direction for each column, e.g., "
+            '{"Col0":"decreasing","Col1":"increasing","Col_linker.0.0":"decreasing"}'
+        ),
+    )
+    parser.add_argument(
+        "--diversification-column",
+        type=str,
+        help="Column header name to use for diversified ranking (e.g., 'cluster_0')",
+    )
+    parser.add_argument(
+        "--selection-in",
+        type=str,
+        required=False,
+        help="Path to selection stage parquet from filter.py (clonotypeKey + selectionStage)",
+    )
+    parser.add_argument(
+        "--selection-out",
+        type=str,
+        required=False,
+        help="Path to write updated selection stage parquet (sampled clones get bumped stage)",
+    )
     return parser.parse_args()
 
 
@@ -56,26 +80,28 @@ def parse_ranking_map(ranking_map_str, all_col_columns):
 
 
 def validate_column_format(df):
+    """Return the clonotype, cluster and linker ranking columns, in that order.
+
+    Always returns three lists. main() checks for clonotypeKey and stops before
+    calling this.
+    """
     print("Found columns:", df.columns)
 
-    # Check for clonotypeKey column
-    if 'clonotypeKey' not in df.columns:
-        print("Error: Input CSV must contain a 'clonotypeKey' column.")
-        return False
-
     # Check for clonotype ranking columns (Col0, Col1, ...)
-    clonotype_col_columns = sorted([col for col in df.columns if re.match(r'^Col\d+$', col)],
-                                   key=lambda x: int(x[3:]))
+    clonotype_col_columns = sorted([col for col in df.columns if re.match(r"^Col\d+$", col)], key=lambda x: int(x[3:]))
     print("Found clonotype ranking columns:", clonotype_col_columns)
 
     # Check for cluster ranking columns (Col_cluster.0, Col_cluster.1, ...)
-    cluster_col_columns = sorted([col for col in df.columns if re.match(r'^Col_cluster\.\d+$', col)],
-                                 key=lambda x: int(x.split('.')[1]))
+    cluster_col_columns = sorted(
+        [col for col in df.columns if re.match(r"^Col_cluster\.\d+$", col)], key=lambda x: int(x.split(".")[1])
+    )
     print("Found cluster ranking columns:", cluster_col_columns)
 
     # Check for linker ranking columns (Col_linker.0, Col_linker.0.0, Col_linker.0.1, etc.)
-    linker_col_columns = sorted([col for col in df.columns if re.match(r'^Col_linker\.\d+(?:\.\d+)?$', col)],
-                                key=lambda x: tuple(map(int, x.split('.')[1:])))
+    linker_col_columns = sorted(
+        [col for col in df.columns if re.match(r"^Col_linker\.\d+(?:\.\d+)?$", col)],
+        key=lambda x: tuple(map(int, x.split(".")[1:])),
+    )
     print("Found linker ranking columns:", linker_col_columns)
 
     return clonotype_col_columns, cluster_col_columns, linker_col_columns
@@ -112,8 +138,7 @@ def coerce_ranking_columns(df, ranking_cols):
 
             unparsed = df[col].null_count() - blank
             if unparsed > 0:
-                print(f"Ranking column '{col}': {unparsed} values did not parse as "
-                      f"numbers. They rank last.")
+                print(f"Ranking column '{col}': {unparsed} values did not parse as numbers. They rank last.")
             dtype = df.schema[col]
 
         if dtype in (pl.Float32, pl.Float64):
@@ -121,14 +146,8 @@ def coerce_ranking_columns(df, ranking_cols):
             # +/-inf is left alone: it ranks as the largest or smallest value.
             nan_count = df[col].is_nan().sum()
             if nan_count:
-                df = df.with_columns(
-                    pl.when(pl.col(col).is_not_nan())
-                    .then(pl.col(col))
-                    .otherwise(None)
-                    .alias(col)
-                )
-                print(f"Ranking column '{col}': {nan_count} values are NaN. "
-                      f"They rank last.")
+                df = df.with_columns(pl.when(pl.col(col).is_not_nan()).then(pl.col(col)).otherwise(None).alias(col))
+                print(f"Ranking column '{col}': {nan_count} values are NaN. They rank last.")
 
     return df
 
@@ -159,8 +178,7 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
     if diversification_column and diversification_column in df.columns:
         before_null_drop = df.height
         df = df.drop_nulls(subset=[diversification_column])
-        print(f"Dropped null '{diversification_column}' rows: "
-              f"{before_null_drop} -> {df.height}")
+        print(f"Dropped null '{diversification_column}' rows: {before_null_drop} -> {df.height}")
 
     # Diversification cannot place a clonotype with no cluster, so it is not
     # eligible for selection. It arrives here as an empty string, not a null.
@@ -171,16 +189,15 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
         if df[diversification_column].dtype == pl.Utf8:
             before_empty_drop = df.height
             df = df.filter(pl.col(diversification_column) != "")
-            print(f"Dropped rows with unassigned '{diversification_column}': "
-                  f"{before_empty_drop} -> {df.height}")
+            print(f"Dropped rows with unassigned '{diversification_column}': {before_empty_drop} -> {df.height}")
 
     # Build sort criteria from ranking_map
     if all_ranking_cols:
-        sort_columns = all_ranking_cols + ['clonotypeKey']
+        sort_columns = all_ranking_cols + ["clonotypeKey"]
         sort_descending = [ranking_map.get(col, "decreasing") == "decreasing" for col in all_ranking_cols] + [False]
         print(f"Sorting by: {' -> '.join(sort_columns)}")
     else:
-        sort_columns = ['clonotypeKey']
+        sort_columns = ["clonotypeKey"]
         sort_descending = [False]
         print("No ranking columns, sorting by clonotypeKey only")
 
@@ -191,13 +208,13 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
     # one.
     if all_ranking_cols:
         missing = int(
-            df.select(
-                pl.any_horizontal([pl.col(col).is_null() for col in all_ranking_cols])
-            ).to_series().sum()
+            df.select(pl.any_horizontal([pl.col(col).is_null() for col in all_ranking_cols])).to_series().sum()
         )
         if missing:
-            print(f"{missing} clonotypes have no value in at least one ranking "
-                  f"column. They rank last in that column only.")
+            print(
+                f"{missing} clonotypes have no value in at least one ranking "
+                f"column. They rank last in that column only."
+            )
 
     # Step 1: Sort by ranking criteria
     df = df.sort(sort_columns, descending=sort_descending, nulls_last=True)
@@ -225,7 +242,10 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
         result = result.drop("_local_rank")
     else:
         if diversification_column:
-            print(f"Warning: Diversification column '{diversification_column}' not found in data. Skipping diversification.")
+            print(
+                f"Warning: Diversification column '{diversification_column}' not found "
+                f"in data. Skipping diversification."
+            )
         # No diversification: plain sort, take top N
         result = df.head(n)
 
@@ -238,7 +258,10 @@ def main():
     start_time = time.time()
     print(f"main.py:START at {time.strftime('%H:%M:%S')}")
     args = parse_arguments()
-    print(f"main.py:args: parquet={args.parquet} out={args.out} selection_in={args.selection_in} selection_out={args.selection_out}")
+    print(
+        f"main.py:args: parquet={args.parquet} out={args.out} "
+        f"selection_in={args.selection_in} selection_out={args.selection_out}"
+    )
     # Handle deprecated flags: map old args to new diversification-column
     diversification_column = args.diversification_column
 
@@ -258,8 +281,18 @@ def main():
         print("Error: N must be a positive integer.")
         return
     if args.n > df.height:
-        print(f"Error: N ({args.n}) is greater than the number of rows in the table ({df.height}).")
+        # Not an error. Asking for more clonotypes than the table holds selects
+        # all of them.
+        print(
+            f"N ({args.n}) is greater than the number of rows in the table "
+            f"({df.height}). Selecting all {df.height} rows."
+        )
         args.n = df.height
+
+    # Without clonotypeKey there is nothing to rank or to write out.
+    if "clonotypeKey" not in df.columns:
+        print("Error: Input table must contain a 'clonotypeKey' column.")
+        return
 
     # Validate columns
     validation_start = time.time()
@@ -269,9 +302,11 @@ def main():
     all_ranking_cols = cluster_col_columns + linker_col_columns + clonotype_col_columns
     total_ranking_cols = len(all_ranking_cols)
     print(f"Validation: {validation_time:.3f}s")
-    print(f"  Found {total_ranking_cols} ranking columns " +
-          f"({len(clonotype_col_columns)} clonotype, {len(cluster_col_columns)} cluster, " +
-          f"{len(linker_col_columns)} linker)")
+    print(
+        f"  Found {total_ranking_cols} ranking columns "
+        + f"({len(clonotype_col_columns)} clonotype, {len(cluster_col_columns)} cluster, "
+        + f"{len(linker_col_columns)} linker)"
+    )
 
     # Parse ranking map
     ranking_map = parse_ranking_map(args.ranking_map, all_ranking_cols)
@@ -293,9 +328,9 @@ def main():
     output_columns = {}
     if diversification_column and diversification_column in df.columns:
         output_columns[diversification_column] = result[diversification_column]
-    output_columns['clonotypeKey'] = result['clonotypeKey']
-    output_columns['top'] = [1] * result.height
-    output_columns['ranked_order'] = result['ranked_order']
+    output_columns["clonotypeKey"] = result["clonotypeKey"]
+    output_columns["top"] = [1] * result.height
+    output_columns["ranked_order"] = result["ranked_order"]
 
     simplified_df = pl.DataFrame(output_columns)
 
@@ -311,7 +346,9 @@ def main():
         sampled_keys = result.select("clonotypeKey")
         max_stage = selection["selectionStage"].max() or 0
         selection = selection.with_columns(
-            pl.when(pl.col("clonotypeKey").is_in(sampled_keys["clonotypeKey"]))
+            # implode() keeps the membership test. A bare Series is deprecated:
+            # polars will read it element-wise, which bumps the wrong rows.
+            pl.when(pl.col("clonotypeKey").is_in(sampled_keys["clonotypeKey"].implode()))
             .then(pl.lit(max_stage + 1).cast(pl.Int64))
             .otherwise(pl.col("selectionStage"))
             .alias("selectionStage")
@@ -320,7 +357,7 @@ def main():
         selection.write_parquet(args.selection_out)
         print(f"main.py:wrote selection_out: bumped {sampled_keys.height} sampled clones to stage {max_stage + 1}")
     else:
-        print(f"main.py:WARNING: --selection-in/--selection-out not both set")
+        print("main.py:WARNING: --selection-in/--selection-out not both set")
 
     total_time = time.time() - start_time
     print(f"main.py:DONE in {total_time:.3f}s")
