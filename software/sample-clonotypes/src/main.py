@@ -281,7 +281,12 @@ def main():
         print("Error: N must be a positive integer.")
         return
     if args.n > df.height:
-        print(f"Error: N ({args.n}) is greater than the number of rows in the table ({df.height}).")
+        # Not an error. Asking for more clonotypes than the table holds selects
+        # all of them.
+        print(
+            f"N ({args.n}) is greater than the number of rows in the table "
+            f"({df.height}). Selecting all {df.height} rows."
+        )
         args.n = df.height
 
     # Without clonotypeKey there is nothing to rank or to write out.
