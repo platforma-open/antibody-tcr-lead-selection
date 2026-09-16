@@ -14,14 +14,12 @@ on:
       - 'main'
     paths:
       - 'software/**'
-      - 'ruff.toml'
       - '.github/workflows/python-tests.yaml'
   push:
     branches:
       - 'main'
     paths:
       - 'software/**'
-      - 'ruff.toml'
       - '.github/workflows/python-tests.yaml'
   workflow_dispatch: {}
 
@@ -47,7 +45,7 @@ jobs:
         run: uv sync --all-groups --locked
 
       # Targets software/ as a whole, so every package under it is covered.
-      # ruff.toml sits at the repo root, which ruff finds by walking up.
+      # The config lives in software/pyproject.toml under [tool.ruff].
       - name: Ruff check
         run: uv run ruff check .
 

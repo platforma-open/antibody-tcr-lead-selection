@@ -46,6 +46,36 @@ umap = [
     "umap-learn==0.5.7",
 ]
 
+# Matches the house set every other block uses: pycodestyle import (E4),
+# statement (E7) and runtime (E9) errors, line length (E501), pyflakes (F) and
+# import sorting (I). Covers every package under software/, since ruff walks up
+# from each file to this file.
+[tool.ruff]
+exclude = [
+    ".venv",
+    "dist",
+    "node_modules",
+    "build",
+    ".hypothesis",
+]
+line-length = 120
+indent-width = 4
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "E501", "F", "I"]
+
+[tool.ruff.lint.isort]
+# The package directory software/umap/ has the same name as the umap module
+# that umap-learn installs. With the config here, software/ is the project
+# root, so isort would read `import umap` as first-party and move it out of the
+# third-party block. Name it explicitly.
+known-third-party = ["umap"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
 [tool.pytest.ini_options]
 # Collect from every package under software/, so a new package's tests are
 # picked up without touching this file. Each package puts its own src/ on
