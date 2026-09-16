@@ -78,6 +78,22 @@ jobs:
       - name: Run pytest
         run: uv run pytest --cov
 
+      # Puts the table on the run's summary page, so a reviewer reads it without
+      # opening the log. always() so it still appears when a test failed, which
+      # is when the uncovered lines are most worth seeing.
+      - name: Publish the coverage table to the run summary
+        if: always()
+        run: |
+          if [ ! -f .coverage ]; then
+            echo "No coverage data: pytest did not get far enough to write it." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          {
+            echo "## Python coverage"
+            echo
+            uv run coverage report --format=markdown
+          } >> "$GITHUB_STEP_SUMMARY"
+
   requirements-sync:
     # Each <package>/src/requirements.txt is generated from its dependency group
     # in pyproject.toml, and pl-pkg builds the shipped environment from it. This
