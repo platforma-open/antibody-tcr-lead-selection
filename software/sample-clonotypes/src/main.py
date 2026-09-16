@@ -82,25 +82,50 @@ def validate_column_format(df):
 
 
 def coerce_ranking_columns(df, ranking_cols):
-    """Cast string-typed ranking columns to Float64. "" becomes null.
+    """Make every ranking column a float whose unrankable entries are null.
 
     The clone table is written by parquetFileBuilder with naStr and nullStr "".
     A numeric column with one missing value arrives as Utf8 with "" in the gaps.
     The model offers only non-String columns for ranking, so every ranking
-    column holds numbers. The cast is non-strict. A strict cast raises on "".
+    column holds numbers. The cast is non-strict: "" and any text that is not a
+    number become null.
+
+    "NaN", "inf", "-inf" and "Infinity" parse to real floats. Polars sorts NaN
+    ahead of every finite value and inf ahead of every finite value when the
+    direction is decreasing, so they are folded into null as well. Null ranks
+    last (see diversified_rank_and_select). A Float64 column that already holds
+    NaN or inf gets the same treatment.
     """
     for col in ranking_cols:
-        if col not in df.columns or df.schema[col] != pl.Utf8:
+        if col not in df.columns:
             continue
 
-        blank = df[col].is_null().sum() + (df[col] == "").sum()
-        df = df.with_columns(pl.col(col).cast(pl.Float64, strict=False))
-        print(f"Cast ranking column '{col}' from string to numeric")
+        dtype = df.schema[col]
 
-        unparsed = df[col].null_count() - blank
-        if unparsed > 0:
-            print(f"Ranking column '{col}': {unparsed} values did not parse as numbers. "
-                  f"They are not eligible for selection.")
+        if dtype == pl.Utf8:
+            blank = df[col].is_null().sum() + (df[col] == "").sum()
+            df = df.with_columns(pl.col(col).cast(pl.Float64, strict=False))
+            print(f"Cast ranking column '{col}' from string to numeric")
+
+            unparsed = df[col].null_count() - blank
+            if unparsed > 0:
+                print(f"Ranking column '{col}': {unparsed} values did not parse as "
+                      f"numbers. They rank last.")
+            dtype = df.schema[col]
+
+        if dtype in (pl.Float32, pl.Float64):
+            # is_finite() is null where the value is null, so this counts NaN and
+            # +/-inf only.
+            nonfinite = (~df[col].is_finite()).sum()
+            if nonfinite:
+                df = df.with_columns(
+                    pl.when(pl.col(col).is_finite())
+                    .then(pl.col(col))
+                    .otherwise(None)
+                    .alias(col)
+                )
+                print(f"Ranking column '{col}': {nonfinite} NaN/inf values. "
+                      f"They rank last.")
 
     return df
 
@@ -110,29 +135,27 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
     Rank and select top N rows using diversified ranking.
 
     Algorithm:
-    1. Sort by ranking criteria + clonotypeKey tiebreaker
+    1. Sort by _unranked + ranking criteria + clonotypeKey tiebreaker
     2. If diversification_column is set:
        a. Compute _local_rank = cumulative count within each group (preserves sort order)
-       b. Re-sort by (_local_rank ASC, ranking criteria)
+       b. Re-sort by (_unranked ASC, _local_rank ASC, ranking criteria)
     3. Take top N
     4. Add ranked_order column
+
+    A clonotype with no value in an active ranking column is kept and ranked last.
+    A clonotype with no diversification group is dropped.
     """
     df = coerce_ranking_columns(df, all_ranking_cols)
 
-    # A null in a column actively used for ranking or diversification means the
-    # clonotype can't be placed by that criterion, so it is not eligible for
-    # selection — drop it before selecting (it still appears in the funnel at its
-    # "passed filters" stage; it is simply never sampled). This mirrors filter.py,
-    # which already drops nulls at each filter stage. Without this, polars' default
-    # nulls-first sort would float null-ranked clonotypes to the top and select them.
-    null_check_cols = [col for col in all_ranking_cols if col in df.columns]
+    # A null diversification value means the clonotype belongs to no group, so it
+    # cannot be diversified against and is not eligible for selection. It still
+    # appears in the funnel at its "passed filters" stage; it is simply never
+    # sampled. Ranking columns are NOT dropped here — see _unranked below.
     if diversification_column and diversification_column in df.columns:
-        null_check_cols.append(diversification_column)
-    if null_check_cols:
         before_null_drop = df.height
-        df = df.drop_nulls(subset=null_check_cols)
-        print(f"Dropped null ranking/diversification rows: {before_null_drop} -> {df.height} "
-              f"(checked: {null_check_cols})")
+        df = df.drop_nulls(subset=[diversification_column])
+        print(f"Dropped null '{diversification_column}' rows: "
+              f"{before_null_drop} -> {df.height}")
 
     # A clonotype with no cluster assigned cannot be diversified against, so it is
     # not eligible for selection. It arrives here as an EMPTY STRING, not a null:
@@ -157,8 +180,27 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
         sort_descending = [False]
         print("No ranking columns, sorting by clonotypeKey only")
 
+    # _unranked is true when any active ranking value is missing. It is the first
+    # sort key, so those clonotypes land behind every complete one in either
+    # direction and under diversification. nulls_last only orders within a single
+    # column: without _unranked, a row missing the second ranking value could still
+    # outrank a complete row on the strength of the first.
+    if all_ranking_cols:
+        df = df.with_columns(
+            pl.any_horizontal([pl.col(col).is_null() for col in all_ranking_cols])
+            .alias("_unranked")
+        )
+        unranked = int(df["_unranked"].sum())
+        if unranked:
+            print(f"Ranking last: {unranked} clonotypes have no value in an active "
+                  f"ranking column")
+    else:
+        df = df.with_columns(pl.lit(False).alias("_unranked"))
+
     # Step 1: Sort by ranking criteria
-    df = df.sort(sort_columns, descending=sort_descending)
+    df = df.sort(["_unranked"] + sort_columns,
+                 descending=[False] + sort_descending,
+                 nulls_last=True)
 
     # Step 2: If diversification_column is set, compute local rank and re-sort
     if diversification_column and diversification_column in df.columns:
@@ -171,10 +213,12 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
             pl.col(diversification_column).cum_count().over(diversification_column).alias("_local_rank")
         )
 
-        # Re-sort by (_local_rank ASC, ranking criteria)
-        final_sort_columns = ["_local_rank"] + sort_columns
-        final_sort_descending = [False] + sort_descending
-        df = df.sort(final_sort_columns, descending=final_sort_descending)
+        # Re-sort by (_unranked ASC, _local_rank ASC, ranking criteria). _unranked
+        # stays ahead of _local_rank: a sole member of a group must not be promoted
+        # into the top N on a missing value.
+        final_sort_columns = ["_unranked", "_local_rank"] + sort_columns
+        final_sort_descending = [False, False] + sort_descending
+        df = df.sort(final_sort_columns, descending=final_sort_descending, nulls_last=True)
 
         # Take top N
         result = df.head(n)
@@ -186,6 +230,8 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
             print(f"Warning: Diversification column '{diversification_column}' not found in data. Skipping diversification.")
         # No diversification: plain sort, take top N
         result = df.head(n)
+
+    result = result.drop("_unranked")
 
     # Add ranked_order column
     result = result.with_columns(pl.arange(1, result.height + 1).alias("ranked_order"))
