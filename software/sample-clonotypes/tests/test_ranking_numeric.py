@@ -40,7 +40,7 @@ def test_empty_value_row_ranks_last_and_is_still_selectable():
 
 
 def test_empty_value_row_ranks_last_when_increasing():
-    """Last means last in either direction — not "smallest, therefore first"."""
+    """Last means last in either direction, not "smallest, therefore first"."""
     df = clone_table(["9.5", "10.2", "", "100.7"])
 
     result = diversified_rank_and_select(df, 4, {"Col0": "increasing"}, ["Col0"])
@@ -67,8 +67,8 @@ def test_inf_ends_swap_when_the_direction_is_increasing():
 
 
 def test_nan_and_empty_rank_behind_inf_and_minus_inf():
-    """NaN has no place on the scale, so it ranks with "" — behind -inf, which
-    does."""
+    """NaN has no place on the scale, so it ranks with "". Both go behind -inf,
+    which does have a place."""
     df = clone_table(["9.5", "NaN", "inf", "100.7", "-inf", ""])
 
     result = diversified_rank_and_select(df, 6, {"Col0": "decreasing"}, ["Col0"])
@@ -85,7 +85,7 @@ def test_nan_and_empty_still_rank_last_when_increasing():
 
 
 def test_nan_and_inf_floats_get_the_same_treatment():
-    """Same when the column already arrives as Float64 — no "" anywhere."""
+    """Same when the column already arrives as Float64, with no "" anywhere."""
     df = pl.DataFrame(
         {
             "clonotypeKey": ["c0", "c1", "c2", "c3"],
@@ -150,8 +150,8 @@ def test_missing_second_criterion_does_not_cost_first_criterion_standing():
 
 
 def test_missing_second_criterion_loses_a_tie_on_the_first():
-    """Where the first criterion does tie, the second decides — and having no
-    value there loses."""
+    """Where the first criterion does tie, the second decides. Having no value
+    there loses the tie."""
     df = pl.DataFrame(
         {
             "clonotypeKey": ["c0", "c1"],
@@ -221,7 +221,7 @@ def test_diversification_spreads_before_it_ranks():
 
 
 def test_unassigned_diversification_group_is_still_dropped():
-    """No cluster means nothing to diversify against — that row stays ineligible."""
+    """No cluster means nothing to diversify against. That row stays ineligible."""
     df = pl.DataFrame(
         {
             "clonotypeKey": ["c0", "c1", "c2"],

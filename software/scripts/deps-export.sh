@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Regenerate every <package>/src/requirements.txt from pyproject.toml.
 #
-# pyproject.toml is the single source of truth: one dependency group per package
+# pyproject.toml is the single source of truth. One dependency group per package
 # holds that package's runtime pins. pl-pkg builds the shipped environment from
-# the generated requirements.txt, so the two must agree — the requirements-sync
-# CI job fails the build when they drift.
+# the generated requirements.txt, so the two must agree. The requirements-sync CI
+# job fails the build when they drift.
 #
 # --no-deps keeps the output to top-level pins. The offline build installs with
-# --no-index --find-links, so a leaked transitive dependency breaks it at
-# runtime rather than here.
+# --no-index --find-links. A leaked transitive dependency breaks that install at
+# runtime, not here.
 #
 # Usage, from software/:   ./scripts/deps-export.sh
 set -euo pipefail

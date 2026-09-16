@@ -69,8 +69,8 @@ def test_missing_clonotype_key_is_reported_not_raised():
 
 def test_n_larger_than_the_table_selects_every_row(tmp_path):
     """Asking for more clonotypes than the table holds is not a failure, so the
-    log must not call it one. Asserted against the clamp message specifically —
-    a broad "Error:" search would fail on any unrelated message later."""
+    log must not call it one. This names the clamp message. A broad "Error:"
+    search would fail on any unrelated message added later."""
     process, selected, _ = run_main(tmp_path, ["9.5", "10.2", "100.7"], n=500)
 
     assert process.returncode == 0

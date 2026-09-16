@@ -96,8 +96,8 @@ def test_numeric_filters_exclude_nan_and_null():
 
 
 def test_is_na_counts_null_and_empty_string_but_not_nan():
-    """isNA tests the text form, so a NaN reads as "NaN" and is not NA — while
-    every numeric filter still excludes it. Pinned because the two disagree."""
+    """isNA tests the text form, so a NaN reads as "NaN" and is not NA. Every
+    numeric filter still excludes it. Pinned because the two disagree."""
     numeric = frame(n=[1.0, float("nan"), None])
     assert keys(apply_filter(numeric, "n", "isNA", None)) == ["c2"]
     assert keys(apply_filter(numeric, "n", "isNotNA", None)) == ["c0", "c1"]

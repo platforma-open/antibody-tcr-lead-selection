@@ -8,10 +8,10 @@ description = "Dev environment for the python software packages of the Top Antib
 requires-python = ">=3.12, <3.13"
 
 # One group per software package, holding that package's runtime pins. This file
-# is the source of truth; each <package>/src/requirements.txt is generated from
-# its group by scripts/deps-export.sh and checked by the requirements-sync CI
-# job. `uv sync --all-groups` therefore installs exactly what the block ships,
-# so the suite never runs a version the block does not.
+# is the source of truth. scripts/deps-export.sh generates each
+# <package>/src/requirements.txt from its group, and the requirements-sync CI job
+# fails when the two drift. `uv sync --all-groups` therefore installs what the
+# block ships, so the suite runs no version the block does not run.
 [dependency-groups]
 dev = [
     "hypothesis>=6.100",

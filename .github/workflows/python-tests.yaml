@@ -1,11 +1,12 @@
 name: Python Tests
 
-# Only the python packages under software/ are linted and tested here, so the
-# pull_request and push triggers are scoped to that tree. merge_group does not
-# support a path filter, so the jobs always run in the merge queue.
+# This workflow lints and tests the python packages under software/. The
+# pull_request and push triggers cover that tree only. merge_group takes no path
+# filter, so both jobs always run in the merge queue.
 #
-# Keep this workflow OUT of the "Main Branch" ruleset's required status checks:
-# a required check that a path filter skips never reports, and the PR blocks.
+# Keep this workflow out of the "Main Branch" ruleset's required status checks.
+# A path filter can skip a run. A required check that never runs never reports,
+# and GitHub then blocks the pull request.
 on:
   merge_group:
   pull_request:
