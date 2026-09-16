@@ -28,11 +28,11 @@
   "devDependencies": {
     "@milaboratories/ts-builder": "catalog:",
     "@milaboratories/ts-configs": "catalog:",
+    "@types/node": "*",
     "eslint": "catalog:",
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@types/node": "*",
     "typescript": "*"
   }
 }

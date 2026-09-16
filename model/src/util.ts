@@ -154,9 +154,24 @@ export function isDatasetScopingSubset(spec: PObjectSpec): boolean {
  */
 export function isPresenceOnlyColumn(spec: PColumnSpec, anchorSpec: PColumnSpec): boolean {
   if (spec.annotations?.[Annotation.IsSubset] !== "true") return false;
+  return isOnAnchorAxes(spec, anchorSpec);
+}
+
+/**
+ * True when every axis of the column is one of the anchor's axes. Axis identity is name,
+ * type, domain and context-domain.
+ *
+ * A column reached through a linker carries an axis the anchor does not have and reads
+ * as not on the anchor's axes.
+ */
+export function isOnAnchorAxes(spec: PColumnSpec, anchorSpec: PColumnSpec): boolean {
   const anchorAxes = new Set(anchorSpec.axesSpec.map(canonicalizeAxisId));
   return spec.axesSpec.every((axis) => anchorAxes.has(canonicalizeAxisId(axis)));
 }
+
+/** Traversal scope shared by every anchored discovery in the model: filter and ranking
+ *  options, defaults, the MSA frame and the results table. */
+export const ANCHORED_DISCOVERY = { mode: "enrichment", maxHops: 4 } as const;
 
 /** JS post-filter for the residual predicates that {@link discoveryExcludeSelectors}
  *  can't express host-side: File value type (`File` is not a matchable `ValueType`)
@@ -374,15 +389,18 @@ export function buildCollection(inputAnchor: PlRef | undefined):
     collection
       .discover({
         anchors: { main: anchorSpec },
-        mode: "related",
-        maxHops: 2,
+        ...ANCHORED_DISCOVERY,
         exclude: discoveryExcludeSelectors(sampleAxisName),
       })
       .getColumns(),
   ).filter(isSelectableMatch);
 
-  // Extract scores
-  const scores = allMatches.filter((c) => c.getSpec().annotations?.[Annotation.IsScore] === "true");
+  // Scores seed the default filters and every preset. Only columns on the anchor's own
+  // axes qualify; linker-reached columns never do.
+  const scores = allMatches.filter((c) => {
+    const spec = c.getSpec();
+    return spec.annotations?.[Annotation.IsScore] === "true" && isOnAnchorAxes(spec, anchorSpec);
+  });
 
   // Compute defaults and presets
   const defaultFilters = computeDefaultFilters(scores, inputAnchor);
