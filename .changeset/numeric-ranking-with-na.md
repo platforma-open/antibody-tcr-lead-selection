@@ -4,7 +4,7 @@
 '@platforma-open/milaboratories.top-antibodies': patch
 ---
 
-Rank numeric columns as numbers, and rank a clonotype with no value last
+Rank numeric columns as numbers, and rank a missing value last in its own column
 
 The clone table writes a missing number as "". A ranking column with one
 missing value reaches the sampler as a string column. The sampler cast that
@@ -17,8 +17,7 @@ null. "NaN", "inf" and "-inf" parse to real floats that sort ahead of every
 finite value, so they become null too, as does a NaN or inf that arrives in an
 already-numeric column.
 
-A clonotype with no usable value in an active ranking column is no longer
-dropped from selection. It ranks behind every clonotype that has one — in both
-directions, and under diversification — and is selected only once N reaches it.
-A clonotype with no diversification group is still dropped, because there is no
-group to spread it across.
+A clonotype with no usable value is not dropped from selection. It ranks last
+inside the column that is missing, in either direction, and keeps its standing
+on every other ranking criterion. A clonotype with no diversification group is
+still dropped, because there is no group to spread it across.

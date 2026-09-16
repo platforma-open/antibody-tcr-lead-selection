@@ -135,14 +135,15 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
     Rank and select top N rows using diversified ranking.
 
     Algorithm:
-    1. Sort by _unranked + ranking criteria + clonotypeKey tiebreaker
+    1. Sort by ranking criteria + clonotypeKey tiebreaker, nulls last
     2. If diversification_column is set:
        a. Compute _local_rank = cumulative count within each group (preserves sort order)
-       b. Re-sort by (_unranked ASC, _local_rank ASC, ranking criteria)
+       b. Re-sort by (_local_rank ASC, ranking criteria)
     3. Take top N
     4. Add ranked_order column
 
-    A clonotype with no value in an active ranking column is kept and ranked last.
+    A clonotype with no value in a ranking column is kept. It ranks last within
+    that column and keeps its standing on every other criterion.
     A clonotype with no diversification group is dropped.
     """
     df = coerce_ranking_columns(df, all_ranking_cols)
@@ -150,7 +151,7 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
     # A null diversification value means the clonotype belongs to no group, so it
     # cannot be diversified against and is not eligible for selection. It still
     # appears in the funnel at its "passed filters" stage; it is simply never
-    # sampled. Ranking columns are NOT dropped here — see _unranked below.
+    # sampled. Ranking columns are NOT dropped — see the sort below.
     if diversification_column and diversification_column in df.columns:
         before_null_drop = df.height
         df = df.drop_nulls(subset=[diversification_column])
@@ -180,27 +181,23 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
         sort_descending = [False]
         print("No ranking columns, sorting by clonotypeKey only")
 
-    # _unranked is true when any active ranking value is missing. It is the first
-    # sort key, so those clonotypes land behind every complete one in either
-    # direction and under diversification. nulls_last only orders within a single
-    # column: without _unranked, a row missing the second ranking value could still
-    # outrank a complete row on the strength of the first.
+    # A missing ranking value costs the clonotype only inside its own column:
+    # nulls_last puts it behind every clonotype that holds a value there, in either
+    # direction. Its standing on the other criteria is untouched, and it is never
+    # dropped. The criteria are one sort, so a later criterion only separates
+    # clonotypes that tie exactly on every earlier one.
     if all_ranking_cols:
-        df = df.with_columns(
-            pl.any_horizontal([pl.col(col).is_null() for col in all_ranking_cols])
-            .alias("_unranked")
+        missing = int(
+            df.select(
+                pl.any_horizontal([pl.col(col).is_null() for col in all_ranking_cols])
+            ).to_series().sum()
         )
-        unranked = int(df["_unranked"].sum())
-        if unranked:
-            print(f"Ranking last: {unranked} clonotypes have no value in an active "
-                  f"ranking column")
-    else:
-        df = df.with_columns(pl.lit(False).alias("_unranked"))
+        if missing:
+            print(f"{missing} clonotypes have no value in at least one ranking "
+                  f"column. They rank last in that column only.")
 
     # Step 1: Sort by ranking criteria
-    df = df.sort(["_unranked"] + sort_columns,
-                 descending=[False] + sort_descending,
-                 nulls_last=True)
+    df = df.sort(sort_columns, descending=sort_descending, nulls_last=True)
 
     # Step 2: If diversification_column is set, compute local rank and re-sort
     if diversification_column and diversification_column in df.columns:
@@ -213,11 +210,9 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
             pl.col(diversification_column).cum_count().over(diversification_column).alias("_local_rank")
         )
 
-        # Re-sort by (_unranked ASC, _local_rank ASC, ranking criteria). _unranked
-        # stays ahead of _local_rank: a sole member of a group must not be promoted
-        # into the top N on a missing value.
-        final_sort_columns = ["_unranked", "_local_rank"] + sort_columns
-        final_sort_descending = [False, False] + sort_descending
+        # Re-sort by (_local_rank ASC, ranking criteria)
+        final_sort_columns = ["_local_rank"] + sort_columns
+        final_sort_descending = [False] + sort_descending
         df = df.sort(final_sort_columns, descending=final_sort_descending, nulls_last=True)
 
         # Take top N
@@ -230,8 +225,6 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
             print(f"Warning: Diversification column '{diversification_column}' not found in data. Skipping diversification.")
         # No diversification: plain sort, take top N
         result = df.head(n)
-
-    result = result.drop("_unranked")
 
     # Add ranked_order column
     result = result.with_columns(pl.arange(1, result.height + 1).alias("ranked_order"))

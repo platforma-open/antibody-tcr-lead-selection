@@ -1,6 +1,8 @@
 """Ranking must treat numeric columns as numbers even when the clone table
-delivers them as strings with "" in the gaps, and must keep a clonotype that
-has no usable value — behind every clonotype that has one."""
+delivers them as strings with "" in the gaps.
+
+A clonotype with no usable value is kept, not dropped. It ranks last inside the
+column that is missing, and keeps its standing on every other criterion."""
 
 import polars as pl
 
@@ -108,14 +110,32 @@ def test_cluster_and_linker_columns_are_coerced_too():
     assert result["clonotypeKey"].to_list() == ["c2", "c0"]
 
 
-def test_row_missing_one_of_two_ranking_values_ranks_behind_complete_rows():
-    """c0 leads on the first criterion but has no value on the second. A complete
-    row outranks it, however weak its first value."""
+def test_missing_second_criterion_does_not_cost_first_criterion_standing():
+    """c0 leads on the first criterion and has no value on the second. The second
+    criterion is a tiebreaker, and c0 and c1 do not tie, so it never fires."""
     df = pl.DataFrame(
         {
             "clonotypeKey": ["c0", "c1"],
             "Col0": ["100.0", "1.0"],
             "Col1": ["", "1.0"],
+        }
+    )
+
+    result = diversified_rank_and_select(
+        df, 2, {"Col0": "decreasing", "Col1": "decreasing"}, ["Col0", "Col1"]
+    )
+
+    assert result["clonotypeKey"].to_list() == ["c0", "c1"]
+
+
+def test_missing_second_criterion_loses_a_tie_on_the_first():
+    """Where the first criterion does tie, the second decides — and having no
+    value there loses."""
+    df = pl.DataFrame(
+        {
+            "clonotypeKey": ["c0", "c1"],
+            "Col0": ["3.0", "3.0"],
+            "Col1": ["", "5.0"],
         }
     )
 
@@ -165,9 +185,11 @@ def test_diversification_still_applies_after_coercion():
     assert result["clonotypeKey"].to_list() == ["c0", "c2"]
 
 
-def test_diversification_does_not_promote_an_unranked_clonotype():
-    """c3 is the only member of cluster C, so diversification would hand it
-    _local_rank 1. It has no ranking value, so it still goes last."""
+def test_diversification_spreads_before_it_ranks():
+    """c3 has no ranking value but is the only member of cluster C, so it takes a
+    first-of-group slot ahead of c1, the second member of cluster A. Diversifying
+    across groups is what the setting asks for; the missing value only costs c3
+    the ordering inside its own slot."""
     df = pl.DataFrame(
         {
             "clonotypeKey": ["c0", "c1", "c2", "c3"],
@@ -180,7 +202,7 @@ def test_diversification_does_not_promote_an_unranked_clonotype():
         df, 4, {"Col0": "decreasing"}, ["Col0"], diversification_column="cluster_0"
     )
 
-    assert result["clonotypeKey"].to_list()[-1] == "c3"
+    assert result["clonotypeKey"].to_list() == ["c0", "c2", "c3", "c1"]
 
 
 def test_unassigned_diversification_group_is_still_dropped():
@@ -205,5 +227,4 @@ def test_helper_columns_are_not_in_the_output():
 
     result = diversified_rank_and_select(df, 2, {"Col0": "decreasing"}, ["Col0"])
 
-    assert "_unranked" not in result.columns
     assert "_local_rank" not in result.columns
