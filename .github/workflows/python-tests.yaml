@@ -97,14 +97,20 @@ jobs:
   requirements-sync:
     # Each <package>/src/requirements.txt is generated from its dependency group
     # in pyproject.toml, and pl-pkg builds the shipped environment from it. This
-    # job fails when the committed file has drifted — someone changed a pin but
-    # did not regenerate.
+    # job runs the same command a developer runs and fails when the committed
+    # file has drifted.
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: software
     steps:
       - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.x'
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
 
       - uses: astral-sh/setup-uv@v5
         with:
@@ -113,15 +119,15 @@ jobs:
           cache-dependency-glob: software/uv.lock
 
       - name: Regenerate requirements.txt from pyproject.toml
-        run: ./scripts/deps-export.sh
+        run: pnpm software:reqs
 
       - name: Verify the committed files are in sync
         run: |
-          if ! git diff --exit-code -- '*/src/requirements.txt'; then
+          if ! git diff --exit-code -- 'software/*/src/requirements.txt'; then
             echo "::error::software/*/src/requirements.txt is out of sync with pyproject.toml"
             echo "Dependencies are defined in software/pyproject.toml, one group per package."
             echo "Resolve locally with:"
-            echo "    cd software && ./scripts/deps-export.sh"
+            echo "    pnpm software:reqs"
             echo "then commit the updated requirements.txt files."
             exit 1
           fi

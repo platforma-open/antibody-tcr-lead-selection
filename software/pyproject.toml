@@ -8,7 +8,7 @@ description = "Dev environment for the python software packages of the Top Antib
 requires-python = ">=3.12, <3.13"
 
 # One group per software package, holding that package's runtime pins. This file
-# is the source of truth. scripts/deps-export.sh generates each
+# is the source of truth. `pnpm software:reqs` generates each
 # <package>/src/requirements.txt from its group, and the requirements-sync CI job
 # fails when the two drift. `uv sync --all-groups` therefore installs what the
 # block ships, so the suite runs no version the block does not run.
