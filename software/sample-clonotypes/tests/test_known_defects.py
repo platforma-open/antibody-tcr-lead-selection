@@ -64,7 +64,9 @@ def test_missing_clonotype_key_reports_its_error_instead_of_raising():
 
     clonotype_cols, cluster_cols, linker_cols = validate_column_format(df)
 
-    assert clonotype_cols == []
+    assert clonotype_cols == ["Col0"]
+    assert cluster_cols == []
+    assert linker_cols == []
 
 
 def test_n_larger_than_the_table_is_not_reported_as_an_error(tmp_path):

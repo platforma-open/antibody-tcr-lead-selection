@@ -80,12 +80,12 @@ def parse_ranking_map(ranking_map_str, all_col_columns):
 
 
 def validate_column_format(df):
-    print("Found columns:", df.columns)
+    """Return the clonotype, cluster and linker ranking columns, in that order.
 
-    # Check for clonotypeKey column
-    if "clonotypeKey" not in df.columns:
-        print("Error: Input CSV must contain a 'clonotypeKey' column.")
-        return False
+    Always returns three lists. main() checks for clonotypeKey and stops before
+    calling this.
+    """
+    print("Found columns:", df.columns)
 
     # Check for clonotype ranking columns (Col0, Col1, ...)
     clonotype_col_columns = sorted([col for col in df.columns if re.match(r"^Col\d+$", col)], key=lambda x: int(x[3:]))
@@ -283,6 +283,11 @@ def main():
     if args.n > df.height:
         print(f"Error: N ({args.n}) is greater than the number of rows in the table ({df.height}).")
         args.n = df.height
+
+    # Without clonotypeKey there is nothing to rank or to write out.
+    if "clonotypeKey" not in df.columns:
+        print("Error: Input table must contain a 'clonotypeKey' column.")
+        return
 
     # Validate columns
     validation_start = time.time()
