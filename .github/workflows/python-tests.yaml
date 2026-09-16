@@ -71,6 +71,8 @@ jobs:
       - name: Install dependencies
         run: uv sync --all-groups --locked
 
-      # Collects every <package>/tests/ under software/.
+      # scripts/pytest.sh layers every package's src/requirements.txt into the
+      # environment, so the suite runs the versions the block ships rather than
+      # whatever the dev group resolves. It collects every <package>/tests/.
       - name: Run pytest
-        run: uv run pytest
+        run: ./scripts/pytest.sh

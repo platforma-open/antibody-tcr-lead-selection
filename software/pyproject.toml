@@ -2,11 +2,18 @@
 name = "top-antibodies-software"
 version = "0.1.0"
 description = "Dev environment for the python software packages of the Top Antibodies block"
-requires-python = ">=3.12"
+# The block ships @platforma-open/milaboratories.runenv-python-3:3.12.10.
+# Without the upper bound uv resolves 3.13, and the suite would exercise a
+# different interpreter and different wheels from the ones the block runs.
+# .python-version pins the patch.
+requires-python = ">=3.12,<3.13"
 
+# Tooling only. Every runtime library comes from the packages' own
+# src/requirements.txt, which is what pl-pkg ships, so the tests run the exact
+# versions the block runs. Adding a runtime library here would let the tested
+# version drift from the shipped one. Use scripts/pytest.sh to run the suite.
 [dependency-groups]
 dev = [
-    "polars==1.33.1",
     "pytest>=8.0.0",
     "ruff>=0.14.0",
 ]
