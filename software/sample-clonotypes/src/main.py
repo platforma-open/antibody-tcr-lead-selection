@@ -346,7 +346,9 @@ def main():
         sampled_keys = result.select("clonotypeKey")
         max_stage = selection["selectionStage"].max() or 0
         selection = selection.with_columns(
-            pl.when(pl.col("clonotypeKey").is_in(sampled_keys["clonotypeKey"]))
+            # implode() keeps the membership test. A bare Series is deprecated:
+            # polars will read it element-wise, which bumps the wrong rows.
+            pl.when(pl.col("clonotypeKey").is_in(sampled_keys["clonotypeKey"].implode()))
             .then(pl.lit(max_stage + 1).cast(pl.Int64))
             .otherwise(pl.col("selectionStage"))
             .alias("selectionStage")
