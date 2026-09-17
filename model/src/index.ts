@@ -529,8 +529,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     // Don't render table if sampledRows aren't finalized
     if (!sampledRowsCollection.isFinal()) return undefined;
 
-    // Use lead-selection column as anchor — it has [clonotypeKey] axis only,
-    // so the inner join core is keyed by clonotypeKey (no sampleId duplication).
+    // Use lead-selection column as anchor — it carries the clonotype axis alone,
+    // so it pins the table's core to one row per selected lead.
     const leadSelectionCol = sampledRowsCollection
       .filter({ include: { name: [{ type: "exact", value: "pl7.app/lead-selection" }] } })
       .getColumns()[0];
@@ -543,8 +543,25 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     );
     if (!clonotypeAxisMatches) return undefined;
 
+    // Drop columns keyed by the per-sample axis. Discovery reaches them through a
+    // linker, and the linker is one-to-many: `pl7.app/sc/cellLinker` maps one
+    // clonotype to every (sample, cell) that carries it, so a per-cell column joins
+    // the lead row once per cell. The anchor does not prevent this — it fixes the
+    // core, while the joined axis set is the union over all columns, and the added
+    // axes are then marked hidden because visibility follows the primary column's
+    // axes. The rows are invisible in the UI and still materialised by the join: on
+    // a single-cell project this took the middle-layer worker to 101 GiB of private
+    // memory in 35 seconds. Everything keyed on the clonotype axis alone is kept,
+    // including the aggregates that summarise these columns per clonotype.
+    const sampleAxisName = anchorSpec.axesSpec[0]?.name;
+    if (sampleAxisName === undefined) return undefined;
+
     const poolDiscovered = ColumnsCollection()
-      .discover({ anchors: { main: leadSelectionSpec }, ...ANCHORED_DISCOVERY })
+      .discover({
+        anchors: { main: leadSelectionSpec },
+        ...ANCHORED_DISCOVERY,
+        exclude: [{ axes: [{ name: exactMatch(sampleAxisName) }], partialAxesMatch: true }],
+      })
       .getColumns()
       .filter((c) => {
         const spec = c.getSpec();
