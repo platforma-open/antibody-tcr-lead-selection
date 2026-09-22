@@ -1,9 +1,6 @@
 self := import("@platforma-sdk/workflow-tengo:tpl")
 exec := import("@platforma-sdk/workflow-tengo:exec")
 assets := import("@platforma-sdk/workflow-tengo:assets")
-wf := import("@platforma-sdk/workflow-tengo:workflow")
-pt := import("@platforma-sdk/workflow-tengo:pt")
-pframes := import("@platforma-sdk/workflow-tengo:pframes")
 anarciSw := assets.importSoftware("@platforma-open/milaboratories.software-anarci:main")
 
 self.defineOutputs("kabat", "kabatStats")
