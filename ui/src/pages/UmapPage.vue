@@ -73,7 +73,11 @@ const multipleSequenceAlignmentOpen = ref(false);
       :status-text="{ noPframe: { title: strings.callToActions.configureSettingsAndRun } }"
     >
       <template #titleLineSlot>
-        <PlBtnGhost icon="dna" @click.stop="() => (multipleSequenceAlignmentOpen = true)">
+        <PlBtnGhost
+          v-if="!app.model.outputs.isPeptide"
+          icon="dna"
+          @click.stop="() => (multipleSequenceAlignmentOpen = true)"
+        >
           Multiple Sequence Alignment
         </PlBtnGhost>
       </template>

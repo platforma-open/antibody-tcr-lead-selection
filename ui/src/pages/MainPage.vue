@@ -223,7 +223,11 @@ watch(
     title="Lead Selection"
   >
     <template #append>
-      <PlBtnGhost icon="dna" @click.stop="() => (multipleSequenceAlignmentOpen = true)">
+      <PlBtnGhost
+        v-if="!app.model.outputs.isPeptide"
+        icon="dna"
+        @click.stop="() => (multipleSequenceAlignmentOpen = true)"
+      >
         Multiple Sequence Alignment
       </PlBtnGhost>
       <PlBtnGhost icon="settings" @click.stop="() => (settingsOpen = true)"> Settings </PlBtnGhost>

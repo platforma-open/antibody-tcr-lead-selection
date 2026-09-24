@@ -317,6 +317,22 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
   )
 
   .output(
+    "isPeptide",
+    (ctx): boolean => {
+      const keyAxis = getSpecByRef(getInputAnchorRef(ctx.data))?.axesSpec[1];
+      if (keyAxis?.name !== "pl7.app/variantKey") return false;
+      const domain = keyAxis.domain ?? {};
+      const declared = domain["pl7.app/modality"];
+      if (declared === "vdj" || declared === "amplicon") return false;
+      if (domain["pl7.app/peptide/extractionRunId"] !== undefined) return true;
+      if (domain["pl7.app/repertoire/extractionRunId"] !== undefined) return false;
+      if (domain["pl7.app/vdj/clonotypingRunId"] !== undefined) return false;
+      return true;
+    },
+    { retentive: true },
+  )
+
+  .output(
     "modality",
     (ctx) => {
       const spec = getSpecByRef(getInputAnchorRef(ctx.data));
