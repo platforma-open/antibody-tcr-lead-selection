@@ -1,6 +1,7 @@
 import argparse
 import sys
 from typing import List
+
 import polars as pl
 
 
@@ -18,7 +19,7 @@ def to_fasta(input_parquet: str, key_column: str, output_fasta: str, final_clono
             key_field = "scClonotypeKey"
         elif len(final_df.columns) > 0:
             key_field = final_df.columns[0]
-        
+
         if key_field:
             for row in final_df.to_dicts():
                 key_value = row.get(key_field)
@@ -28,13 +29,13 @@ def to_fasta(input_parquet: str, key_column: str, output_fasta: str, final_clono
     # Read parquet file using Polars
     df = pl.read_parquet(input_parquet)
     fieldnames: List[str] = list(df.columns)
-    
+
     if key_column not in fieldnames:
         print(f"Key column '{key_column}' not found in Parquet file", file=sys.stderr)
         sys.exit(2)
 
     seq_cols = [c for c in fieldnames if c != key_column]
-    
+
     with open(output_fasta, "w") as out:
         # Iterate over rows as dictionaries
         for row in df.to_dicts():
@@ -69,5 +70,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
