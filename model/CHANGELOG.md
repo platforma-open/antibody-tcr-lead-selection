@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 5.2.0
+
+### Minor Changes
+
+- e18e0fb: Hide the multiple sequence alignment entry point for peptide datasets, including the table cell button.
+
 ## 5.1.6
 
 ### Patch Changes

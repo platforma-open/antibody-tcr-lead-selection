@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 5.1.6
+
+### Patch Changes
+
+- c4712b9: Bump tengo-builder to 4.1.1 and block-tools to 2.16.1.
+
 ## 5.1.5
 
 ### Patch Changes
