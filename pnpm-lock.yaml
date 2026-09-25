@@ -19,8 +19,8 @@ catalogs:
       specifier: 1.47.24
       version: 1.47.24
     '@milaboratories/pl-model-common':
-      specifier: 1.48.0
-      version: 1.48.0
+      specifier: 1.51.0
+      version: 1.51.0
     '@milaboratories/strings':
       specifier: 0.1.2
       version: 0.1.2
@@ -155,7 +155,7 @@ importers:
     dependencies:
       '@milaboratories/pl-model-common':
         specifier: 'catalog:'
-        version: 1.48.0
+        version: 1.51.0
       '@platforma-sdk/block-kind':
         specifier: 'catalog:'
         version: 1.1.0
@@ -1185,9 +1185,6 @@ packages:
 
   '@milaboratories/pl-model-common@1.46.2':
     resolution: {integrity: sha512-VEeauisApYScvCS8lnK3zpFJ520xuTAodKJmjR8ulHcMrWMyWMfHEdGb7j5OMD0mM/OwTgmQrrJ5eB7Xd+xoOQ==}
-
-  '@milaboratories/pl-model-common@1.48.0':
-    resolution: {integrity: sha512-oCVrjFNmjQolb7YWnbSGHnp6GGVm1PhG1lnNABp9lqYjvA2ISjIPQLIo/vT2ca0mqwLrEvbuRqiqSFOg7sQ5tQ==}
 
   '@milaboratories/pl-model-common@1.51.0':
     resolution: {integrity: sha512-KowoSl3BTUo8N4yUYpFiIdi7JZmtGX2bm4roK9maeoGdB3Tb0SsfySsWgdDSGwWMvxHwQ6cp3DA2dkw1dFlmcg==}
@@ -8353,14 +8350,6 @@ snapshots:
       '@milaboratories/helpers': 1.14.2
       '@milaboratories/pl-error-like': 1.12.10
       canonicalize: 2.1.0
-      zod: 3.25.76
-
-  '@milaboratories/pl-model-common@1.48.0':
-    dependencies:
-      '@milaboratories/helpers': 1.14.5
-      '@milaboratories/pl-error-like': 1.12.10
-      canonicalize: 2.1.0
-      es-toolkit: 1.40.0
       zod: 3.25.76
 
   '@milaboratories/pl-model-common@1.51.0':
