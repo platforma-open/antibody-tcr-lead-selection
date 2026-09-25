@@ -2,4 +2,4 @@
 "@platforma-open/milaboratories.top-antibodies": patch
 ---
 
-Update SDK: PlAgDataTable no longer recreates its grid in an endless loop
+Update SDK: PlAgDataTableV2 no longer recreates its grid in an endless loop
