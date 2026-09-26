@@ -74,6 +74,7 @@ const CLUSTERING_TRACE_TYPES = [
   "milaboratories.clonotype-clustering.clustering",
   "milaboratories.3d-structure-clustering.clustering",
   "milaboratories.embedding-clustering.clustering",
+  "milaboratories.lineage-trees.clustering",
 ];
 
 // Display selectors for the main table (host-side `ColumnSelector`s — the V3
