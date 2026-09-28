@@ -3,8 +3,6 @@ import {
   createPlDataTableStateV2,
   createPrimaryRef,
   DataModelBuilder,
-  isPlRef,
-  parseJsonSafely,
   type PObjectId,
 } from "@platforma-sdk/model";
 import { kind } from "@platforma-open/milaboratories.top-antibodies.kind";
@@ -14,11 +12,10 @@ import type {
   BlockData_Ver_2026_05_08,
   BlockData_Ver_2026_05_21,
   BlockData_Ver_2026_07_28,
-  InitializedForAnchor,
   LegacyBlockArgs,
   LegacyUiState,
 } from "./types";
-import { anchorInitializedId, getDefaultBlockLabel } from "./util";
+import { getDefaultBlockLabel, readInitializedForAnchor } from "./util";
 
 const defaultSelectionPlotState = (): BlockData["selectionPlotState"] => ({
   title: "Selection Plot",
@@ -31,40 +28,6 @@ const defaultSelectionPlotState = (): BlockData["selectionPlotState"] => ({
  * option.
  */
 const REMOVED_IN_VIVO_SCORE_COLUMN_ID = "pl7.app/vdj/inVivoScore" as PObjectId;
-
-/**
- * Reshapes one stored `JSON.stringify(anchor) + "::" + preset` guard value into
- * the two-field slot.
- *
- * Split at the LAST `"::"`: a block id or column name can itself contain a colon,
- * so a leftmost split would cut the anchor JSON in half. The tail is the preset —
- * `"none"` when none was selected.
- *
- * The head is re-minted through `anchorInitializedId` — the block's one
- * `createGlobalPObjectId` call site — rather than carried over verbatim. The old value was written with `JSON.stringify`, whose key order is
- * whatever the object happened to have; the UI now computes its key the same
- * canonical way, and relocation re-emits the stored value canonically too, so a
- * verbatim head could stop matching. A head that does not parse as a reference
- * drops the whole slot: an unreadable anchor is worse than none, and absent is
- * exactly what "not initialized" means.
- */
-function splitInitializedForAnchor(stored: string | undefined): InitializedForAnchor | undefined {
-  if (stored === undefined) return undefined;
-  const separator = stored.lastIndexOf("::");
-  const head = separator < 0 ? stored : stored.slice(0, separator);
-  const preset = separator < 0 ? "none" : stored.slice(separator + 2);
-
-  const parsed = parseJsonSafely(head);
-  // `isPlRef` only demands the two fields be present, so their types are checked
-  // here too: the id constructor would happily canonicalize a non-string.
-  if (!isPlRef(parsed) || typeof parsed.blockId !== "string" || typeof parsed.name !== "string")
-    return undefined;
-
-  const anchor = anchorInitializedId(parsed);
-  if (anchor === undefined) return undefined;
-
-  return { anchor, preset: preset as InitializedForAnchor["preset"] };
-}
 
 export const blockDataModel = new DataModelBuilder({ kind })
   .from<BlockData_Ver_2026_02_25>("Ver_2026_02_25")
@@ -129,11 +92,19 @@ export const blockDataModel = new DataModelBuilder({ kind })
   // The defaults-init guards were one `JSON.stringify(anchor) + "::" + preset`
   // string; they are two fields now, so the anchor half stays a bare stringified
   // `PlRef` — canonically serialized, since that is what relocates and what the
-  // UI compares against. See `splitInitializedForAnchor`.
+  // UI compares against. See `readInitializedForAnchor`.
   .migrate<BlockData>("Ver_2026_08_20", (prev) => ({
     ...prev,
-    filtersInitializedForAnchor: splitInitializedForAnchor(prev.filtersInitializedForAnchor),
-    rankingsInitializedForAnchor: splitInitializedForAnchor(prev.rankingsInitializedForAnchor),
+    filtersInitializedForAnchor: readInitializedForAnchor(prev.filtersInitializedForAnchor),
+    rankingsInitializedForAnchor: readInitializedForAnchor(prev.rankingsInitializedForAnchor),
+  }))
+  // The same split, run again: stored data has been seen still holding the joined
+  // string after `Ver_2026_08_20`, and a template exported from it is refused by
+  // the kind. An already-split slot is read back unchanged.
+  .migrate<BlockData>("Ver_2026_09_28", (prev) => ({
+    ...prev,
+    filtersInitializedForAnchor: readInitializedForAnchor(prev.filtersInitializedForAnchor),
+    rankingsInitializedForAnchor: readInitializedForAnchor(prev.rankingsInitializedForAnchor),
   }))
   // `params` is absent when a block is created by hand rather than from a
   // template, so every field the contract carries keeps its own default.
