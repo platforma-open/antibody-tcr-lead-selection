@@ -2,8 +2,9 @@ import type {
   InitializedForAnchor,
   ScopedColumnId,
 } from "@platforma-open/milaboratories.top-antibodies.model";
+import { anchorInitializedId } from "@platforma-open/milaboratories.top-antibodies.model";
 import type { PlRef } from "@platforma-sdk/model";
-import { createPlRef, plRefsEqual } from "@platforma-sdk/model";
+import { plRefsEqual } from "@platforma-sdk/model";
 import { computed, ref, watch } from "vue";
 
 export interface ConfigWithOptions {
@@ -94,6 +95,16 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
     [getAnchor, configAnchorKey, currentPreset],
     ([currentAnchor, configKey, preset]: [PlRef | undefined, string | null, string]) => {
       const config = getConfig();
+      // The anchor as a canonical column identifier, minted by the same helper
+      // the stored value is written with — a single `createGlobalPObjectId` call
+      // site. Relocation re-canonicalizes that stored value when a template is
+      // applied, so this side has to produce the same bytes or the comparison
+      // below never matches, and the constructor is what guarantees it. The
+      // preset is not joined in: it is stored as its own field, since a joined
+      // string parses as no identifier at all and would not relocate.
+      const currentAnchorKey = currentAnchor ? (anchorInitializedId(currentAnchor) ?? null) : null;
+      const initializedAnchorKey = getInitializedAnchorKey?.();
+      const isAlreadyInitialized = currentAnchorKey && initializedAnchorKey === currentAnchorKey;
 
       // No anchor = clear state and reset initialized tracking
       if (!currentAnchor) {
@@ -104,15 +115,6 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
         setInitializedAnchorKey?.(undefined);
         return;
       }
-
-      // The anchor as the slot stores it: a fresh plain `PlRef` of just the block
-      // and column, so the stored value is not a live piece of the selection.
-      // Compared ignoring enrichments, which do not change which column is meant.
-      const currentAnchorKey = createPlRef(currentAnchor.blockId, currentAnchor.name);
-      const initializedAnchorKey = getInitializedAnchorKey?.();
-      const isAlreadyInitialized =
-        initializedAnchorKey !== undefined &&
-        plRefsEqual(initializedAnchorKey, currentAnchorKey, true);
 
       // Already applied for this anchor+preset combo (in this component instance)? Skip
       if (
@@ -178,7 +180,7 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
       if (!presetChanged && hasExistingStateForConfig?.(config)) {
         appliedForAnchor.value = currentAnchor;
         appliedForPreset.value = preset;
-        setInitializedAnchorKey?.(currentAnchorKey);
+        setInitializedAnchorKey?.(currentAnchorKey!);
         return;
       }
 
@@ -188,14 +190,14 @@ export function useAnchorSyncedDefaults(options: UseAnchorSyncedDefaultsOptions)
       if (!hasDefaults() && !presetChanged) {
         appliedForAnchor.value = currentAnchor;
         appliedForPreset.value = preset;
-        setInitializedAnchorKey?.(currentAnchorKey);
+        setInitializedAnchorKey?.(currentAnchorKey!);
         return;
       }
 
       // Apply defaults (or clear state if defaults are empty)
       appliedForAnchor.value = currentAnchor;
       appliedForPreset.value = preset;
-      setInitializedAnchorKey?.(currentAnchorKey);
+      setInitializedAnchorKey?.(currentAnchorKey!);
       applyDefaults();
     },
     { immediate: true },

@@ -95,38 +95,22 @@ export type BlockData_Ver_2026_07_28 = BlockData_Ver_2026_05_21 & {
   inVivoScoreRemovedNotice?: boolean;
 };
 
-/**
- * A defaults-init slot as data at `Ver_2026_08_20` has been found holding it:
- * either the original `JSON.stringify(anchor) + "::" + preset` string, or the
- * split object whose anchor is still a serialized `PlRef`.
- */
-export type StoredInitializedForAnchor_Ver_2026_08_20 =
-  | string
-  | { anchor: string; preset: WorkflowPreset | "none" };
-
 export type BlockData_Ver_2026_08_20 = Omit<
   BlockData_Ver_2026_07_28,
   "filtersInitializedForAnchor" | "rankingsInitializedForAnchor"
 > & {
-  filtersInitializedForAnchor?: StoredInitializedForAnchor_Ver_2026_08_20;
-  rankingsInitializedForAnchor?: StoredInitializedForAnchor_Ver_2026_08_20;
-};
-
-export type BlockData_Ver_2026_09_28 = Omit<
-  BlockData_Ver_2026_08_20,
-  "filtersInitializedForAnchor" | "rankingsInitializedForAnchor"
-> & {
   /**
    * The anchor the filter defaults were last applied for, with the preset they
-   * were applied under. The anchor is the `PlRef` object, which is what lets a
-   * template relocate it to the project it is applied in.
+   * were applied under. Replaces the previous single `anchor::preset` string:
+   * split into two fields, the anchor half stays a bare stringified `PlRef`,
+   * which is what lets a template relocate it to the project it is applied in.
    */
   filtersInitializedForAnchor?: InitializedForAnchor;
   /** As {@link filtersInitializedForAnchor}, for the ranking defaults. */
   rankingsInitializedForAnchor?: InitializedForAnchor;
 };
 
-export type BlockData = BlockData_Ver_2026_09_28;
+export type BlockData = BlockData_Ver_2026_08_20;
 
 export type BlockArgs = {
   defaultBlockLabel: string;

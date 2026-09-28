@@ -2,10 +2,14 @@ import {
   Annotation,
   Column,
   ColumnsCollection,
+  createGlobalPObjectId,
   DataColumn,
   extractPObjectId,
   canonicalizeAxisId,
+  isGlobalPObjectId,
   isPColumnSpec,
+  isPlRef,
+  parseJsonSafely,
   readAnnotationJson,
   type AxisSpec,
   type ColumnRecipe,
@@ -18,11 +22,71 @@ import {
 import type {
   BlockData,
   ColumnsMeta,
+  InitializedForAnchor,
   PlTableFiltersDefault,
   RankingOrder,
   ScopedColumnId,
   WorkflowPreset,
 } from "./types";
+
+/**
+ * The canonical column identifier for an anchor, as the defaults-init guard
+ * stores it.
+ *
+ * The single place it is minted: the UI computes the current key with it and the
+ * `Ver_2026_08_20` migration rewrites stored values with it, so the two can never
+ * disagree on bytes for the same anchor — which they would if one used
+ * `JSON.stringify` and the other canonicalized, and which matters because
+ * relocation re-emits the stored value canonically when a template is applied.
+ *
+ * `createGlobalPObjectId` is the SDK's named constructor for this id form, and it
+ * takes the two fields rather than the object: an oddly-ordered `PlRef` cannot
+ * leak its key order in, and stray fields on the ref — `requireEnrichments`, say,
+ * which does not change which column is meant — cannot reach the id. The
+ * narrowing is what keeps this cast-free; the constructor always produces the
+ * global form, so the `undefined` branch is unreachable in practice.
+ */
+export function anchorInitializedId(ref: PlRef): InitializedForAnchor["anchor"] | undefined {
+  const id = createGlobalPObjectId(ref.blockId, ref.name);
+  return isGlobalPObjectId(id) ? id : undefined;
+}
+
+/**
+ * Reads a stored defaults-init slot in either shape it has had: the
+ * `{ anchor, preset }` object, or the older `JSON.stringify(anchor) + "::" +
+ * preset` string.
+ *
+ * Stored data has been seen holding the string even after the `Ver_2026_08_20`
+ * migration split it, and the kind rejects the string, so a template exported
+ * from such a block cannot be applied. Everything that hands the slot on reads
+ * it through here.
+ *
+ * The string is split at the LAST `"::"`: a block id or column name can itself
+ * contain a colon, so a leftmost split would cut the anchor JSON in half. The
+ * tail is the preset — `"none"` when none was selected.
+ *
+ * Either way the anchor is re-minted through `anchorInitializedId` rather than
+ * carried over verbatim: the old string was written with `JSON.stringify`, whose
+ * key order is whatever the object happened to have, and the UI and relocation
+ * both compare against the canonical form. An anchor that does not parse as a
+ * reference drops the whole slot: an unreadable anchor is worse than none, and
+ * absent is exactly what "not initialized" means.
+ */
+export function readInitializedForAnchor(stored: unknown): InitializedForAnchor | undefined {
+  const parts = initializedSlotParts(stored);
+  if (parts === undefined) return undefined;
+
+  const parsed = parseJsonSafely(parts.anchor);
+  // `isPlRef` only demands the two fields be present, so their types are checked
+  // here too: the id constructor would happily canonicalize a non-string.
+  if (!isPlRef(parsed) || typeof parsed.blockId !== "string" || typeof parsed.name !== "string")
+    return undefined;
+
+  const anchor = anchorInitializedId(parsed);
+  if (anchor === undefined) return undefined;
+
+  return { anchor, preset: parts.preset as InitializedForAnchor["preset"] };
+}
 
 /** Underlying primary `PlRef` from `data.input` — undefined when no dataset is picked. */
 export function getInputAnchorRef(data: Pick<BlockData, "input">): PlRef | undefined {
@@ -663,4 +727,17 @@ function computePresets(
 
 export function getDefaultBlockLabel(data: { datasetLabel?: string }) {
   return data.datasetLabel || "Select dataset";
+}
+
+/** The anchor and preset halves of a stored defaults-init slot, still unparsed. */
+function initializedSlotParts(stored: unknown): { anchor: string; preset: string } | undefined {
+  if (typeof stored === "string") {
+    const separator = stored.lastIndexOf("::");
+    if (separator < 0) return { anchor: stored, preset: "none" };
+    return { anchor: stored.slice(0, separator), preset: stored.slice(separator + 2) };
+  }
+  if (typeof stored !== "object" || stored === null) return undefined;
+  if (!("anchor" in stored) || !("preset" in stored)) return undefined;
+  const { anchor, preset } = stored;
+  return typeof anchor === "string" && typeof preset === "string" ? { anchor, preset } : undefined;
 }

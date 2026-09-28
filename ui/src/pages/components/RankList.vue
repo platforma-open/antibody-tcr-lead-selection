@@ -100,7 +100,7 @@ useAnchorSyncedDefaults({
   // that differs from the current one means the list belongs to the other preset
   // and must be replaced, so the read reports "not initialized" and the
   // composable falls through to the defaults path. The anchor is kept as its own
-  // field, a `PlRef` object, so a project template can relocate it.
+  // field, a bare stringified `PlRef`, so a project template can relocate it.
   getInitializedAnchorKey: () => {
     const stored = app.model.data.rankingsInitializedForAnchor;
     if (stored === undefined) return undefined;
