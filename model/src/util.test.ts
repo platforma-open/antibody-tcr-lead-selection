@@ -1,12 +1,7 @@
 import type { AxisSpec, ColumnRecipe, PColumnSpec } from "@platforma-sdk/model";
 import { canonicalizeAxisId, createGlobalPObjectId } from "@platforma-sdk/model";
 import { describe, expect, test } from "vitest";
-import {
-  isDatasetScopingSubset,
-  isPresenceOnlyColumn,
-  isRankableMatch,
-  readInitializedForAnchor,
-} from "./util";
+import { isDatasetScopingSubset, isPresenceOnlyColumn, isRankableMatch } from "./util";
 
 const sampleAxis: AxisSpec = { type: "String", name: "pl7.app/sampleId" };
 const clonotypeAxis: AxisSpec = {
@@ -223,47 +218,5 @@ describe("isDatasetScopingSubset", () => {
       annotations: { "pl7.app/label": "Selected Leads", "pl7.app/isSubset": "true" },
     });
     expect(isDatasetScopingSubset(selected)).toBe(true);
-  });
-});
-
-describe("readInitializedForAnchor", () => {
-  const blockId = "f9212394-932e-49ff-8366-017b840d47e9";
-  const name = "pf.chain_0/abundance_0";
-  const canonical = createGlobalPObjectId(blockId, name);
-
-  test("splits the old joined string, dropping extra ref fields", () => {
-    const stored = `${JSON.stringify({ __isRef: true, blockId, name, requireEnrichments: true })}::none`;
-    expect(readInitializedForAnchor(stored)).toEqual({ anchor: canonical, preset: "none" });
-  });
-
-  test("takes the preset from after the last separator", () => {
-    const stored = `${JSON.stringify({ __isRef: true, blockId, name: "a::b" })}::in-vivo`;
-    expect(readInitializedForAnchor(stored)).toEqual({
-      anchor: createGlobalPObjectId(blockId, "a::b"),
-      preset: "in-vivo",
-    });
-  });
-
-  test("reads a string with no separator as preset none", () => {
-    const stored = JSON.stringify({ __isRef: true, blockId, name });
-    expect(readInitializedForAnchor(stored)).toEqual({ anchor: canonical, preset: "none" });
-  });
-
-  test("keeps an already-split slot", () => {
-    const slot = { anchor: canonical, preset: "in-vitro" };
-    expect(readInitializedForAnchor(slot)).toEqual(slot);
-  });
-
-  test("re-mints an already-split anchor in canonical key order", () => {
-    const slot = { anchor: JSON.stringify({ name, blockId, __isRef: true }), preset: "none" };
-    expect(readInitializedForAnchor(slot)).toEqual({ anchor: canonical, preset: "none" });
-  });
-
-  test("drops a slot whose anchor is not a reference", () => {
-    expect(readInitializedForAnchor("not json::none")).toBeUndefined();
-    expect(readInitializedForAnchor({ anchor: "{}", preset: "none" })).toBeUndefined();
-    expect(readInitializedForAnchor({ anchor: canonical })).toBeUndefined();
-    expect(readInitializedForAnchor(42)).toBeUndefined();
-    expect(readInitializedForAnchor(undefined)).toBeUndefined();
   });
 });

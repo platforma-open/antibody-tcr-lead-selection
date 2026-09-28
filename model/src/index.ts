@@ -46,7 +46,6 @@ import {
   isProducedByLeadSelection,
   isRankableMatch,
   isSelectableMatch,
-  readInitializedForAnchor,
   recordSource,
   matchToColumnId,
 } from "./util";
@@ -57,12 +56,7 @@ import type { BlockArgs, BlockData } from "./types";
 
 export * from "./types";
 export * from "./converters";
-export {
-  anchorInitializedId,
-  getDefaultBlockLabel,
-  getInputAnchorRef,
-  getInputFilterRef,
-} from "./util";
+export { getDefaultBlockLabel, getInputAnchorRef, getInputFilterRef } from "./util";
 export { blockDataModel } from "./dataModel";
 export type Href = InferHrefType<typeof platforma>;
 export type BlockOutputs = InferOutputsType<typeof platforma>;
@@ -219,12 +213,10 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
   // crosses, nor does `inVivoScoreRemovedNotice`, which a migration sets for a
   // project that lost the built-in in-vivo score. The two
   // `…InitializedForAnchor` slots do cross, and they carry their weight: each
-  // holds a bare stringified anchor beside the preset it was applied under, so
+  // holds the anchor `PlRef` beside the preset it was applied under, so
   // relocation rewrites the anchor while leaving the preset alone, and the
   // applied block recognizes the ranking and filter lists above as already
   // applied instead of replacing them with the landing dataset's defaults.
-  // They go out through `readInitializedForAnchor`, so a slot still stored as
-  // the old joined string leaves split, in the shape the kind accepts.
   .templateParams((data) => ({
     input: data.input,
 
@@ -234,8 +226,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     rankingOrder: convertRankingOrderUI(data.rankingOrder),
     filters: convertFilterUI(data.filters),
     diversificationColumn: data.diversificationColumn,
-    filtersInitializedForAnchor: readInitializedForAnchor(data.filtersInitializedForAnchor),
-    rankingsInitializedForAnchor: readInitializedForAnchor(data.rankingsInitializedForAnchor),
+    filtersInitializedForAnchor: data.filtersInitializedForAnchor,
+    rankingsInitializedForAnchor: data.rankingsInitializedForAnchor,
 
     defaultBlockLabel: data.defaultBlockLabel,
     customBlockLabel: data.customBlockLabel,

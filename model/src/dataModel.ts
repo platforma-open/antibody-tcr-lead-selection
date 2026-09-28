@@ -1,8 +1,11 @@
 import {
   createDatasetSelection,
   createPlDataTableStateV2,
+  createPlRef,
   createPrimaryRef,
   DataModelBuilder,
+  isPlRef,
+  parseJsonSafely,
   type PObjectId,
 } from "@platforma-sdk/model";
 import { kind } from "@platforma-open/milaboratories.top-antibodies.kind";
@@ -12,10 +15,12 @@ import type {
   BlockData_Ver_2026_05_08,
   BlockData_Ver_2026_05_21,
   BlockData_Ver_2026_07_28,
+  BlockData_Ver_2026_08_20,
+  InitializedForAnchor,
   LegacyBlockArgs,
   LegacyUiState,
 } from "./types";
-import { getDefaultBlockLabel, readInitializedForAnchor } from "./util";
+import { getDefaultBlockLabel } from "./util";
 
 const defaultSelectionPlotState = (): BlockData["selectionPlotState"] => ({
   title: "Selection Plot",
@@ -90,21 +95,17 @@ export const blockDataModel = new DataModelBuilder({ kind })
     return { ...prev, rankingOrder, inVivoScoreRemovedNotice: true };
   })
   // The defaults-init guards were one `JSON.stringify(anchor) + "::" + preset`
-  // string; they are two fields now, so the anchor half stays a bare stringified
-  // `PlRef` — canonically serialized, since that is what relocates and what the
-  // UI compares against. See `readInitializedForAnchor`.
-  .migrate<BlockData>("Ver_2026_08_20", (prev) => ({
-    ...prev,
-    filtersInitializedForAnchor: readInitializedForAnchor(prev.filtersInitializedForAnchor),
-    rankingsInitializedForAnchor: readInitializedForAnchor(prev.rankingsInitializedForAnchor),
-  }))
-  // The same split, run again: stored data has been seen still holding the joined
-  // string after `Ver_2026_08_20`, and a template exported from it is refused by
-  // the kind. An already-split slot is read back unchanged.
+  // string. This step once split them into `{ anchor, preset }` with the anchor
+  // still a serialized `PlRef`; data at this version has been found holding
+  // either shape, so both are left as they are and `Ver_2026_09_28` reads them.
+  .migrate<BlockData_Ver_2026_08_20>("Ver_2026_08_20", (prev) => ({ ...prev }))
+  // The anchor becomes the `PlRef` object itself, so nothing in the slot is a
+  // string that has to be parsed back. A slot whose anchor does not read as a
+  // reference is dropped; absent is exactly what "not initialized" means.
   .migrate<BlockData>("Ver_2026_09_28", (prev) => ({
     ...prev,
-    filtersInitializedForAnchor: readInitializedForAnchor(prev.filtersInitializedForAnchor),
-    rankingsInitializedForAnchor: readInitializedForAnchor(prev.rankingsInitializedForAnchor),
+    filtersInitializedForAnchor: readStoredInitializedForAnchor(prev.filtersInitializedForAnchor),
+    rankingsInitializedForAnchor: readStoredInitializedForAnchor(prev.rankingsInitializedForAnchor),
   }))
   // `params` is absent when a block is created by hand rather than from a
   // template, so every field the contract carries keeps its own default.
@@ -146,3 +147,46 @@ export const blockDataModel = new DataModelBuilder({ kind })
     preset: params?.preset,
     inVivoScoreRemovedNotice: undefined,
   }));
+
+/**
+ * Reads a slot stored at `Ver_2026_08_20` — the joined string or the split
+ * object with a serialized anchor — into the `{ anchor: PlRef, preset }` form.
+ *
+ * Takes `unknown` rather than the stored type: the slot has already been found
+ * holding a shape its declared type did not allow, so it is checked, not trusted.
+ *
+ * The joined string is split at the LAST `"::"`: a block id or column name can
+ * itself contain a colon, so a leftmost split would cut the anchor JSON in half.
+ * Its tail is the preset — `"none"` when none was selected.
+ *
+ * The anchor is rebuilt from its `blockId` and `name` alone, so a stray field
+ * the old serialization carried, such as `requireEnrichments`, does not survive.
+ */
+function readStoredInitializedForAnchor(stored: unknown): InitializedForAnchor | undefined {
+  const parts = storedSlotParts(stored);
+  if (parts === undefined) return undefined;
+
+  const parsed = parseJsonSafely(parts.anchor);
+  // `isPlRef` only demands the two fields be present, so their types are checked
+  // here too.
+  if (!isPlRef(parsed) || typeof parsed.blockId !== "string" || typeof parsed.name !== "string")
+    return undefined;
+
+  return {
+    anchor: createPlRef(parsed.blockId, parsed.name),
+    preset: parts.preset as InitializedForAnchor["preset"],
+  };
+}
+
+/** The anchor and preset halves of a stored slot, the anchor still serialized. */
+function storedSlotParts(stored: unknown): { anchor: string; preset: string } | undefined {
+  if (typeof stored === "string") {
+    const separator = stored.lastIndexOf("::");
+    if (separator < 0) return { anchor: stored, preset: "none" };
+    return { anchor: stored.slice(0, separator), preset: stored.slice(separator + 2) };
+  }
+  if (typeof stored !== "object" || stored === null) return undefined;
+  if (!("anchor" in stored) || !("preset" in stored)) return undefined;
+  const { anchor, preset } = stored;
+  return typeof anchor === "string" && typeof preset === "string" ? { anchor, preset } : undefined;
+}
