@@ -843,7 +843,10 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
 
     const sections: Array<{ type: "link"; href: `/${string}`; label: string }> = [
       { type: "link", href: "/", label: strings.titles.main },
-      { type: "link", href: "/umap", label: spaceLabel },
+      // Only offered once an upstream clonotype-space block has produced UMAP columns.
+      ...(umapPoolColumns(ctx) !== undefined
+        ? [{ type: "link" as const, href: "/umap" as const, label: spaceLabel }]
+        : []),
       { type: "link", href: "/selection", label: "Selection Plot" },
     ];
     // Gated on the columns, not on what produced them: an imported set has no V gene to bin by
