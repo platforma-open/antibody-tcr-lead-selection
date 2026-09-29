@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 5.2.2
+
+### Patch Changes
+
+- 3e6949a: Hide the Clonotype Space page when no upstream clonotype-space block has produced UMAP columns
+
 ## 5.2.1
 
 ### Patch Changes
