@@ -184,7 +184,8 @@ export function isProducedByLeadSelection(spec: PColumnSpec): boolean {
 /** Domain key a block stamps on columns it computed on a subset of its dataset. Its value is the
  *  subset column's result-pool id (see {@link anchorInitializedId}). */
 export const SUBSET_DOMAIN = "pl7.app/inputSubset";
-/** The earlier name of {@link SUBSET_DOMAIN}, still stamped by blocks published with it. */
+/** The earlier name of {@link SUBSET_DOMAIN}, still carried by columns from runs made before
+ *  the rename. */
 const LEGACY_SUBSET_DOMAIN = "pl7.app/subset";
 
 /** The subset a column or axis was computed on, read from its domain under either name
