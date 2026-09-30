@@ -183,7 +183,15 @@ export function isProducedByLeadSelection(spec: PColumnSpec): boolean {
 
 /** Domain key a block stamps on columns it computed on a subset of its dataset. Its value is the
  *  subset column's result-pool id (see {@link anchorInitializedId}). */
-export const SUBSET_DOMAIN = "pl7.app/subset";
+export const SUBSET_DOMAIN = "pl7.app/inputSubset";
+/** The earlier name of {@link SUBSET_DOMAIN}, still stamped by blocks published with it. */
+const LEGACY_SUBSET_DOMAIN = "pl7.app/subset";
+
+/** The subset a column or axis was computed on, read from its domain under either name
+ *  (undefined = full data). */
+export function inputSubsetOf(domain: Record<string, string> | undefined): string | undefined {
+  return domain?.[SUBSET_DOMAIN] ?? domain?.[LEGACY_SUBSET_DOMAIN];
+}
 
 /**
  * The columns this block may pick as automatic defaults when it runs on `subsetId` (undefined =
@@ -199,18 +207,18 @@ export function defaultsForSubset(
   columns: ColumnRecipe[],
   subsetId: string | undefined,
 ): ColumnRecipe[] {
-  const subsetOf = (c: ColumnRecipe) => c.getSpec().domain?.[SUBSET_DOMAIN];
+  const subsetOf = (c: ColumnRecipe) => inputSubsetOf(c.getSpec().domain);
   const allowed = columns.filter((c) => {
     const subset = subsetOf(c);
     return subset === undefined || subset === subsetId;
   });
   if (subsetId === undefined) return allowed;
   // Identity without the stamp: the full-data and subset versions of one column share it.
-  // Builds an identity string from the name plus the domain with pl7.app/subset removed.
+  // Builds an identity string from the name plus the domain with the subset stamp removed.
   const sansSubset = (c: ColumnRecipe) => {
     const spec = c.getSpec();
     const domain = Object.entries(spec.domain ?? {})
-      .filter(([key]) => key !== SUBSET_DOMAIN)
+      .filter(([key]) => key !== SUBSET_DOMAIN && key !== LEGACY_SUBSET_DOMAIN)
       .sort(([a], [b]) => a.localeCompare(b));
     return spec.name + JSON.stringify(domain);
   };

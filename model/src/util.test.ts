@@ -252,9 +252,9 @@ describe("defaultsForSubset", () => {
   const F = createGlobalPObjectId("labeling", "labels.F");
   const G = createGlobalPObjectId("labeling", "labels.G");
   let n = 0;
-  const scoreCol = (name: string, subset?: string) => {
+  const scoreCol = (name: string, subset?: string, subsetKey = "pl7.app/inputSubset") => {
     const domain: Record<string, string> = { "pl7.app/vdj/chain": "IGHeavy" };
-    if (subset !== undefined) domain["pl7.app/subset"] = subset;
+    if (subset !== undefined) domain[subsetKey] = subset;
     const spec = col({ name, valueType: "Double", domain, axesSpec: [clonotypeAxis] });
     return { id: `c${n++}`, getSpec: () => spec } as unknown as ColumnRecipe;
   };
@@ -284,6 +284,13 @@ describe("defaultsForSubset", () => {
     const full = scoreCol(REPERTOIRE);
     const onF = scoreCol(REPERTOIRE, F);
     expect(ids(defaultsForSubset([full], F))).toEqual([full.id]);
+    expect(ids(defaultsForSubset([full, onF], F))).toEqual([onF.id]);
+    expect(ids(defaultsForSubset([full, onF], undefined))).toEqual([full.id]);
+  });
+
+  test("the legacy pl7.app/subset stamp counts as the same subset", () => {
+    const full = scoreCol(LIABILITY);
+    const onF = scoreCol(LIABILITY, F, "pl7.app/subset");
     expect(ids(defaultsForSubset([full, onF], F))).toEqual([onF.id]);
     expect(ids(defaultsForSubset([full, onF], undefined))).toEqual([full.id]);
   });

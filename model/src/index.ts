@@ -42,6 +42,7 @@ import {
   anchorInitializedId,
   defaultClusteringSubset,
   inputKeyOf,
+  inputSubsetOf,
   isPeptideOrAmplicon,
   isPresenceOnlyColumn,
   ANCHORED_DISCOVERY,
@@ -788,7 +789,7 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
         }
         // A clustering run on a subset says which: two clusterings with the same settings
         // otherwise read the same.
-        const clusterSubset = clusterAxis.domain?.["pl7.app/subset"];
+        const clusterSubset = inputSubsetOf(clusterAxis.domain);
         if (clusterSubset !== undefined) {
           const subsetRef = parseJsonSafely<unknown>(clusterSubset);
           const subsetLabel = isPlRef(subsetRef)
