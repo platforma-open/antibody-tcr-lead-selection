@@ -39,6 +39,14 @@ const inputAnchorRef = computed(() => getInputAnchorRef(app.model.data));
 const inputKey = computed(() =>
   inputKeyOf(inputAnchorRef.value, getInputFilterRef(app.model.data)),
 );
+// After a dataset or filter change the filter/ranking defaults take a moment to recompute, and
+// arriving they replace whatever was added to the lists meanwhile.
+const defaultsPending = computed(
+  () =>
+    inputKey.value !== undefined &&
+    (app.model.outputs.filterConfig?.inputKey !== inputKey.value ||
+      app.model.outputs.rankingConfig?.inputKey !== inputKey.value),
+);
 
 const settingsOpen = ref(inputAnchorRef.value === undefined);
 const multipleSequenceAlignmentOpen = ref(false);
@@ -272,6 +280,10 @@ watch(
         clearable
         required
       />
+      <PlAlert v-if="defaultsPending" type="info" :style="{ width: '320px' }">
+        Computing the preset defaults for this dataset. Please wait a moment before editing filters
+        or ranking.
+      </PlAlert>
 
       <!-- Number of leads to select -->
       <PlNumberField
