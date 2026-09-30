@@ -2,7 +2,8 @@ import type { AxisSpec, ColumnRecipe, PColumnSpec } from "@platforma-sdk/model";
 import { canonicalizeAxisId, createGlobalPObjectId } from "@platforma-sdk/model";
 import { describe, expect, test } from "vitest";
 import {
-  isDatasetScopingSubset,
+  defaultsForSubset,
+  defaultClusteringSubset,
   isPresenceOnlyColumn,
   isRankableMatch,
   readInitializedForAnchor,
@@ -205,27 +206,6 @@ describe("isRankableMatch", () => {
   });
 });
 
-describe("isDatasetScopingSubset", () => {
-  test("a repertoire-labeling tag cannot scope a dataset", () => {
-    const tag = col({
-      name: "pl7.app/tag",
-      axesSpec: [clonotypeAxis],
-      domain: { "pl7.app/tag/name": "AAAAAAAAAAAAAAAAAAAAAAAA" },
-      annotations: { "pl7.app/label": "Strong binders", "pl7.app/isSubset": "true" },
-    });
-    expect(isDatasetScopingSubset(tag)).toBe(false);
-  });
-
-  test("a lead-selection subset can", () => {
-    const selected = col({
-      name: "pl7.app/lead-selection",
-      axesSpec: [clonotypeAxis],
-      annotations: { "pl7.app/label": "Selected Leads", "pl7.app/isSubset": "true" },
-    });
-    expect(isDatasetScopingSubset(selected)).toBe(true);
-  });
-});
-
 describe("readInitializedForAnchor", () => {
   const blockId = "f9212394-932e-49ff-8366-017b840d47e9";
   const name = "pf.chain_0/abundance_0";
@@ -265,5 +245,81 @@ describe("readInitializedForAnchor", () => {
     expect(readInitializedForAnchor({ anchor: canonical })).toBeUndefined();
     expect(readInitializedForAnchor(42)).toBeUndefined();
     expect(readInitializedForAnchor(undefined)).toBeUndefined();
+  });
+});
+
+describe("defaultsForSubset", () => {
+  const F = createGlobalPObjectId("labeling", "labels.F");
+  const G = createGlobalPObjectId("labeling", "labels.G");
+  let n = 0;
+  const scoreCol = (name: string, subset?: string, subsetKey = "pl7.app/inputSubset") => {
+    const domain: Record<string, string> = { "pl7.app/vdj/chain": "IGHeavy" };
+    if (subset !== undefined) domain[subsetKey] = subset;
+    const spec = col({ name, valueType: "Double", domain, axesSpec: [clonotypeAxis] });
+    return { id: `c${n++}`, getSpec: () => spec } as unknown as ColumnRecipe;
+  };
+  const ids = (cols: ColumnRecipe[]) => cols.map((c) => c.id);
+
+  const REPERTOIRE = "pl7.app/vdj/repertoireScore";
+  const LIABILITY = "pl7.app/vdj/developabilityScore";
+
+  test("full-data run: only full-data columns", () => {
+    const full = scoreCol(LIABILITY);
+    const onF = scoreCol(LIABILITY, F);
+    expect(ids(defaultsForSubset([full, onF], undefined))).toEqual([full.id]);
+  });
+
+  test("subset run: its own subset's column wins over the full-data one", () => {
+    const full = scoreCol(LIABILITY);
+    const onF = scoreCol(LIABILITY, F);
+    expect(ids(defaultsForSubset([full, onF], F))).toEqual([onF.id]);
+  });
+
+  test("subset run: a per-sequence column falls back to full data", () => {
+    const full = scoreCol(LIABILITY);
+    expect(ids(defaultsForSubset([full], F))).toEqual([full.id]);
+  });
+
+  test("subset run: the repertoire score also falls back to full data", () => {
+    const full = scoreCol(REPERTOIRE);
+    const onF = scoreCol(REPERTOIRE, F);
+    expect(ids(defaultsForSubset([full], F))).toEqual([full.id]);
+    expect(ids(defaultsForSubset([full, onF], F))).toEqual([onF.id]);
+    expect(ids(defaultsForSubset([full, onF], undefined))).toEqual([full.id]);
+  });
+
+  test("the legacy pl7.app/subset stamp counts as the same subset", () => {
+    const full = scoreCol(LIABILITY);
+    const onF = scoreCol(LIABILITY, F, "pl7.app/subset");
+    expect(ids(defaultsForSubset([full, onF], F))).toEqual([onF.id]);
+    expect(ids(defaultsForSubset([full, onF], undefined))).toEqual([full.id]);
+  });
+
+  test("a column computed on a different subset is never a default", () => {
+    const onG = scoreCol(LIABILITY, G);
+    expect(ids(defaultsForSubset([onG], F))).toEqual([]);
+    expect(ids(defaultsForSubset([onG], undefined))).toEqual([]);
+  });
+});
+
+describe("defaultClusteringSubset", () => {
+  const F = createGlobalPObjectId("labeling", "labels.F");
+  const G = createGlobalPObjectId("labeling", "labels.G");
+  test.for<{
+    available: (string | undefined)[];
+    subset: string | undefined;
+    expected: string | undefined;
+    why: string;
+  }>([
+    { available: [undefined, F], subset: undefined, expected: undefined, why: "full-data run" },
+    { available: [undefined, F], subset: F, expected: F, why: "subset run, own subset exists" },
+    {
+      available: [undefined, G],
+      subset: F,
+      expected: undefined,
+      why: "subset run, falls back to full data",
+    },
+  ])("$why", ({ available, subset, expected }) => {
+    expect(defaultClusteringSubset(available, subset)).toBe(expected);
   });
 });
