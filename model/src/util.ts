@@ -7,7 +7,6 @@ import {
   extractPObjectId,
   canonicalizeAxisId,
   isGlobalPObjectId,
-  isPColumnSpec,
   isPlRef,
   parseJsonSafely,
   readAnnotationJson,
@@ -15,7 +14,6 @@ import {
   type ColumnRecipe,
   type PColumnSpec,
   type PlRef,
-  type PObjectSpec,
   type PObjectId,
   type RelaxedColumnSelector,
 } from "@platforma-sdk/model";
@@ -49,6 +47,17 @@ import type {
 export function anchorInitializedId(ref: PlRef): InitializedForAnchor["anchor"] | undefined {
   const id = createGlobalPObjectId(ref.blockId, ref.name);
   return isGlobalPObjectId(id) ? id : undefined;
+}
+
+/** The input a run, a config or a list is for: the anchor plus its dataset filter, as canonical
+ *  column ids (undefined = no anchor). A different filter is a different input, as a different
+ *  anchor is. Outputs carry it so the UI can tell those computed for a previous input. */
+export function inputKeyOf(
+  anchor: PlRef | undefined,
+  filter: PlRef | undefined,
+): string | undefined {
+  if (!anchor) return undefined;
+  return `${anchorInitializedId(anchor) ?? ""}|${filter ? (anchorInitializedId(filter) ?? "") : ""}`;
 }
 
 /**
@@ -172,13 +181,52 @@ export function isProducedByLeadSelection(spec: PColumnSpec): boolean {
   );
 }
 
-/** Repertoire-labeling emits one such column per label. `PColumnName` has no entry for it. */
-const LABELING_TAG_COLUMN_NAME = "pl7.app/tag";
+/** Domain key a block stamps on columns it computed on a subset of its dataset. Its value is the
+ *  subset column's result-pool id (see {@link anchorInitializedId}). */
+export const SUBSET_DOMAIN = "pl7.app/subset";
 
-/** `pl7.app/isSubset` marks both a dataset restriction and a presence-only column. A labeling
- *  tag is only the second, so the dataset picker must not offer it. */
-export function isDatasetScopingSubset(spec: PObjectSpec): boolean {
-  return isPColumnSpec(spec) && spec.name !== LABELING_TAG_COLUMN_NAME;
+/**
+ * The columns this block may pick as automatic defaults when it runs on `subsetId` (undefined =
+ * the full dataset). Manual picks are not restricted; only the defaults follow the rule:
+ *
+ * - A column computed on a different subset is never a default: outside that subset it has no
+ *   values, so defaulting to it would silently rank or filter out everything else.
+ * - A full-data run takes only full-data columns.
+ * - A subset run prefers the column computed on its own subset, and falls back to the full-data
+ *   version of the same column.
+ */
+export function defaultsForSubset(
+  columns: ColumnRecipe[],
+  subsetId: string | undefined,
+): ColumnRecipe[] {
+  const subsetOf = (c: ColumnRecipe) => c.getSpec().domain?.[SUBSET_DOMAIN];
+  const allowed = columns.filter((c) => {
+    const subset = subsetOf(c);
+    return subset === undefined || subset === subsetId;
+  });
+  if (subsetId === undefined) return allowed;
+  // Identity without the stamp: the full-data and subset versions of one column share it.
+  // Builds an identity string from the name plus the domain with pl7.app/subset removed.
+  const sansSubset = (c: ColumnRecipe) => {
+    const spec = c.getSpec();
+    const domain = Object.entries(spec.domain ?? {})
+      .filter(([key]) => key !== SUBSET_DOMAIN)
+      .sort(([a], [b]) => a.localeCompare(b));
+    return spec.name + JSON.stringify(domain);
+  };
+  // get the equivalent full-data column identities of subset columns
+  const subsetVersions = new Set(allowed.filter((c) => subsetOf(c) === subsetId).map(sansSubset));
+  // Keep a full-data column only if no subset version with the same identity exists.
+  return allowed.filter((c) => subsetOf(c) !== undefined || !subsetVersions.has(sansSubset(c)));
+}
+
+/** Which clusterings may be the automatic diversification default on `subsetId`: those on the
+ * run's own subset if any, otherwise the full-data ones. */
+export function defaultClusteringSubset(
+  available: (string | undefined)[],
+  subsetId: string | undefined,
+): string | undefined {
+  return subsetId !== undefined && available.includes(subsetId) ? subsetId : undefined;
 }
 
 /**
@@ -399,7 +447,10 @@ export function getVisibleClusterAxes<T extends { id: unknown; spec: { axesSpec:
  * Relies on the ambient render ctx (set during output evaluation) for
  * `Column` / `ColumnsCollection` resolution — no `ctx` argument needed.
  */
-export function buildCollection(inputAnchor: PlRef | undefined):
+export function buildCollection(
+  inputAnchor: PlRef | undefined,
+  inputFilter?: PlRef,
+):
   | {
       collection: ColumnsCollection;
       anchorSpec: PColumnSpec;
@@ -441,9 +492,13 @@ export function buildCollection(inputAnchor: PlRef | undefined):
     return spec.annotations?.[Annotation.IsScore] === "true" && isOnAnchorAxes(spec, anchorSpec);
   });
 
-  // Compute defaults and presets
-  const defaultFilters = computeDefaultFilters(scores, inputAnchor);
-  const presets = computePresets(scores, defaultFilters, inputAnchor, anchorSpec);
+  // Compute defaults and presets, from the scores this run may default to (see defaultsForSubset).
+  const defaultCandidates = defaultsForSubset(
+    scores,
+    inputFilter && anchorInitializedId(inputFilter),
+  );
+  const defaultFilters = computeDefaultFilters(defaultCandidates, inputAnchor);
+  const presets = computePresets(defaultCandidates, defaultFilters, inputAnchor, anchorSpec);
 
   return {
     collection,

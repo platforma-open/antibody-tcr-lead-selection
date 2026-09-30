@@ -1,7 +1,11 @@
 <script setup lang="ts">
 import { PlMultiSequenceAlignment } from "@milaboratories/multi-sequence-alignment";
 import strings from "@milaboratories/strings";
-import { getInputAnchorRef } from "@platforma-open/milaboratories.top-antibodies.model";
+import {
+  getInputAnchorRef,
+  getInputFilterRef,
+  inputKeyOf,
+} from "@platforma-open/milaboratories.top-antibodies.model";
 import type { PlRef, PlSelectionModel } from "@platforma-sdk/model";
 import { createPlDataTableStateV2 } from "@platforma-sdk/model";
 import {
@@ -31,6 +35,10 @@ const app = useApp();
 // and downstream lookups all key off this — `data.input` is the opaque payload,
 // but the existing block logic still thinks in terms of "the anchor".
 const inputAnchorRef = computed(() => getInputAnchorRef(app.model.data));
+// The dataset together with its filter (see inputKeyOf): a string, so watchers compare by content.
+const inputKey = computed(() =>
+  inputKeyOf(inputAnchorRef.value, getInputFilterRef(app.model.data)),
+);
 
 const settingsOpen = ref(inputAnchorRef.value === undefined);
 const multipleSequenceAlignmentOpen = ref(false);
@@ -113,19 +121,21 @@ const selectedClusterColumnValue = computed<string | undefined>({
   },
 });
 
-// Clear diversificationColumn when inputAnchor changes (old value is invalid for new dataset)
-watch(inputAnchorRef, (newAnchor, oldAnchor) => {
-  if (oldAnchor && newAnchor && JSON.stringify(oldAnchor) !== JSON.stringify(newAnchor)) {
-    app.model.data.diversificationColumn = undefined;
-  }
-});
-
-// Auto-set default diversificationColumn when options become available
+// When the input (dataset or its filter) changes, clear diversificationColumn.
+// Then auto-set the default once options for the current input are available. The model marks
+// which clusterings qualify (`isDefault`).
 watch(
-  () => app.model.outputs.clusterColumnOptions,
-  (options) => {
-    if (options && options.length > 0 && !app.model.data.diversificationColumn) {
-      app.model.data.diversificationColumn = options[0].ref;
+  [inputKey, () => JSON.stringify(app.model.outputs.clusterColumnOptions ?? null)],
+  ([input], oldValues) => {
+    const oldInput = oldValues?.[0];
+    if (oldInput && input && input !== oldInput) {
+      app.model.data.diversificationColumn = undefined;
+    }
+    const options = app.model.outputs.clusterColumnOptions;
+    if (!options?.length || options[0].forInput !== input) return;
+    const defaultOption = options.find((o) => o.isDefault);
+    if (defaultOption && !app.model.data.diversificationColumn) {
+      app.model.data.diversificationColumn = defaultOption.ref;
     }
   },
   { immediate: true },
@@ -166,8 +176,9 @@ const selectedPresetValue = computed<string>({
   },
 });
 
-// Reset preset when inputAnchor or modality changes (clears stale presets when
-watch([inputAnchorRef, () => app.model.outputs.modality], () => {
+// Reset preset when the input (dataset or its filter) or the modality changes: a preset chosen
+// for one input is not assumed to fit another.
+watch([inputKey, () => app.model.outputs.modality], () => {
   app.model.data.preset = undefined;
 });
 

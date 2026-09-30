@@ -5,7 +5,10 @@ import type {
   PlTableFilter,
   ScopedColumnId,
 } from "@platforma-open/milaboratories.top-antibodies.model";
-import { getInputAnchorRef } from "@platforma-open/milaboratories.top-antibodies.model";
+import {
+  getInputAnchorRef,
+  getInputFilterRef,
+} from "@platforma-open/milaboratories.top-antibodies.model";
 import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from "@platforma-sdk/ui-vue";
 import { ref, toRaw } from "vue";
 import { useApp } from "../../app";
@@ -69,8 +72,10 @@ const resetToDefaults = () => {
 };
 
 // Use shared anchor sync logic
-useAnchorSyncedDefaults({
+const { configIsCurrent } = useAnchorSyncedDefaults({
   getAnchor: () => getInputAnchorRef(app.model.data),
+  // A different dataset filter is a different input: its defaults replace the lists.
+  getFilter: () => getInputFilterRef(app.model.data),
   getConfig: () => app.model.outputs.filterConfig,
   clearState: () => {
     app.model.data.filters = [];
@@ -151,7 +156,9 @@ useAnchorSyncedDefaults({
     <div class="d-flex flex-column gap-6">
       <PlBtnSecondary icon="add" @click="addFilter"> Add Filter </PlBtnSecondary>
 
-      <PlBtnSecondary icon="reverse" @click="resetToDefaults"> Reset to defaults </PlBtnSecondary>
+      <PlBtnSecondary icon="reverse" :disabled="!configIsCurrent" @click="resetToDefaults">
+        Reset to defaults
+      </PlBtnSecondary>
     </div>
   </div>
 </template>

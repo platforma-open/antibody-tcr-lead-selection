@@ -216,7 +216,7 @@ wf.body(func(args) {
             filterStageNames := utils.buildFilterStageNames(args.filters, columns)
 
             // Use ender.create to call the filter-clonotypes template
-            filterSampleResult := render.create(filterAndSampleTpl, {
+            filterSampleInputs := {
                 inputAnchor: args.inputAnchor,
                 cloneTable: cloneTable,
                 rankingOrder: args.rankingOrder,
@@ -231,7 +231,13 @@ wf.body(func(args) {
                 filterTraceLabel: filterTraceLabel,
                 filterStageNames: filterStageNames,
                 customBlockLabel: args.customBlockLabel
-            })
+            }
+            // With a dataset filter the export's trace roots in the filter (dataset -> the block
+            // that made the subset). Set only then, so an unfiltered run's inputs are unchanged.
+            if !is_undefined(inputFilterColumn) {
+                filterSampleInputs.traceSpec = inputFilterColumn.spec
+            }
+            filterSampleResult := render.create(filterAndSampleTpl, filterSampleInputs)
 
             // Get the filtered clonotypes from the template result
             outputs["sampledRows"] = filterSampleResult.output("sampledRows", 24 * 60 * 60 * 1000)

@@ -26,26 +26,27 @@ import {
   extractPObjectId,
   isDataColumn,
   isPColumnSpec,
+  isPlRef,
+  parseJsonSafely,
   type PObjectId,
 } from "@platforma-sdk/model";
 import {
   buildCollection,
   CLUSTER_ID_AXIS_NAMES,
-  dedupByLeafId,
-  discoveryExcludeSelectors,
   exactMatch,
   getInputAnchorRef,
   getInputFilterRef,
   getSpecByRef,
   hasGeneCalls,
   isClusterIdAxisName,
-  isDatasetScopingSubset,
+  anchorInitializedId,
+  defaultClusteringSubset,
+  inputKeyOf,
   isPeptideOrAmplicon,
   isPresenceOnlyColumn,
   ANCHORED_DISCOVERY,
   isProducedByLeadSelection,
   isRankableMatch,
-  isSelectableMatch,
   readInitializedForAnchor,
   recordSource,
   matchToColumnId,
@@ -62,6 +63,7 @@ export {
   getDefaultBlockLabel,
   getInputAnchorRef,
   getInputFilterRef,
+  inputKeyOf,
 } from "./util";
 export { blockDataModel } from "./dataModel";
 export type Href = InferHrefType<typeof platforma>;
@@ -286,7 +288,9 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
           rowAxis === "pl7.app/variantKey"
         );
       },
-      filter: isDatasetScopingSubset,
+      // `pl7.app/isSubset` also marks presence-only columns; any of them can scope the dataset.
+      // A tag picked here is left out of the filter list.
+      filter: isPColumnSpec,
     });
     if (!opts) return opts;
 
@@ -352,18 +356,17 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
   // Combined filter config - options and defaults together for atomic updates
   .output("filterConfig", (ctx) => {
     const inputAnchor = getInputAnchorRef(ctx.data);
-    const result = buildCollection(inputAnchor);
+    const inputFilter = getInputFilterRef(ctx.data);
+    const result = buildCollection(inputAnchor, inputFilter);
     if (!result) return undefined;
 
-    const filterableMatches = dedupByLeafId(
-      result.collection
-        .discover({
-          anchors: { main: result.anchorSpec },
-          ...ANCHORED_DISCOVERY,
-          exclude: discoveryExcludeSelectors(result.sampleAxisName),
-        })
-        .getColumns(),
-    ).filter(isSelectableMatch);
+    // The subset picked as the dataset filter already scopes the whole run, so it is not offered
+    // again as a filter here.
+    const datasetFilterId = inputFilter && anchorInitializedId(inputFilter);
+    const isDatasetFilter = (c: ColumnRecipe) =>
+      datasetFilterId !== undefined && extractPObjectId(c.id) === datasetFilterId;
+
+    const filterableMatches = result.meta.allMatches.filter((c) => !isDatasetFilter(c));
 
     const labels = deriveDistinctLabels(
       filterableMatches.map((c) => c.getSpec()),
@@ -383,6 +386,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
 
     return {
       options,
+      // The input these defaults were computed for (see inputKeyOf).
+      inputKey: inputKeyOf(inputAnchor, inputFilter),
       defaults: result.meta.defaultFilters,
       inVivoDefaults: result.meta.inVivoDefaults.filters,
       inVitroDefaults: result.meta.inVitroDefaults.filters,
@@ -393,26 +398,20 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
   // Combined ranking config - options and defaults together for atomic updates
   .output("rankingConfig", (ctx) => {
     const inputAnchor = getInputAnchorRef(ctx.data);
-    const result = buildCollection(inputAnchor);
+    const inputFilter = getInputFilterRef(ctx.data);
+    const result = buildCollection(inputAnchor, inputFilter);
     if (!result) return undefined;
 
-    // `type: "String"` is a valid ValueType, so the non-string filter goes
-    // host-side too — only File / lead-selection-produced survive to isSelectableMatch.
+    // The filterable matches minus String columns, which cannot be ranked.
     // `isRankableMatch` excludes presence-only columns. The test needs the anchor, so it
     // cannot run host-side.
     const rankedColumnIds = new Set<PObjectId>(
       ctx.data.rankingOrder.flatMap((r) => (r.value ? [r.value.column] : [])),
     );
 
-    const rankableMatches = dedupByLeafId(
-      result.collection
-        .discover({
-          anchors: { main: result.anchorSpec },
-          ...ANCHORED_DISCOVERY,
-          exclude: [...discoveryExcludeSelectors(result.sampleAxisName), { type: "String" }],
-        })
-        .getColumns(),
-    ).filter((c) => isRankableMatch(c, result.anchorSpec, rankedColumnIds));
+    const rankableMatches = result.meta.allMatches
+      .filter((c) => c.getSpec().valueType !== "String")
+      .filter((c) => isRankableMatch(c, result.anchorSpec, rankedColumnIds));
 
     const labels = deriveDistinctLabels(
       rankableMatches.map((c) => c.getSpec()),
@@ -425,27 +424,14 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
 
     return {
       options,
+      // See filterConfig.
+      inputKey: inputKeyOf(inputAnchor, inputFilter),
       defaults: result.meta.defaultRankingOrder,
       inVivoDefaults: result.meta.inVivoDefaults.rankingOrder,
       inVitroDefaults: result.meta.inVitroDefaults.rankingOrder,
       inPeptideDefaults: result.meta.inPeptideDefaults.rankingOrder,
     };
   })
-
-  .output(
-    "presetConfig",
-    (ctx) => {
-      const result = buildCollection(getInputAnchorRef(ctx.data));
-      if (!result) return undefined;
-
-      return {
-        detectedPreset: result.meta.detectedPreset,
-        hasRepertoireScore: result.meta.hasRepertoireScore,
-        hasEnrichmentScores: result.meta.hasEnrichmentScores,
-      };
-    },
-    { retentive: true },
-  )
 
   .outputWithStatus("pf", (ctx) => {
     const anchor = getInputAnchorRef(ctx.data);
@@ -709,15 +695,6 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     );
   })
 
-  .output("hasClusterData", (ctx) => {
-    const result = buildCollection(getInputAnchorRef(ctx.data));
-    if (!result) return false;
-
-    return result.meta.allMatches.some((m) =>
-      m.getSpec().axesSpec.some((a) => isClusterIdAxisName(a.name)),
-    );
-  })
-
   .output("clusterColumnOptions", (ctx) => {
     const anchor = getInputAnchorRef(ctx.data);
     if (anchor === undefined) return undefined;
@@ -739,7 +716,17 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     // Get linker columns using the same iteration order as util.ts.
     // `getOptions` preserves the `PlRef` wire shape the UI + workflow consume
     // (diversificationColumn is a PlRef), so it stays the entry point here.
-    const options: Array<{ label: string; ref: PlRef }> = [];
+    // `isDefault`: may be the automatic diversification default (see defaultClusteringSubset).
+    // `forInput`: the input these options were computed for (see inputKeyOf).
+    const options: Array<{
+      label: string;
+      ref: PlRef;
+      isDefault: boolean;
+      forInput: string | undefined;
+    }> = [];
+    const inputFilter = getInputFilterRef(ctx.data);
+    const subsetId = inputFilter && anchorInitializedId(inputFilter);
+    const optionSubsets: (string | undefined)[] = [];
 
     for (const idx of [0, 1]) {
       let axesToMatch;
@@ -799,9 +786,31 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
         } catch {
           /* use default */
         }
-        options.push({ label, ref: link.ref });
+        // A clustering run on a subset says which: two clusterings with the same settings
+        // otherwise read the same.
+        const clusterSubset = clusterAxis.domain?.["pl7.app/subset"];
+        if (clusterSubset !== undefined) {
+          const subsetRef = parseJsonSafely<unknown>(clusterSubset);
+          const subsetLabel = isPlRef(subsetRef)
+            ? getSpecByRef(subsetRef)?.annotations?.[Annotation.Label]
+            : undefined;
+          if (subsetLabel) label = `${label} / ${subsetLabel}`;
+        }
+        options.push({
+          label,
+          ref: link.ref,
+          isDefault: false,
+          forInput: inputKeyOf(anchor, inputFilter),
+        });
+        optionSubsets.push(clusterSubset);
       }
     }
+
+    // Mark the automatic diversification default. `undefined` stands for full data here: a
+    // full-data run defaults to full-data clusterings; a subset run to its own subset's, or to
+    // the full-data ones when it has none.
+    const defaultSubset = defaultClusteringSubset(optionSubsets, subsetId);
+    options.forEach((o, i) => (o.isDefault = optionSubsets[i] === defaultSubset));
 
     return options.length > 0 ? options : undefined;
   })

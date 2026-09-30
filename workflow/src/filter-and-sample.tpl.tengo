@@ -155,7 +155,9 @@ self.body(func(inputs) {
     if is_undefined(traceLabel) || traceLabel == "" {
         traceLabel = "Selected Leads"
     }
-    trace := pSpec.makeTrace(datasetSpec,
+    // A dataset-filtered run roots the trace in the filter, so the export names the subset.
+    traceSpec := is_undefined(inputs.traceSpec) ? datasetSpec : inputs.traceSpec
+    trace := pSpec.makeTrace(traceSpec,
         {
             type: "milaboratories.antibody-tcr-lead-selection",
             importance: 30,
