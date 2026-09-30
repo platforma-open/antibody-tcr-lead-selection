@@ -61,6 +61,7 @@ const multipleSequenceAlignmentOpen = ref(false);
 <template>
   <PlBlockPage no-body-gutters>
     <GraphMaker
+      data-testid="umap-chart"
       v-model="app.model.data.graphStateUMAP"
       v-model:selection="selection"
       chartType="scatterplot-umap"
@@ -75,6 +76,7 @@ const multipleSequenceAlignmentOpen = ref(false);
       <template #titleLineSlot>
         <PlBtnGhost
           v-if="!app.model.outputs.isPeptide"
+          data-testid="open-msa"
           icon="dna"
           @click.stop="() => (multipleSequenceAlignmentOpen = true)"
         >
@@ -84,6 +86,7 @@ const multipleSequenceAlignmentOpen = ref(false);
     </GraphMaker>
     <PlSlideModal
       v-model="multipleSequenceAlignmentOpen"
+      data-testid="msa-panel"
       width="100%"
       :close-on-outside-click="false"
     >

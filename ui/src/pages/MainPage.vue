@@ -225,12 +225,19 @@ watch(
     <template #append>
       <PlBtnGhost
         v-if="!app.model.outputs.isPeptide"
+        data-testid="open-msa"
         icon="dna"
         @click.stop="() => (multipleSequenceAlignmentOpen = true)"
       >
         Multiple Sequence Alignment
       </PlBtnGhost>
-      <PlBtnGhost icon="settings" @click.stop="() => (settingsOpen = true)"> Settings </PlBtnGhost>
+      <PlBtnGhost
+        data-testid="open-settings"
+        icon="settings"
+        @click.stop="() => (settingsOpen = true)"
+      >
+        Settings
+      </PlBtnGhost>
     </template>
     <PlAlert v-model="inVivoScoreNoticeVisible" type="warn" label="In Vivo Score removed" closeable>
       From this version on, Lead Selection no longer computes its own In Vivo Score, and the ranking
@@ -242,6 +249,7 @@ watch(
     </PlAlert>
     <PlAgDataTableV2
       v-model="app.model.data.tableState"
+      data-testid="leads-table"
       v-model:selection="selection"
       :settings="tableSettings"
       :not-ready-text="strings.callToActions.configureSettingsAndRun"
@@ -249,12 +257,17 @@ watch(
       show-export-button
       disable-filters-panel
     />
-    <PlSlideModal v-model="settingsOpen" :close-on-outside-click="true">
+    <PlSlideModal
+      v-model="settingsOpen"
+      data-testid="settings-panel"
+      :close-on-outside-click="true"
+    >
       <template #title>Settings</template>
 
       <!-- First element: Select dataset (with optional filter dropdown) -->
       <PlDatasetSelector
         v-model="app.model.data.input"
+        data-testid="settings-dataset"
         :options="app.model.outputs.datasetOptions"
         :style="{ width: '320px' }"
         label="Select dataset"
@@ -265,6 +278,7 @@ watch(
       <!-- Number of leads to select -->
       <PlNumberField
         v-model="app.model.data.topClonotypes"
+        data-testid="settings-number-of-sequences"
         :style="{ width: '320px' }"
         label="Number of sequences to select"
         :step="1"
@@ -276,6 +290,7 @@ watch(
       <!-- Workflow preset selector -->
       <PlDropdown
         v-model="selectedPresetValue"
+        data-testid="settings-preset"
         :options="presetOptions"
         :style="{ width: '320px' }"
         label="Workflow preset"
@@ -348,6 +363,7 @@ watch(
     </PlSlideModal>
     <PlSlideModal
       v-model="multipleSequenceAlignmentOpen"
+      data-testid="msa-panel"
       width="100%"
       :close-on-outside-click="false"
     >

@@ -47,6 +47,7 @@ const defaultOptions = computed((): PredefinedGraphOption<"discrete">[] => {
 <template>
   <PlBlockPage no-body-gutters>
     <GraphMaker
+      data-testid="spectratype-chart"
       v-model="app.model.data.cdr3StackedBarPlotState"
       chartType="discrete"
       :p-frame="app.model.outputs.spectratypePf"

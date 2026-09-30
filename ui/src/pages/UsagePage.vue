@@ -47,6 +47,7 @@ const defaultOptions = computed((): PredefinedGraphOption<"heatmap">[] => {
 
 <template>
   <GraphMaker
+    data-testid="usage-chart"
     v-model="app.model.data.vjUsagePlotState"
     chart-type="heatmap"
     :p-frame="app.model.outputs.vjUsagePf"

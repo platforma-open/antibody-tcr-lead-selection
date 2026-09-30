@@ -26,6 +26,7 @@ const defaultOptions = computed((): PredefinedGraphOption<"selection">[] => {
 <template>
   <PlBlockPage no-body-gutters>
     <GraphMaker
+      data-testid="selection-chart"
       v-model="app.model.data.selectionPlotState"
       chartType="selection"
       :p-frame="app.model.outputs.selectionStagePf"
