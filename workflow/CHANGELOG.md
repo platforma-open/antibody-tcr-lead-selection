@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.workflow
 
+## 5.3.0
+
+### Minor Changes
+
+- f1d6511: Scale the filter step's memory with the clone table size (32x the parquet, 16-128 GiB) so larger datasets fit in memory
+
 ## 5.2.0
 
 ### Minor Changes
