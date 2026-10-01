@@ -35,7 +35,7 @@ self.body(func(inputs) {
         resources({ onCPU: {
             cpu: 1,
             ram: f.size("cloneTable").times(32).
-                between(f.gib(16), f.gib(64)).
+                between(f.gib(16), f.gib(128)).
                 staticFallback(f.gib(16))
         } }).
         addFile("clonotypes.parquet", cloneTable, { tag: "cloneTable" }).
