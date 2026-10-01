@@ -10,6 +10,8 @@ sampledExportConv := import(":sampled-export-conv")
 selectionStageConv := import(":selection-stage-conv")
 json := import("json")
 
+f := exec.formula
+
 self.defineOutputs("sampledRows", "finalClonotypes", "sampledColumnsExport", "selectionStagePf")
 
 self.body(func(inputs) {
@@ -25,12 +27,18 @@ self.body(func(inputs) {
     outputs := {}
     finalClonotypes := undefined
 
-    // Run filtering script with selection stage tracking
+    // Run filtering script with selection stage tracking.
+    // filter.py loads the whole clone table eagerly, so memory scales with its size:
+    // measured peak is 15-24x the compressed parquet; 32x leaves room for polars threads.
     filterBuilder := exec.builder().
         software(assets.importSoftware("@platforma-open/milaboratories.top-antibodies.sample-clonotypes:filter")).
-        mem("16GiB").
-        cpu(1).
-        addFile("clonotypes.parquet", cloneTable).
+        resources({ onCPU: {
+            cpu: 1,
+            ram: f.size("cloneTable").times(32).
+                between(f.gib(16), f.gib(128)).
+                staticFallback(f.gib(16))
+        } }).
+        addFile("clonotypes.parquet", cloneTable, { tag: "cloneTable" }).
         arg("--parquet").arg("clonotypes.parquet").
         arg("--out").arg("filteredClonotypes.parquet").
         arg("--filter-map").arg(string(json.encode(filterMap))).
