@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 4.6.1
+
+### Patch Changes
+
+- b80df8b: Name Lineage Trees clusterings in the diversification dropdown by their own label instead of "Cluster".
+
 ## 4.6.0
 
 ### Minor Changes
