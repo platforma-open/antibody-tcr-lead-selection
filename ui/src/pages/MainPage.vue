@@ -101,6 +101,15 @@ const inVivoScoreNoticeVisible = computed<boolean>({
   },
 });
 
+// One-time notice for projects that had a ranking before it became a weighted
+// score. Dismissing it clears the flag for good.
+const balancedRankingNoticeVisible = computed<boolean>({
+  get: () => app.model.data.balancedRankingNotice === true,
+  set: (v: boolean) => {
+    if (!v) app.model.data.balancedRankingNotice = false;
+  },
+});
+
 // Special value for "No diversification" option
 const NO_DIVERSIFICATION_VALUE = "__no_diversification__";
 
@@ -259,6 +268,17 @@ watch(
       From this version on, Lead Selection no longer computes its own In Vivo Score, and the ranking
       column using it has been removed from this project. The score is now produced by the
       Repertoire Score block — add it upstream and rank by its Repertoire Score column instead.
+    </PlAlert>
+    <PlAlert
+      v-model="balancedRankingNoticeVisible"
+      type="warn"
+      label="Ranking now combines every criterion"
+      closeable
+    >
+      Ranking used to apply each criterion in order, the second one separating only the sequences
+      that tied exactly on the first. It now computes one combined score per sequence, in which each
+      criterion counts in proportion to its weight. Re-running this project will select a different
+      set of leads. Weights are set in Settings, beside each ranking criterion.
     </PlAlert>
     <PlAlert v-if="app.model.outputs.kabatWarning" type="warn">
       {{ app.model.outputs.kabatWarning }}

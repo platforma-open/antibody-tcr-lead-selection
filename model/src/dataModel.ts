@@ -13,6 +13,7 @@ import type {
   BlockData_Ver_2026_05_21,
   BlockData_Ver_2026_07_28,
   BlockData_Ver_2026_08_20,
+  BlockData_Ver_2026_10_02,
   LegacyBlockArgs,
   LegacyUiState,
 } from "./types";
@@ -109,10 +110,18 @@ export const blockDataModel = new DataModelBuilder({ kind })
   }))
   // Every stored ranking row gains a weight; a list with none is read as a priority order
   // and gets descending weights. See `withRankingWeights`.
-  .migrate<BlockData>("Ver_2026_10_02", (prev) => ({
+  .migrate<BlockData_Ver_2026_10_02>("Ver_2026_10_02", (prev) => ({
     ...prev,
     rankingOrder: withRankingWeights(prev.rankingOrder),
   }))
+  // Ranking is one weighted score now, not a priority order, so a project with a
+  // stored ranking selects a different set of leads on its next run. Flag the
+  // one-time notice for those projects only. Its own version rather than an
+  // amendment of `Ver_2026_10_02`: projects already migrated to that version
+  // would otherwise never see it.
+  .migrate<BlockData>("Ver_2026_10_05", (prev) =>
+    prev.rankingOrder.length > 0 ? { ...prev, balancedRankingNotice: true } : { ...prev },
+  )
   // `params` is absent when a block is created by hand rather than from a
   // template, so every field the contract carries keeps its own default.
   .init(({ params }) => ({
@@ -153,4 +162,5 @@ export const blockDataModel = new DataModelBuilder({ kind })
     rankingsInitializedForAnchor: params?.rankingsInitializedForAnchor,
     preset: params?.preset,
     inVivoScoreRemovedNotice: undefined,
+    balancedRankingNotice: undefined,
   }));

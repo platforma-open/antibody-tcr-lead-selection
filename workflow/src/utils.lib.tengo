@@ -478,7 +478,7 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec, inputFilterCol
                 
                 cloneTable.add(columns.getColumn(col.value.column), {header: header})
                 addedCols = true
-                rankingMap[header] = col.rankingOrder
+                rankingMap[header] = {direction: col.rankingOrder, weight: col.weightNorm}
             }
         }
     }

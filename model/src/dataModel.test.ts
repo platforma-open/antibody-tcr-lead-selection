@@ -100,3 +100,19 @@ describe("ranking weight migration", () => {
     ).not.toThrow();
   });
 });
+
+describe("balanced ranking notice", () => {
+  /** Runs stored data through the chain from the version it was left at. */
+  const notice = (version: string, data: unknown) =>
+    blockDataModel.migrate({ version, data }).data.balancedRankingNotice;
+
+  test("a project with a stored ranking is told its results will change", () => {
+    expect(
+      notice("Ver_2026_10_02", { rankingOrder: [{ rankingOrder: "decreasing", weight: 1 }] }),
+    ).toBe(true);
+  });
+
+  test("a project that never ranked anything is not", () => {
+    expect(notice("Ver_2026_10_02", { rankingOrder: [] })).toBeUndefined();
+  });
+});

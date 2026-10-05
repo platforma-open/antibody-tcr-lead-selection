@@ -229,8 +229,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
   // `isExpanded`) stay behind.
   //
   // View state — the table, the four graphs, the alignment model — never
-  // crosses, nor does `inVivoScoreRemovedNotice`, which a migration sets for a
-  // project that lost the built-in in-vivo score. The two
+  // crosses, nor do the two one-time notice flags, which migrations set for the
+  // stored projects they affected and not for a project built here. The two
   // `…InitializedForAnchor` slots do cross, and they carry their weight: each
   // holds a bare stringified anchor beside the preset it was applied under, so
   // relocation rewrites the anchor while leaving the preset alone, and the
