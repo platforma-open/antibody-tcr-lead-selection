@@ -185,8 +185,12 @@ const selectedPresetValue = computed<string>({
 });
 
 // Reset preset when the input (dataset or its filter) or the modality changes: a preset chosen
-// for one input is not assumed to fit another.
-watch([inputKey, () => app.model.outputs.modality], () => {
+// for one input is not assumed to fit another. `modality` is undefined while the outputs
+// resolve, on mount and again whenever the pack is updated; those transitions are not a change
+// of modality, and resetting on them wipes the preset and with it the ranking and filter lists.
+watch([inputKey, () => app.model.outputs.modality], ([key, modality], [prevKey, prevModality]) => {
+  const hydrating = modality === undefined || prevModality === undefined;
+  if (key === prevKey && hydrating) return;
   app.model.data.preset = undefined;
 });
 
