@@ -12,10 +12,11 @@ import type {
   BlockData_Ver_2026_05_08,
   BlockData_Ver_2026_05_21,
   BlockData_Ver_2026_07_28,
+  BlockData_Ver_2026_08_20,
   LegacyBlockArgs,
   LegacyUiState,
 } from "./types";
-import { getDefaultBlockLabel, readInitializedForAnchor } from "./util";
+import { getDefaultBlockLabel, readInitializedForAnchor, withRankingWeights } from "./util";
 
 const defaultSelectionPlotState = (): BlockData["selectionPlotState"] => ({
   title: "Selection Plot",
@@ -93,7 +94,7 @@ export const blockDataModel = new DataModelBuilder({ kind })
   // string; they are two fields now, so the anchor half stays a bare stringified
   // `PlRef` — canonically serialized, since that is what relocates and what the
   // UI compares against. See `readInitializedForAnchor`.
-  .migrate<BlockData>("Ver_2026_08_20", (prev) => ({
+  .migrate<BlockData_Ver_2026_08_20>("Ver_2026_08_20", (prev) => ({
     ...prev,
     filtersInitializedForAnchor: readInitializedForAnchor(prev.filtersInitializedForAnchor),
     rankingsInitializedForAnchor: readInitializedForAnchor(prev.rankingsInitializedForAnchor),
@@ -101,10 +102,16 @@ export const blockDataModel = new DataModelBuilder({ kind })
   // The same split, run again: stored data has been seen still holding the joined
   // string after `Ver_2026_08_20`, and a template exported from it is refused by
   // the kind. An already-split slot is read back unchanged.
-  .migrate<BlockData>("Ver_2026_09_28", (prev) => ({
+  .migrate<BlockData_Ver_2026_08_20>("Ver_2026_09_28", (prev) => ({
     ...prev,
     filtersInitializedForAnchor: readInitializedForAnchor(prev.filtersInitializedForAnchor),
     rankingsInitializedForAnchor: readInitializedForAnchor(prev.rankingsInitializedForAnchor),
+  }))
+  // Every stored ranking row gains a weight; a list with none is read as a priority order
+  // and gets descending weights. See `withRankingWeights`.
+  .migrate<BlockData>("Ver_2026_10_02", (prev) => ({
+    ...prev,
+    rankingOrder: withRankingWeights(prev.rankingOrder),
   }))
   // `params` is absent when a block is created by hand rather than from a
   // template, so every field the contract carries keeps its own default.
@@ -114,7 +121,8 @@ export const blockDataModel = new DataModelBuilder({ kind })
     input: params?.input,
     topClonotypes: params?.topClonotypes ?? 100,
     kabatNumbering: params?.kabatNumbering,
-    rankingOrder: params?.rankingOrder ?? [],
+    // A template's rows may predate weights, so fill them as the migration does.
+    rankingOrder: withRankingWeights(params?.rankingOrder ?? []),
     filters: params?.filters ?? [],
     diversificationColumn: params?.diversificationColumn,
     tableState: createPlDataTableStateV2(),

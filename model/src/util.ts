@@ -23,7 +23,9 @@ import type {
   InitializedForAnchor,
   PlTableFiltersDefault,
   RankingOrder,
+  RankingOrderUI,
   ScopedColumnId,
+  WeightedRankingOrderUI,
   WorkflowPreset,
 } from "./types";
 
@@ -292,6 +294,70 @@ export function isRankableMatch(
   if (!isSelectableMatch(c)) return false;
   if (rankedColumnIds.has(extractPObjectId(c.id))) return true;
   return !isPresenceOnlyColumn(c.getSpec(), anchorSpec);
+}
+
+/** Weight a ranking row gets when nothing has set one. */
+export const DEFAULT_RANKING_WEIGHT = 1;
+
+/**
+ * Fills in the weight of every ranking row that has none.
+ *
+ * A list where no row has one predates weights, so its order was its priority: it gets
+ * descending weights `n, n - 1, …, 1`. Rows beside already-weighted ones get the default.
+ */
+export function withRankingWeights(
+  rows: readonly RankingOrderUI[] | undefined,
+): WeightedRankingOrderUI[] {
+  if (!Array.isArray(rows)) return [];
+  const noneWeighted = rows.every((row) => row.weight === undefined);
+  return rows.map((row, i) => ({
+    ...row,
+    weight: row.weight ?? (noneWeighted ? rows.length - i : DEFAULT_RANKING_WEIGHT),
+  }));
+}
+
+/** Each weight as a fraction of all of them: `w / Σw`. Zero-sum lists read as equal. */
+export function normalizeWeights(weights: readonly number[]): number[] {
+  const total = weights.reduce((sum, w) => sum + w, 0);
+  if (!(total > 0)) return weights.map(() => 1 / weights.length);
+  return weights.map((w) => w / total);
+}
+
+/** Whether a ranking metric describes one record or a whole cluster of them.
+ * The record label comes from the detected modality: Peptide, Variant, Clonotype, or Sequence.
+ */
+export type RankingLevel = "clonotype" | "cluster";
+
+/**
+ * Which level a ranking metric acts on: cluster-level when its axes do not include the
+ * anchor's record axis.
+ */
+export function rankingLevelOf(spec: PColumnSpec, anchorSpec: PColumnSpec): RankingLevel {
+  const recordAxisName = anchorSpec.axesSpec[1]?.name;
+  if (recordAxisName === undefined) return "clonotype";
+  return spec.axesSpec.some((axis) => axis.name === recordAxisName) ? "clonotype" : "cluster";
+}
+
+/** What one record is called: Clonotype, Peptide, Variant, or Sequence when unplaceable. */
+export function recordLabel(anchorSpec: PColumnSpec): string {
+  switch (recordSource(anchorSpec)) {
+    case "peptide":
+      return "Peptide";
+    case "amplicon":
+      return "Variant";
+    case "vdj":
+      return "Clonotype";
+    default:
+      return "Sequence";
+  }
+}
+
+/**
+ * What each level is called, for this dataset. Model-side because `PlDropdown` reads its
+ * `group` off the option itself.
+ */
+export function rankingLevelLabels(anchorSpec: PColumnSpec): Record<RankingLevel, string> {
+  return { cluster: "Cluster", clonotype: recordLabel(anchorSpec) };
 }
 
 /**
@@ -690,9 +756,12 @@ function computePresets(
       rankingOrder:
         (s.getSpec().annotations?.[Annotation.Score.RankingOrder] as "increasing" | "decreasing") ??
         "decreasing",
+      weight: DEFAULT_RANKING_WEIGHT,
       isExpanded: false,
     }));
 
+  // Equal weights. The Repertoire Score keeps the front row below, but row order no
+  // longer affects the score.
   if (repertoireScore) {
     defaultRankingOrder.unshift({
       value: matchToColumnId(repertoireScore, anchorRef),
@@ -700,6 +769,7 @@ function computePresets(
         (repertoireScore.getSpec().annotations?.["pl7.app/score/rankingOrder"] as
           | "increasing"
           | "decreasing") ?? "decreasing",
+      weight: DEFAULT_RANKING_WEIGHT,
     });
   }
 

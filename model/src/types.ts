@@ -110,7 +110,12 @@ export type BlockData_Ver_2026_08_20 = Omit<
   rankingsInitializedForAnchor?: InitializedForAnchor;
 };
 
-export type BlockData = BlockData_Ver_2026_08_20;
+export type BlockData_Ver_2026_10_02 = Omit<BlockData_Ver_2026_08_20, "rankingOrder"> & {
+  /** Ranking rows, every one carrying a weight — `.init` and `Ver_2026_10_02` fill it in. */
+  rankingOrder: WeightedRankingOrderUI[];
+};
+
+export type BlockData = BlockData_Ver_2026_10_02;
 
 export type BlockArgs = {
   defaultBlockLabel: string;
@@ -123,17 +128,30 @@ export type BlockArgs = {
    */
   inputFilter?: PlRef;
   topClonotypes: number;
-  rankingOrder: RankingOrder[];
+  rankingOrder: RankingOrderArg[];
   filters: Filter[];
   kabatNumbering?: boolean;
   /** Selected linker column for diversified ranking (grouping by cluster). undefined = no diversification */
   diversificationColumn?: PlRef;
 };
 
+/**
+ * A ranking row as the workflow receives it. `weightNorm` is the normalized weight, not the
+ * raw one: scaling every weight means the same ranking, so sending raw values would restale
+ * the block for an edit that changes nothing.
+ */
+export type RankingOrderArg = {
+  value?: ScopedColumnId;
+  rankingOrder: "increasing" | "decreasing";
+  weightNorm: number;
+};
+
 export type RankingOrderUI = RankingOrder & {
   id?: string;
   isExpanded?: boolean;
 };
+
+export type WeightedRankingOrderUI = RankingOrderUI & { weight: number };
 
 export type FilterUI = Filter & {
   id?: string;

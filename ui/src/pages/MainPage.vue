@@ -268,19 +268,18 @@ watch(
       show-export-button
       disable-filters-panel
     />
-    <PlSlideModal v-model="settingsOpen" :close-on-outside-click="true">
+    <PlSlideModal v-model="settingsOpen" :close-on-outside-click="true" width="40%">
       <template #title>Settings</template>
 
       <!-- First element: Select dataset (with optional filter dropdown) -->
       <PlDatasetSelector
         v-model="app.model.data.input"
         :options="app.model.outputs.datasetOptions"
-        :style="{ width: '320px' }"
         label="Select dataset"
         clearable
         required
       />
-      <PlAlert v-if="defaultsPending" type="info" :style="{ width: '320px' }">
+      <PlAlert v-if="defaultsPending" type="info">
         Computing the preset defaults for this dataset. Please wait a moment before editing filters
         or ranking.
       </PlAlert>
@@ -288,7 +287,6 @@ watch(
       <!-- Number of leads to select -->
       <PlNumberField
         v-model="app.model.data.topClonotypes"
-        :style="{ width: '320px' }"
         label="Number of sequences to select"
         :step="1"
         :error-message="validateTopClonotypes(app.model.data.topClonotypes)"
@@ -297,12 +295,7 @@ watch(
       </PlNumberField>
 
       <!-- Workflow preset selector -->
-      <PlDropdown
-        v-model="selectedPresetValue"
-        :options="presetOptions"
-        :style="{ width: '320px' }"
-        label="Workflow preset"
-      >
+      <PlDropdown v-model="selectedPresetValue" :options="presetOptions" label="Workflow preset">
         <template #tooltip>
           Pre-configured ranking for common discovery workflows.
           <br /><br />
@@ -327,23 +320,24 @@ watch(
           app.model.outputs.clusterColumnOptions.length > 0
         "
       >
-        <PlRow>
-          Diversify by:
-          <PlTooltip>
-            <PlIcon16 name="info" />
-            <template #tooltip
-              >Defines how sequences are grouped to ensure diversity in the selected
-              panel.</template
-            >
-          </PlTooltip>
-        </PlRow>
+        <div class="diversify-group d-flex flex-column gap-6">
+          <PlRow>
+            Diversify by:
+            <PlTooltip>
+              <PlIcon16 name="info" />
+              <template #tooltip
+                >Defines how sequences are grouped to ensure diversity in the selected
+                panel.</template
+              >
+            </PlTooltip>
+          </PlRow>
 
-        <PlDropdown
-          v-model="selectedClusterColumnValue"
-          :options="clusterColumnOptionsWithNone"
-          :style="{ width: '320px' }"
-          label="Cluster for diversification"
-        />
+          <PlDropdown
+            v-model="selectedClusterColumnValue"
+            :options="clusterColumnOptionsWithNone"
+            label="Cluster for diversification"
+          />
+        </div>
       </template>
 
       <RankList />
@@ -364,7 +358,6 @@ watch(
       <PlAlert
         v-if="app.model.data.rankingOrder.some((order) => order.value === undefined)"
         type="warn"
-        :style="{ width: '320px' }"
       >
         {{ "Warning: Please remove or assign values to empty ranking columns" }}
       </PlAlert>
@@ -384,3 +377,15 @@ watch(
     </PlSlideModal>
   </PlBlockPage>
 </template>
+
+<style scoped>
+/*
+ * Rules around the diversification block. Borders on the group rather than two
+ * `PlSectionSeparator`s, which as separate flex children would each add the modal's 24px gap.
+ */
+.diversify-group {
+  padding-block: 12px;
+  border-top: 1px solid var(--border-color-div-grey);
+  border-bottom: 1px solid var(--border-color-div-grey);
+}
+</style>

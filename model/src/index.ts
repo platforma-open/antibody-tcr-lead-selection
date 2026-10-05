@@ -48,12 +48,18 @@ import {
   ANCHORED_DISCOVERY,
   isProducedByLeadSelection,
   isRankableMatch,
+  rankingLevelLabels,
+  rankingLevelOf,
   readInitializedForAnchor,
   recordSource,
   matchToColumnId,
 } from "./util";
 import { kind } from "@platforma-open/milaboratories.top-antibodies.kind";
-import { convertFilterUI, convertRankingOrderUI } from "./converters";
+import {
+  convertFilterUI,
+  convertRankingOrderUI,
+  convertRankingOrderUIForParams,
+} from "./converters";
 import { blockDataModel } from "./dataModel";
 import type { BlockArgs, BlockData } from "./types";
 
@@ -61,11 +67,14 @@ export * from "./types";
 export * from "./converters";
 export {
   anchorInitializedId,
+  DEFAULT_RANKING_WEIGHT,
   getDefaultBlockLabel,
   getInputAnchorRef,
   getInputFilterRef,
   inputKeyOf,
+  normalizeWeights,
 } from "./util";
+export type { RankingLevel } from "./util";
 export { blockDataModel } from "./dataModel";
 export type Href = InferHrefType<typeof platforma>;
 export type BlockOutputs = InferOutputsType<typeof platforma>;
@@ -235,7 +244,7 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     preset: data.preset,
     topClonotypes: data.topClonotypes,
     kabatNumbering: data.kabatNumbering,
-    rankingOrder: convertRankingOrderUI(data.rankingOrder),
+    rankingOrder: convertRankingOrderUIForParams(data.rankingOrder),
     filters: convertFilterUI(data.filters),
     diversificationColumn: data.diversificationColumn,
     filtersInitializedForAnchor: readInitializedForAnchor(data.filtersInitializedForAnchor),
@@ -419,13 +428,28 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       rankableMatches.map((c) => c.getSpec()),
       { includeNativeLabel: true },
     );
-    const options = rankableMatches.map((c, i) => ({
-      label: labels[i],
-      value: matchToColumnId(c, inputAnchor!),
-    }));
+    // Which metrics move whole clusters and which reorder within one, and what each level is
+    // called for this dataset. The card has no anchor spec, so the model decides.
+    const levelLabels = rankingLevelLabels(result.anchorSpec);
+    const levelGroups = {
+      cluster: `${levelLabels.cluster} metrics`,
+      clonotype: `${levelLabels.clonotype} metrics`,
+    };
+
+    const options = rankableMatches.map((c, i) => {
+      const level = rankingLevelOf(c.getSpec(), result.anchorSpec);
+      return {
+        label: labels[i],
+        value: matchToColumnId(c, inputAnchor!),
+        // `level` groups the rows, `group` is what PlDropdown buckets the option list by.
+        level,
+        group: levelGroups[level],
+      };
+    });
 
     return {
       options,
+      levelLabels,
       // See filterConfig.
       inputKey: inputKeyOf(inputAnchor, inputFilter),
       defaults: result.meta.defaultRankingOrder,
