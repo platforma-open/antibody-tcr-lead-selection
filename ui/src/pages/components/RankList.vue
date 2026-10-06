@@ -15,7 +15,6 @@ import {
   PlIcon16,
   PlNumberField,
   PlRow,
-  PlSectionSeparator,
   PlTooltip,
 } from "@platforma-sdk/ui-vue";
 import { computed, ref, toRaw } from "vue";
@@ -36,80 +35,32 @@ const generateUniqueId = () => {
 
 // Keyed on the column id alone: a stored row and a freshly built option can carry the same
 // column with their keys in a different order. A map, not a scan, because every row looks up
-// its label and its level on each render.
+// its label on each render.
 const optionByColumn = computed(
   () => new Map((app.model.outputs.rankingConfig?.options ?? []).map((o) => [o.value.column, o])),
 );
 
-const getMetricOption = (value: ScopedColumnId | undefined) =>
-  value ? optionByColumn.value.get(value.column) : undefined;
-
 const getMetricLabel = (value: ScopedColumnId | undefined) =>
-  getMetricOption(value)?.label ?? "Set rank";
-
-/** Group order: cluster metrics, then per-record metrics, then rows with no metric chosen. */
-const groupRank = (row: { value?: ScopedColumnId }) => {
-  const level = getMetricOption(row.value)?.level;
-  if (level === "cluster") return 0;
-  if (level === "clonotype") return 1;
-  return 2;
-};
+  (value ? optionByColumn.value.get(value.column)?.label : undefined) ?? "Set rank";
 
 /**
- * The stored list, kept grouped so each group stays contiguous — headings depend on it. Stable,
- * so the order inside a group is the user's.
+ * The stored list, in the user's own order — dragging a row writes the new order straight back.
  *
  * Every index in the template reads through here, not through `app.model.data`, so a row's
- * weight, percentage and heading always come from the same row. Same objects either way, so
- * edits still reach stored data.
+ * weight and percentage always come from the same row.
  */
 const rows = computed({
-  get: () => {
-    const stored = app.model.data.rankingOrder ?? [];
-    return stored
-      .map((row, i) => ({ row, i }))
-      .sort((a, b) => groupRank(a.row) - groupRank(b.row) || a.i - b.i)
-      .map(({ row }) => row);
-  },
-  set: (value) => {
-    app.model.data.rankingOrder = [...value].sort((a, b) => groupRank(a) - groupRank(b));
-  },
+  get: () => app.model.data.rankingOrder ?? [],
+  set: (value) => (app.model.data.rankingOrder = value),
 });
 
 /** Each row's weight as a fraction of all of them. Derived, never stored. */
 const weightNorms = computed(() => normalizeWeights(rows.value.map((row) => row.weight)));
 
-/**
- * Headings show when any metric is cluster-level: a cluster-only ranking shifts whole clusters
- * and reorders nothing within them, which is worth saying. An all-per-record list gets none.
- */
-const showGroupHeadings = computed(() => {
-  const ranks = rows.value.filter((row) => row.value).map(groupRank);
-  if (ranks.length === 0) return false;
-  return ranks.includes(0);
-});
-
-/** The record name lowercased for prose; same source as the group headings. */
+/** The record name lowercased for the tooltip's prose. */
 const recordWord = computed(() =>
   (app.model.outputs.rankingConfig?.levelLabels?.clonotype ?? "Clonotype").toLowerCase(),
 );
-
-/**
- * The heading that belongs above row `index`, when a group starts there.
- *
- * Rendered from two places: `PlElementList` forwards `item-before` only for pinned items, so
- * the first heading sits above the list and later ones ride the previous row's `item-after`.
- */
-const groupHeading = (index: number) => {
-  if (!showGroupHeadings.value) return undefined;
-  const row = rows.value[index];
-  if (row === undefined) return undefined;
-  const rank = groupRank(row);
-  if (rank === 2) return undefined;
-  if (index > 0 && groupRank(rows.value[index - 1]) === rank) return undefined;
-  const labels = app.model.outputs.rankingConfig?.levelLabels;
-  return rank === 0 ? (labels?.cluster ?? "Cluster") : (labels?.clonotype ?? "Clonotype");
-};
 
 const addRankColumn = () => {
   const ui = app.model.data;
@@ -231,20 +182,12 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
       <span class="rank-columns__weight-norm">%</span>
     </div>
 
-    <PlSectionSeparator v-if="groupHeading(0)" compact>{{ groupHeading(0) }}</PlSectionSeparator>
-
     <PlElementList
       v-model:items="rows"
       :get-item-key="(item) => item.id ?? 0"
       :is-expanded="(item) => item.isExpanded === true"
       :on-expand="(item) => (item.isExpanded = !item.isExpanded)"
-      disable-dragging
     >
-      <template #item-after="{ index }">
-        <PlSectionSeparator v-if="groupHeading(index + 1)" compact>
-          {{ groupHeading(index + 1) }}
-        </PlSectionSeparator>
-      </template>
       <!-- Weight and percentage lead the row so the list can be balanced without expanding
            anything. `@click.stop` keeps the field from toggling the card. -->
       <template #item-title="{ item, index }">
@@ -258,17 +201,19 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
             required
           />
         </div>
-        <span class="rank-weight-norm text-description flex-shrink-0">
+        <span class="rank-weight-norm flex-shrink-0 align-self-center">
           {{ formatWeightNorm(weightNorms[index]) }}
         </span>
-        <span>{{ item.value ? getMetricLabel(item.value) : "Add Rank" }}</span>
+        <span class="align-self-center">
+          {{ item.value ? getMetricLabel(item.value) : "Add Rank" }}
+        </span>
       </template>
       <template #item-content="{ index }">
         <RankCard v-model="rows[index]" :options="app.model.outputs.rankingConfig?.options" />
       </template>
     </PlElementList>
 
-    <div class="d-flex flex-column gap-6">
+    <div class="d-flex flex-column gap-6 mt-6">
       <PlBtnSecondary icon="add" @click="addRankColumn"> Add Ranking Column </PlBtnSecondary>
 
       <PlBtnSecondary icon="reverse" :disabled="!configIsCurrent" @click="resetToDefaults">
@@ -281,19 +226,21 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
 <style scoped>
 /*
  * `PlNumberField` is 40px tall by default, which makes the row 56px; trimmed to 24px it fits the
- * row's existing padding. Its 12px inner padding leaves only 30px of text in a 52px field, and
- * "1000" measures 32px, so that is tightened too. `:deep` is safe because the component styles
- * itself with plain global class names, not CSS modules.
+ * row's existing padding, and its 12px inner padding is tightened to keep "1000" from clipping.
+ * Both numeric cells are set to the 11px of the `text-caps11` headings above them, without the
+ * uppercasing and letter-spacing that class also carries. `:deep` is safe because the component
+ * styles itself with plain global class names, not CSS modules.
  */
 .rank-list {
   --rank-weight-width: 52px;
   --rank-weight-norm-width: 32px;
   /*
-   * Where a row's title slot begins: the row's border and padding plus `PlElementList`'s expand
-   * chevron. Measured, because the heading row cannot read their width. Goes stale if the list
-   * changes that furniture; the symptom is a heading offset from its columns.
+   * Where a row's title slot begins, so the headings line up with the cells under them. The
+   * heading row cannot read the list's own furniture, so it is summed from `PlElementListItem`:
+   * 1px item border + 8px `.head` padding + 24px drag handle + 16px chevron + its 4px margin.
+   * Turning dragging off drops the handle and this becomes 29px.
    */
-  --rank-row-lead-width: 29px;
+  --rank-row-lead-width: 53px;
 }
 
 /* One heading row, naming the two numeric columns. The metric column needs no heading. */
@@ -301,6 +248,8 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
   padding-left: var(--rank-row-lead-width);
   /* "WEIGHT" nearly fills its column, so a heading overflows rather than wrapping. */
   white-space: nowrap;
+  margin-top: 18px;
+  margin-bottom: -6px;
 }
 
 /*
@@ -324,5 +273,16 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
 .rank-weight :deep(.pl-number-field__wrapper) {
   padding-left: 8px;
   padding-right: 8px;
+}
+
+.rank-weight :deep(input),
+.rank-weight-norm {
+  font-size: 11px;
+}
+
+/* `text-caps11` is 11px at weight 600; matching the size alone left the percentage looking
+ * lighter than the heading above it. */
+.rank-weight-norm {
+  font-weight: 600;
 }
 </style>

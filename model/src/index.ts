@@ -436,16 +436,13 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       clonotype: `${levelLabels.clonotype} metrics`,
     };
 
-    const options = rankableMatches.map((c, i) => {
-      const level = rankingLevelOf(c.getSpec(), result.anchorSpec);
-      return {
-        label: labels[i],
-        value: matchToColumnId(c, inputAnchor!),
-        // `level` groups the rows, `group` is what PlDropdown buckets the option list by.
-        level,
-        group: levelGroups[level],
-      };
-    });
+    const options = rankableMatches.map((c, i) => ({
+      label: labels[i],
+      value: matchToColumnId(c, inputAnchor!),
+      // What PlDropdown buckets the option list by, so picking a column shows which metrics act
+      // on whole clusters and which reorder within one.
+      group: levelGroups[rankingLevelOf(c.getSpec(), result.anchorSpec)],
+    }));
 
     return {
       options,

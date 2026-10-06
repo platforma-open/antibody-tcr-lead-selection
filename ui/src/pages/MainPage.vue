@@ -275,10 +275,11 @@ watch(
       label="Ranking now combines every criterion"
       closeable
     >
-      Ranking used to apply each criterion in order, the second one separating only the sequences
-      that tied exactly on the first. It now computes one combined score per sequence, in which each
-      criterion counts in proportion to its weight. Re-running this project will select a different
-      set of leads. Weights are set in Settings, beside each ranking criterion.
+      Before Lead Selection v5.0.0 ranking used to apply each criterion in order, the second ranking
+      criterion separating only the sequences that tied exactly on the first. It now computes one
+      combined score per sequence, in which each criterion counts in proportion to its weight.
+      Re-running this updated block might result in a different selection of leads as compared to
+      the previous version.
     </PlAlert>
     <PlAlert v-if="app.model.outputs.kabatWarning" type="warn">
       {{ app.model.outputs.kabatWarning }}
@@ -406,9 +407,11 @@ watch(
 /*
  * Rules around the diversification block. Borders on the group rather than two
  * `PlSectionSeparator`s, which as separate flex children would each add the modal's 24px gap.
+ * The padding matches that gap, so each rule sits the same distance from the content on either
+ * side of it.
  */
 .diversify-group {
-  padding-block: 12px;
+  padding-block: 24px;
   border-top: 1px solid var(--border-color-div-grey);
   border-bottom: 1px solid var(--border-color-div-grey);
 }
