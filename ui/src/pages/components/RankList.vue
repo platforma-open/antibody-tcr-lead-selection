@@ -8,6 +8,7 @@ import {
   getInputAnchorRef,
   getInputFilterRef,
   normalizeWeights,
+  rankingWeightError,
 } from "@platforma-open/milaboratories.top-antibodies.model";
 import {
   PlBtnSecondary,
@@ -54,7 +55,9 @@ const rows = computed({
   set: (value) => (app.model.data.rankingOrder = value),
 });
 
-/** Each row's weight as a fraction of all of them. Derived, never stored. */
+/**
+ * Each row's weight as a fraction of all of them. Derived, never stored.
+ */
 const weightNorms = computed(() => normalizeWeights(rows.value.map((row) => row.weight)));
 
 /** The record name lowercased for the tooltip's prose. */
@@ -164,8 +167,8 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
           <br /><br />
           One <b>combined score</b> is computed per {{ recordWord }}: each ranking selection counts
           in proportion to its weight. Candidates are then selected from that ranking. The
-          <b>%</b> column shows each weight as a fraction of all the weights together — and that
-          percentage is what the score actually multiplies by: <br /><br />
+          <b>%</b> column shows each weight as a fraction of all the weights together, rounded for
+          display; the score uses the exact fraction: <br /><br />
           <code>score = Σ ( % × ranked value )</code>
           <br /><br />
           Each selection's values are replaced by their rank before weighting, so columns in
@@ -194,8 +197,7 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
         <div class="rank-weight flex-shrink-0 align-self-center" @click.stop>
           <PlNumberField
             v-model="rows[index].weight"
-            :min-value="0"
-            :max-value="1000"
+            :validate="rankingWeightError"
             :step="0.1"
             disable-steps
             required

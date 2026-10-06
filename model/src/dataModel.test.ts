@@ -101,6 +101,35 @@ describe("ranking weight migration", () => {
   });
 });
 
+describe("the chain survives the shapes stored data really has", () => {
+  // A throwing migration leaves the block unable to take the new pack at all, so
+  // every version key must tolerate a ranking list that is absent or malformed.
+  // Entering at Ver_2026_09_28 hides this: the weights step rebuilds the array
+  // before the later steps see it. These enter at every key.
+  const VERSIONS = [
+    "Ver_2026_02_25",
+    "Ver_2026_05_08",
+    "Ver_2026_05_21",
+    "Ver_2026_07_28",
+    "Ver_2026_08_20",
+    "Ver_2026_09_28",
+    "Ver_2026_10_02",
+  ];
+  const SHAPES: [string, unknown][] = [
+    ["no ranking key", {}],
+    ["rankingOrder undefined", { rankingOrder: undefined }],
+    ["empty ranking", { rankingOrder: [] }],
+  ];
+
+  for (const version of VERSIONS) {
+    for (const [label, data] of SHAPES) {
+      test(`${version} + ${label}`, () => {
+        expect(() => blockDataModel.migrate({ version, data })).not.toThrow();
+      });
+    }
+  }
+});
+
 describe("balanced ranking notice", () => {
   /** Runs stored data through the chain from the version it was left at. */
   const notice = (version: string, data: unknown) =>

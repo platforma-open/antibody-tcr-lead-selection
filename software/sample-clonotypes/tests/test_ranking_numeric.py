@@ -6,9 +6,9 @@ proportion to its weight. No criterion is a tiebreaker for another.
 
 Numeric columns must be treated as numbers even when the clone table delivers
 them as strings with "" in the gaps. inf and -inf parse to real floats and keep
-the two ends of the scale. "" and NaN have no place on it and score one level
-below the worst value present. A clonotype holding one is kept, not dropped, and
-keeps whatever the other criteria give it.
+the two ends of the scale. "" and NaN have no place on it and score 0, level with
+the worst value present. A clonotype holding one is kept, not dropped, and keeps
+whatever the other criteria give it.
 """
 
 import polars as pl
@@ -52,7 +52,7 @@ def test_string_column_with_empty_gaps_ranks_numerically():
     assert result["ranked_order"].to_list() == [1, 2, 3]
 
 
-def test_empty_value_row_ranks_last_and_is_still_selectable():
+def test_empty_value_row_scores_worst_and_is_still_selectable():
     df = clone_table(["9.5", "10.2", "", "100.7"])
 
     result = diversified_rank_and_select(df, 4, rmap({"Col0": "decreasing"}), ["Col0"])
@@ -60,14 +60,15 @@ def test_empty_value_row_ranks_last_and_is_still_selectable():
     assert result["clonotypeKey"].to_list() == ["c3", "c1", "c0", "c2"]
 
 
-def test_empty_value_row_ranks_last_when_increasing():
-    """Last means last in either direction — not "smallest, therefore first". c3
-    holds 100.7, the worst value present; c2 holds nothing and ranks below it."""
+def test_empty_value_row_scores_worst_when_increasing():
+    """Worst in either direction — never "smallest, therefore first". c2 holds no
+    value and scores 0; c3 holds 100.7, the worst value present, and scores 0 too,
+    so clonotypeKey settles which of the two comes last."""
     df = clone_table(["9.5", "10.2", "", "100.7"])
 
     result = diversified_rank_and_select(df, 4, rmap({"Col0": "increasing"}), ["Col0"])
 
-    assert result["clonotypeKey"].to_list() == ["c0", "c1", "c3", "c2"]
+    assert result["clonotypeKey"].to_list() == ["c0", "c1", "c2", "c3"]
 
 
 def test_inf_is_the_largest_and_minus_inf_the_smallest():
@@ -88,23 +89,24 @@ def test_inf_ends_swap_when_the_direction_is_increasing():
     assert result["clonotypeKey"].to_list() == ["c3", "c0", "c2", "c1"]
 
 
-def test_nan_and_empty_rank_behind_inf_and_minus_inf():
-    """NaN has no place on the scale, so it ranks with "" — behind -inf, which
-    does have a place and keeps the bottom of the scale."""
+def test_nan_and_empty_score_worst_alongside_minus_inf():
+    """NaN has no place on the scale, so it scores with "". -inf does have a place
+    and keeps the bottom of the scale — which is also a score of 0, so the three
+    tie and clonotypeKey orders them."""
     df = clone_table(["9.5", "NaN", "inf", "100.7", "-inf", ""])
 
     result = diversified_rank_and_select(df, 6, rmap({"Col0": "decreasing"}), ["Col0"])
 
-    assert result["clonotypeKey"].to_list() == ["c2", "c3", "c0", "c4", "c1", "c5"]
+    assert result["clonotypeKey"].to_list() == ["c2", "c3", "c0", "c1", "c4", "c5"]
 
 
-def test_nan_and_empty_still_rank_last_when_increasing():
+def test_nan_and_empty_still_score_worst_when_increasing():
     """The same, with inf now the worst value present."""
     df = clone_table(["9.5", "NaN", "inf", "100.7", "-inf", ""])
 
     result = diversified_rank_and_select(df, 6, rmap({"Col0": "increasing"}), ["Col0"])
 
-    assert result["clonotypeKey"].to_list() == ["c4", "c0", "c3", "c2", "c1", "c5"]
+    assert result["clonotypeKey"].to_list() == ["c4", "c0", "c3", "c1", "c2", "c5"]
 
 
 def test_nan_and_inf_floats_get_the_same_treatment():
@@ -121,7 +123,7 @@ def test_nan_and_inf_floats_get_the_same_treatment():
     assert result["clonotypeKey"].to_list() == ["c2", "c3", "c0", "c1"]
 
 
-def test_unparseable_text_ranks_last():
+def test_unparseable_text_scores_worst():
     df = clone_table(["9.5", "n/a", "100.7"])
 
     result = diversified_rank_and_select(df, 3, rmap({"Col0": "decreasing"}), ["Col0"])
@@ -134,12 +136,13 @@ def test_increasing_direction_respected_on_coerced_column():
 
     result = diversified_rank_and_select(df, 3, rmap({"Col0": "increasing"}), ["Col0"])
 
-    assert result["clonotypeKey"].to_list() == ["c0", "c1", "c3"]
+    assert result["clonotypeKey"].to_list() == ["c0", "c1", "c2"]
 
 
 def test_cluster_and_linker_columns_are_coerced_too():
     """Both columns are coerced, so "10" outranks "2" rather than losing to it as
-    text."""
+    text. c1 is selected over c0 on the strength of its linker value: the cluster
+    column no longer has first call on the order just for being added first."""
     df = pl.DataFrame(
         {
             "clonotypeKey": ["c0", "c1", "c2"],
@@ -155,7 +158,7 @@ def test_cluster_and_linker_columns_are_coerced_too():
         ["Col_cluster.0", "Col_linker.0.0"],
     )
 
-    assert result["clonotypeKey"].to_list() == ["c2", "c0"]
+    assert result["clonotypeKey"].to_list() == ["c2", "c1"]
 
 
 def test_weight_decides_which_criterion_wins():
@@ -186,30 +189,6 @@ def test_weight_decides_which_criterion_wins():
     assert second_heavy["clonotypeKey"].to_list() == ["c1", "c0"]
 
 
-def test_zero_weight_contributes_nothing():
-    """A criterion weighted 0 leaves the selection where dropping it does."""
-    df = pl.DataFrame(
-        {
-            "clonotypeKey": ["c0", "c1", "c2"],
-            "Col0": ["1.0", "2.0", "3.0"],
-            "Col1": ["30.0", "20.0", "10.0"],
-        }
-    )
-
-    zero_weighted = diversified_rank_and_select(
-        df,
-        3,
-        rmap({"Col0": ("decreasing", 1.0), "Col1": ("decreasing", 0.0)}),
-        ["Col0", "Col1"],
-    )
-    dropped = diversified_rank_and_select(
-        df.drop("Col1"), 3, rmap({"Col0": "decreasing"}), ["Col0"]
-    )
-
-    assert zero_weighted["clonotypeKey"].to_list() == ["c2", "c1", "c0"]
-    assert dropped["clonotypeKey"].to_list() == zero_weighted["clonotypeKey"].to_list()
-
-
 def test_constant_column_is_inert_but_a_gap_in_it_is_not():
     """A column holding one value everywhere cannot order anything, so the other
     criterion decides. Where some rows have no value, that same column does rank
@@ -237,16 +216,22 @@ def test_constant_column_is_inert_but_a_gap_in_it_is_not():
     assert result["clonotypeKey"].to_list() == ["c1", "c0"]
 
 
-def test_a_missing_value_scores_below_the_worst_value_present():
-    """The worst value present keeps its own standing — it is not pushed to 0 just
-    for being the worst. In a column running 4 to 100, 4 scores a third of the
-    column's weight; only a missing value scores nothing."""
-    df = pl.DataFrame({"Col0": [4.0, 50.0, 100.0, None]})
+def test_a_missing_value_scores_level_with_the_worst_and_rescales_nothing():
+    """A missing value scores 0, exactly what the worst value present scores. The
+    column occupies [0, 1] whether or not anything is missing, so a clonotype that
+    holds no value here cannot move the score of one that does."""
     cfg = rmap({"Col0": "decreasing"})
+    scored = lambda vals: [
+        round(x, 6)
+        for x in pl.DataFrame({"Col0": vals})
+        .select(composite_score(pl.DataFrame({"Col0": vals}), cfg, ["Col0"]))
+        .to_series()
+        .to_list()
+    ]
 
-    scores = df.select(composite_score(df, cfg, ["Col0"])).to_series().to_list()
-
-    assert scores == [1 / 3, 2 / 3, 1.0, 0.0]
+    assert scored([4.0, 50.0, 100.0, None]) == [0.0, 0.5, 1.0, 0.0]
+    # Dropping the clonotype that holds nothing leaves the other three untouched.
+    assert scored([4.0, 50.0, 100.0]) == [0.0, 0.5, 1.0]
 
 
 def test_a_cluster_metric_scores_the_same_however_often_it_repeats():

@@ -97,8 +97,8 @@ def coerce_ranking_columns(df, ranking_cols):
 
     "NaN" also parses to a real float, but it has no place on the scale, and
     polars sorts it ahead of every finite value. It becomes null. A NaN in a
-    column that is already numeric gets the same cast. Null scores below every
-    value present in the column it is missing from. See composite_score.
+    column that is already numeric gets the same cast. Null scores 0, level with
+    the worst value present in that column. See composite_score.
     """
     for col in ranking_cols:
         if col not in df.columns:
@@ -143,10 +143,9 @@ def composite_score(df, ranking_map, ranking_cols):
     decreasing column scores its largest value 1, an increasing column its
     smallest.
 
-    A missing value is one rank below the worst value present, not level with
-    it: in a column running 4 to 100, holding no value scores below 4 rather
-    than alongside it. The clonotype keeps whatever the other columns give it
-    and is never dropped.
+    A missing value scores 0, level with the worst value present. It never
+    removes the clonotype from selection, and the clonotype keeps whatever the
+    other columns give it.
 
     A column with one distinct value cannot order anything, but it still
     separates the clonotypes that have a value from the ones that do not, so it
@@ -166,21 +165,18 @@ def composite_score(df, ranking_map, ranking_cols):
         null_count = df[col].null_count()
         distinct = df[col].n_unique() - (1 if null_count else 0)
 
-        # rank("dense") is ascending (highest value gets the biggest rank) and leaves 
-        # nulls null. Reverse it for a increasing column, where the smallest is the best,
+        # rank("dense") is ascending (highest value gets the biggest rank) and leaves
+        # nulls null. Reverse it for an increasing column, where the smallest is the best,
         # so that `level` counts up towards the best value in either direction.
         rank = pl.col(col).rank("dense")
         level = rank if cfg["direction"] == "decreasing" else distinct + 1 - rank
 
         if distinct == 0:
             oriented = pl.lit(0.0)
-        elif null_count:
-            # Null is level 0, one below the worst value present.
-            oriented = (level / distinct).fill_null(0.0)
         elif distinct == 1:
-            oriented = pl.lit(1.0)
+            oriented = pl.when(pl.col(col).is_null()).then(0.0).otherwise(1.0)
         else:
-            oriented = (level - 1) / (distinct - 1)
+            oriented = ((level - 1) / (distinct - 1)).fill_null(0.0)
 
         print(f"Ranking column '{col}': {cfg['direction']}, weight "
               f"{weight:.4f}, {distinct} distinct values, {null_count} missing")
@@ -206,9 +202,9 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
     4. Add ranked_order column
 
     Every ranking column counts, in proportion to its weight. A clonotype with no
-    value in a ranking column stays in the result and scores below every value
-    present in that column, keeping whatever the other columns give it. A
-    clonotype with no diversification group is dropped. See composite_score.
+    value in a ranking column stays in the result and scores worst on that column,
+    keeping whatever the other columns give it. A clonotype with no
+    diversification group is dropped. See composite_score.
     """
     df = coerce_ranking_columns(df, all_ranking_cols)
 
@@ -248,9 +244,9 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
         sort_descending = [False]
         print("No ranking columns, sorting by clonotypeKey only")
 
-    # The composite already ranks a missing value below every value present in
-    # its own column, so nothing here depends on null ordering. Report how many
-    # clonotypes that affects.
+    # The composite already scores a missing value worst in its own column, so
+    # nothing here depends on null ordering. Report how many clonotypes that
+    # affects.
     if all_ranking_cols:
         missing = int(
             df.select(

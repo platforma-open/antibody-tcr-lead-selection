@@ -85,10 +85,14 @@ export const blockDataModel = new DataModelBuilder({ kind })
   // nothing when the workflow builds its column bundle. Drop those entries and
   // flag the one-time notice, but only for projects that actually used it.
   .migrate<BlockData_Ver_2026_07_28>("Ver_2026_07_28", (prev) => {
-    const rankingOrder = prev.rankingOrder.filter(
-      (rank) => rank.value?.column !== REMOVED_IN_VIVO_SCORE_COLUMN_ID,
+    // Read defensively: a step that throws leaves the block unable to take the
+    // new pack at all. Absent stays absent — `withRankingWeights` below is what
+    // settles the shape, and rewriting it here would hide that.
+    const stored = Array.isArray(prev.rankingOrder) ? prev.rankingOrder : [];
+    const rankingOrder = stored.filter(
+      (rank) => rank?.value?.column !== REMOVED_IN_VIVO_SCORE_COLUMN_ID,
     );
-    if (rankingOrder.length === prev.rankingOrder.length) return { ...prev };
+    if (rankingOrder.length === stored.length) return { ...prev };
     return { ...prev, rankingOrder, inVivoScoreRemovedNotice: true };
   })
   // The defaults-init guards were one `JSON.stringify(anchor) + "::" + preset`
@@ -119,8 +123,10 @@ export const blockDataModel = new DataModelBuilder({ kind })
   // one-time notice for those projects only. Its own version rather than an
   // amendment of `Ver_2026_10_02`: projects already migrated to that version
   // would otherwise never see it.
+  // `?.length ?? 0`, not `.length`: this step reads stored data directly, and a
+  // throwing migration leaves the block unable to take the new pack at all.
   .migrate<BlockData>("Ver_2026_10_05", (prev) =>
-    prev.rankingOrder.length > 0 ? { ...prev, balancedRankingNotice: true } : { ...prev },
+    (prev.rankingOrder?.length ?? 0) > 0 ? { ...prev, balancedRankingNotice: true } : { ...prev },
   )
   // `params` is absent when a block is created by hand rather than from a
   // template, so every field the contract carries keeps its own default.

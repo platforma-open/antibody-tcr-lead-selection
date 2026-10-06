@@ -48,6 +48,9 @@ import {
   ANCHORED_DISCOVERY,
   isProducedByLeadSelection,
   isRankableMatch,
+  isUsableRankingWeight,
+  MAX_RANKING_WEIGHT,
+  MIN_RANKING_WEIGHT,
   rankingLevelLabels,
   rankingLevelOf,
   readInitializedForAnchor,
@@ -72,7 +75,11 @@ export {
   getInputAnchorRef,
   getInputFilterRef,
   inputKeyOf,
+  isUsableRankingWeight,
+  MAX_RANKING_WEIGHT,
+  MIN_RANKING_WEIGHT,
   normalizeWeights,
+  rankingWeightError,
 } from "./util";
 export type { RankingLevel } from "./util";
 export { blockDataModel } from "./dataModel";
@@ -262,6 +269,11 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     const rankingOrder = convertRankingOrderUI(data.rankingOrder);
     if (rankingOrder.some((order) => order.value === undefined))
       throw new Error("Incomplete ranking order");
+    // Throwing here is what disables Run: the field's own bounds are advisory.
+    if (!data.rankingOrder.every((row) => isUsableRankingWeight(row.weight)))
+      throw new Error(
+        `Ranking weights must be above ${MIN_RANKING_WEIGHT} and at most ${MAX_RANKING_WEIGHT}`,
+      );
     const filters = convertFilterUI(data.filters);
     if (filters.some((filter) => filter.value === undefined)) throw new Error("Incomplete filters");
 

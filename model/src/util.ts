@@ -299,6 +299,24 @@ export function isRankableMatch(
 /** Weight a ranking row gets when nothing has set one. */
 export const DEFAULT_RANKING_WEIGHT = 1;
 
+// Bounds of the ranking weight
+export const MIN_RANKING_WEIGHT = 0;
+export const MAX_RANKING_WEIGHT = 1000;
+
+/**
+ * Whether a stored weight is one the score can use.
+ */
+export function rankingWeightError(weight: number): string | undefined {
+  if (!Number.isFinite(weight)) return "Not a number";
+  if (weight <= MIN_RANKING_WEIGHT) return `Above ${MIN_RANKING_WEIGHT}`;
+  if (weight > MAX_RANKING_WEIGHT) return `Max ${MAX_RANKING_WEIGHT}`;
+  return undefined;
+}
+
+export function isUsableRankingWeight(weight: number): boolean {
+  return rankingWeightError(weight) === undefined;
+}
+
 /**
  * Fills in the weight of every ranking row that has none.
  *
