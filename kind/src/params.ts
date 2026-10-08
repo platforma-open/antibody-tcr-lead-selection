@@ -86,7 +86,8 @@ const isFilterPredicate: Guard<PlTableFilter | DiscreteFilter> = (
 const isRankingOrder: Guard<RankingOrder> = (v): v is RankingOrder =>
   isPlainObject(v) &&
   optional(isScopedColumnId)(v.value) &&
-  oneOf("increasing", "decreasing")(v.rankingOrder);
+  oneOf("increasing", "decreasing")(v.rankingOrder) &&
+  optional(isNumber)(v.weight);
 
 const isFilter: Guard<Filter> = (v): v is Filter =>
   isPlainObject(v) && optional(isScopedColumnId)(v.value) && optional(isFilterPredicate)(v.filter);
@@ -137,7 +138,7 @@ const CONTRACT = {
   kabatNumbering: check(isBoolean, "a boolean"),
   rankingOrder: check(
     arrayOf(isRankingOrder),
-    "an array of { value?, rankingOrder: 'increasing' | 'decreasing' } entries",
+    "an array of { value?, rankingOrder: 'increasing' | 'decreasing', weight? } entries",
   ),
   filters: check(arrayOf(isFilter), "an array of { value?, filter? } entries"),
   diversificationColumn: check(isPlRef, REF),

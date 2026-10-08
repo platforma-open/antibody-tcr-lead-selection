@@ -12,10 +12,11 @@ import type {
   BlockData_Ver_2026_05_08,
   BlockData_Ver_2026_05_21,
   BlockData_Ver_2026_07_28,
+  BlockData_Ver_2026_08_20,
   LegacyBlockArgs,
   LegacyUiState,
 } from "./types";
-import { getDefaultBlockLabel, readInitializedForAnchor } from "./util";
+import { getDefaultBlockLabel, readInitializedForAnchor, withRankingWeights } from "./util";
 
 const defaultSelectionPlotState = (): BlockData["selectionPlotState"] => ({
   title: "Selection Plot",
@@ -83,17 +84,21 @@ export const blockDataModel = new DataModelBuilder({ kind })
   // nothing when the workflow builds its column bundle. Drop those entries and
   // flag the one-time notice, but only for projects that actually used it.
   .migrate<BlockData_Ver_2026_07_28>("Ver_2026_07_28", (prev) => {
-    const rankingOrder = prev.rankingOrder.filter(
-      (rank) => rank.value?.column !== REMOVED_IN_VIVO_SCORE_COLUMN_ID,
+    // Read defensively: a step that throws leaves the block unable to take the
+    // new pack at all. Absent stays absent — `withRankingWeights` below is what
+    // settles the shape, and rewriting it here would hide that.
+    const stored = Array.isArray(prev.rankingOrder) ? prev.rankingOrder : [];
+    const rankingOrder = stored.filter(
+      (rank) => rank?.value?.column !== REMOVED_IN_VIVO_SCORE_COLUMN_ID,
     );
-    if (rankingOrder.length === prev.rankingOrder.length) return { ...prev };
+    if (rankingOrder.length === stored.length) return { ...prev };
     return { ...prev, rankingOrder, inVivoScoreRemovedNotice: true };
   })
   // The defaults-init guards were one `JSON.stringify(anchor) + "::" + preset`
   // string; they are two fields now, so the anchor half stays a bare stringified
   // `PlRef` — canonically serialized, since that is what relocates and what the
   // UI compares against. See `readInitializedForAnchor`.
-  .migrate<BlockData>("Ver_2026_08_20", (prev) => ({
+  .migrate<BlockData_Ver_2026_08_20>("Ver_2026_08_20", (prev) => ({
     ...prev,
     filtersInitializedForAnchor: readInitializedForAnchor(prev.filtersInitializedForAnchor),
     rankingsInitializedForAnchor: readInitializedForAnchor(prev.rankingsInitializedForAnchor),
@@ -101,10 +106,21 @@ export const blockDataModel = new DataModelBuilder({ kind })
   // The same split, run again: stored data has been seen still holding the joined
   // string after `Ver_2026_08_20`, and a template exported from it is refused by
   // the kind. An already-split slot is read back unchanged.
-  .migrate<BlockData>("Ver_2026_09_28", (prev) => ({
+  .migrate<BlockData_Ver_2026_08_20>("Ver_2026_09_28", (prev) => ({
     ...prev,
     filtersInitializedForAnchor: readInitializedForAnchor(prev.filtersInitializedForAnchor),
     rankingsInitializedForAnchor: readInitializedForAnchor(prev.rankingsInitializedForAnchor),
+  }))
+  // Every stored ranking row gains a weight; a list with none is read as a priority
+  // order and gets descending weights (see `withRankingWeights`).
+  //
+  // `prev` is raw stored JSON — its TypeScript type is what the old version claimed,
+  // not a guarantee, so `rankingOrder` can be absent. Throwing here would leave the
+  // block stuck on its old pack, unable to upgrade at all.
+  .migrate<BlockData>("Ver_2026_10_08", (prev) => ({
+    ...prev,
+    rankingOrder: withRankingWeights(prev.rankingOrder),
+    balancedRankingNotice: (prev.rankingOrder?.length ?? 0) > 0 ? true : undefined,
   }))
   // `params` is absent when a block is created by hand rather than from a
   // template, so every field the contract carries keeps its own default.
@@ -114,7 +130,8 @@ export const blockDataModel = new DataModelBuilder({ kind })
     input: params?.input,
     topClonotypes: params?.topClonotypes ?? 100,
     kabatNumbering: params?.kabatNumbering,
-    rankingOrder: params?.rankingOrder ?? [],
+    // A template's rows may predate weights, so fill them as the migration does.
+    rankingOrder: withRankingWeights(params?.rankingOrder ?? []),
     filters: params?.filters ?? [],
     diversificationColumn: params?.diversificationColumn,
     tableState: createPlDataTableStateV2(),
@@ -145,4 +162,5 @@ export const blockDataModel = new DataModelBuilder({ kind })
     rankingsInitializedForAnchor: params?.rankingsInitializedForAnchor,
     preset: params?.preset,
     inVivoScoreRemovedNotice: undefined,
+    balancedRankingNotice: undefined,
   }));

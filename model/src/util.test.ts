@@ -4,9 +4,13 @@ import { describe, expect, test } from "vitest";
 import {
   defaultsForSubset,
   defaultClusteringSubset,
+  isOnAnchorAxes,
   isPresenceOnlyColumn,
   isRankableMatch,
+  rankingLevelOf,
+  normalizeWeights,
   readInitializedForAnchor,
+  withRankingWeights,
 } from "./util";
 
 const sampleAxis: AxisSpec = { type: "String", name: "pl7.app/sampleId" };
@@ -32,6 +36,13 @@ const contrastAxis: AxisSpec = {
   type: "String",
   name: "pl7.app/dea/contrast",
   domain: { "pl7.app/blockId": "da1" },
+};
+
+/** The axis a clustering block mints, carried instead of the record axis. */
+const clusterAxis: AxisSpec = {
+  type: "String",
+  name: "pl7.app/vdj/clusterId",
+  domain: { "pl7.app/blockId": "clust1" },
 };
 
 /** The dataset lead selection anchors on. */
@@ -321,5 +332,109 @@ describe("defaultClusteringSubset", () => {
     },
   ])("$why", ({ available, subset, expected }) => {
     expect(defaultClusteringSubset(available, subset)).toBe(expected);
+  });
+});
+
+describe("rankingLevelOf", () => {
+  test("a per-clonotype column is clonotype-level", () => {
+    expect(rankingLevelOf(col({ axesSpec: [clonotypeAxis] }), anchor)).toBe("clonotype");
+  });
+
+  test("a column on the cluster axis alone is cluster-level", () => {
+    expect(rankingLevelOf(col({ axesSpec: [clusterAxis] }), anchor)).toBe("cluster");
+  });
+
+  test("a column carrying the record axis AND another is clonotype-level", () => {
+    // Where the workflow's rule and `isOnAnchorAxes` disagree.
+    const spec = col({ axesSpec: [clonotypeAxis, contrastAxis] });
+    expect(rankingLevelOf(spec, anchor)).toBe("clonotype");
+    expect(isOnAnchorAxes(spec, anchor)).toBe(false);
+  });
+
+  test("the record axis is matched by name, as the workflow matches it", () => {
+    // A narrower domain is a different axis to `canonicalizeAxisId`, the same one to the
+    // workflow. The label follows the workflow.
+    const narrower = col({ axesSpec: [narrowerClonotypeAxis] });
+    const undomained = col({ axesSpec: [undomainedClonotypeAxis] });
+    expect(rankingLevelOf(narrower, anchor)).toBe("clonotype");
+    expect(rankingLevelOf(undomained, anchor)).toBe("clonotype");
+    expect(isOnAnchorAxes(narrower, anchor)).toBe(false);
+  });
+
+  test("an anchor with no record axis has no levels to tell apart", () => {
+    const sampleOnlyAnchor: PColumnSpec = { ...anchor, axesSpec: [sampleAxis] };
+    expect(rankingLevelOf(col({ axesSpec: [clusterAxis] }), sampleOnlyAnchor)).toBe("clonotype");
+  });
+});
+
+describe("normalizeWeights", () => {
+  test("a weight normalizes to its part of the total", () => {
+    expect(normalizeWeights([3, 1])).toEqual([0.75, 0.25]);
+  });
+
+  test("only the proportions count", () => {
+    expect(normalizeWeights([2, 2])).toEqual(normalizeWeights([1, 1]));
+    expect(normalizeWeights([30, 10])).toEqual(normalizeWeights([3, 1]));
+  });
+
+  test("weights that sum to zero read as equal, not as NaN", () => {
+    expect(normalizeWeights([0, 0, 0])).toEqual([1 / 3, 1 / 3, 1 / 3]);
+  });
+
+  test("no weights, nothing to normalize", () => {
+    expect(normalizeWeights([])).toEqual([]);
+  });
+
+  test("the linear descending weights a migrated config gets are the brief's numbers", () => {
+    const [a, b, c] = normalizeWeights([3, 2, 1]);
+    expect([a, b, c].map((s) => Math.round(s * 100) / 100)).toEqual([0.5, 0.33, 0.17]);
+  });
+});
+
+describe("withRankingWeights", () => {
+  const rank = (over: Partial<{ weight: number; id: string }> = {}) => ({
+    value: undefined,
+    rankingOrder: "decreasing" as const,
+    ...over,
+  });
+
+  test("a list written before weights existed gets its order read as its priority", () => {
+    expect(withRankingWeights([rank(), rank(), rank()]).map((r) => r.weight)).toEqual([3, 2, 1]);
+  });
+
+  test("one metric takes the whole score", () => {
+    expect(withRankingWeights([rank()]).map((r) => r.weight)).toEqual([1]);
+  });
+
+  test("weights already set are left alone", () => {
+    expect(withRankingWeights([rank({ weight: 0.2 }), rank({ weight: 5 })])).toEqual([
+      rank({ weight: 0.2 }),
+      rank({ weight: 5 }),
+    ]);
+  });
+
+  test("a weight of zero is a choice, not a missing value", () => {
+    expect(withRankingWeights([rank({ weight: 0 }), rank()]).map((r) => r.weight)).toEqual([0, 1]);
+  });
+
+  test("beside weights that are already set, a missing one takes the default", () => {
+    // Only a hand-written template produces this.
+    expect(withRankingWeights([rank({ weight: 4 }), rank(), rank()]).map((r) => r.weight)).toEqual([
+      4, 1, 1,
+    ]);
+  });
+
+  test("an empty list stays empty", () => {
+    expect(withRankingWeights([])).toEqual([]);
+  });
+
+  test("a missing list reads as an empty one", () => {
+    // Stored data need not hold every declared field, and a throwing migration resets it all.
+    expect(withRankingWeights(undefined)).toEqual([]);
+  });
+
+  test("everything else on the row survives", () => {
+    const rows = [rank({ id: "rank-1" })];
+    expect(withRankingWeights(rows)[0]).toEqual({ ...rows[0], weight: 1 });
   });
 });

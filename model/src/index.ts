@@ -48,12 +48,21 @@ import {
   ANCHORED_DISCOVERY,
   isProducedByLeadSelection,
   isRankableMatch,
+  isUsableRankingWeight,
+  MAX_RANKING_WEIGHT,
+  MIN_RANKING_WEIGHT,
+  rankingLevelLabels,
+  rankingLevelOf,
   readInitializedForAnchor,
   recordSource,
   matchToColumnId,
 } from "./util";
 import { kind } from "@platforma-open/milaboratories.top-antibodies.kind";
-import { convertFilterUI, convertRankingOrderUI } from "./converters";
+import {
+  convertFilterUI,
+  convertRankingOrderUI,
+  convertRankingOrderUIForParams,
+} from "./converters";
 import { blockDataModel } from "./dataModel";
 import type { BlockArgs, BlockData } from "./types";
 
@@ -61,11 +70,18 @@ export * from "./types";
 export * from "./converters";
 export {
   anchorInitializedId,
+  DEFAULT_RANKING_WEIGHT,
   getDefaultBlockLabel,
   getInputAnchorRef,
   getInputFilterRef,
   inputKeyOf,
+  isUsableRankingWeight,
+  MAX_RANKING_WEIGHT,
+  MIN_RANKING_WEIGHT,
+  normalizeWeights,
+  rankingWeightError,
 } from "./util";
+export type { RankingLevel } from "./util";
 export { blockDataModel } from "./dataModel";
 export type Href = InferHrefType<typeof platforma>;
 export type BlockOutputs = InferOutputsType<typeof platforma>;
@@ -220,8 +236,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
   // `isExpanded`) stay behind.
   //
   // View state — the table, the four graphs, the alignment model — never
-  // crosses, nor does `inVivoScoreRemovedNotice`, which a migration sets for a
-  // project that lost the built-in in-vivo score. The two
+  // crosses, nor do the two one-time notice flags, which migrations set for the
+  // stored projects they affected and not for a project built here. The two
   // `…InitializedForAnchor` slots do cross, and they carry their weight: each
   // holds a bare stringified anchor beside the preset it was applied under, so
   // relocation rewrites the anchor while leaving the preset alone, and the
@@ -235,7 +251,7 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     preset: data.preset,
     topClonotypes: data.topClonotypes,
     kabatNumbering: data.kabatNumbering,
-    rankingOrder: convertRankingOrderUI(data.rankingOrder),
+    rankingOrder: convertRankingOrderUIForParams(data.rankingOrder),
     filters: convertFilterUI(data.filters),
     diversificationColumn: data.diversificationColumn,
     filtersInitializedForAnchor: readInitializedForAnchor(data.filtersInitializedForAnchor),
@@ -253,6 +269,11 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     const rankingOrder = convertRankingOrderUI(data.rankingOrder);
     if (rankingOrder.some((order) => order.value === undefined))
       throw new Error("Incomplete ranking order");
+    // Throwing here is what disables Run: the field's own bounds are advisory.
+    if (!data.rankingOrder.every((row) => isUsableRankingWeight(row.weight)))
+      throw new Error(
+        `Ranking weights must be above ${MIN_RANKING_WEIGHT} and at most ${MAX_RANKING_WEIGHT}`,
+      );
     const filters = convertFilterUI(data.filters);
     if (filters.some((filter) => filter.value === undefined)) throw new Error("Incomplete filters");
 
@@ -419,13 +440,25 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       rankableMatches.map((c) => c.getSpec()),
       { includeNativeLabel: true },
     );
+    // Which metrics move whole clusters and which reorder within one, and what each level is
+    // called for this dataset. The card has no anchor spec, so the model decides.
+    const levelLabels = rankingLevelLabels(result.anchorSpec);
+    const levelGroups = {
+      cluster: `${levelLabels.cluster} metrics`,
+      clonotype: `${levelLabels.clonotype} metrics`,
+    };
+
     const options = rankableMatches.map((c, i) => ({
       label: labels[i],
       value: matchToColumnId(c, inputAnchor!),
+      // What PlDropdown buckets the option list by, so picking a column shows which metrics act
+      // on whole clusters and which reorder within one.
+      group: levelGroups[rankingLevelOf(c.getSpec(), result.anchorSpec)],
     }));
 
     return {
       options,
+      levelLabels,
       // See filterConfig.
       inputKey: inputKeyOf(inputAnchor, inputFilter),
       defaults: result.meta.defaultRankingOrder,

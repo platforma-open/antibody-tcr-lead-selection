@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import type {
   ScopedColumnId,
-  RankingOrder,
+  WeightedRankingOrderUI,
 } from "@platforma-open/milaboratories.top-antibodies.model";
+import { DEFAULT_RANKING_WEIGHT } from "@platforma-open/milaboratories.top-antibodies.model";
 import type { ListOption } from "@platforma-sdk/ui-vue";
 import { PlDropdown } from "@platforma-sdk/ui-vue";
 
@@ -11,9 +12,10 @@ const rankingOrderOptions = [
   { value: "decreasing", label: "Highest" },
 ];
 
-const model = defineModel<RankingOrder>({
+const model = defineModel<WeightedRankingOrderUI>({
   default: {
     rankingOrder: "increasing",
+    weight: DEFAULT_RANKING_WEIGHT,
   },
 });
 

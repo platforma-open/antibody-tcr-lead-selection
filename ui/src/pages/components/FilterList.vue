@@ -153,7 +153,7 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
       </template>
     </PlElementList>
 
-    <div class="d-flex flex-column gap-6">
+    <div class="d-flex flex-column gap-6 mt-6">
       <PlBtnSecondary icon="add" @click="addFilter"> Add Filter </PlBtnSecondary>
 
       <PlBtnSecondary icon="reverse" :disabled="!configIsCurrent" @click="resetToDefaults">

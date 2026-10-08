@@ -9,6 +9,7 @@ sampledColsConv := import(":sampled-cols-conv")
 sampledExportConv := import(":sampled-export-conv")
 selectionStageConv := import(":selection-stage-conv")
 json := import("json")
+canonical := import("@platforma-sdk/workflow-tengo:canonical")
 
 f := exec.formula
 
@@ -85,7 +86,7 @@ self.body(func(inputs) {
 			addFile("selection_in.parquet", selectionParquet).
 			arg("--parquet").arg("filteredClonotypes.parquet").
 			arg("--n").arg(string(topClonotypes)).
-			arg("--ranking-map").arg(string(json.encode(rankingMap))).
+			arg("--ranking-map").arg(string(canonical.encode(rankingMap))).
 			arg("--selection-in").arg("selection_in.parquet").
 			arg("--selection-out").arg("selection_out.parquet")
 

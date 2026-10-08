@@ -58,6 +58,7 @@ export type ScopedColumnId = {
 export type RankingOrder = {
   value?: ScopedColumnId;
   rankingOrder: "increasing" | "decreasing";
+  weight?: number;
 };
 
 /** Filter for matching any of a set of discrete string values */

@@ -101,6 +101,15 @@ const inVivoScoreNoticeVisible = computed<boolean>({
   },
 });
 
+// One-time notice for projects that had a ranking before it became a weighted
+// score. Dismissing it clears the flag for good.
+const balancedRankingNoticeVisible = computed<boolean>({
+  get: () => app.model.data.balancedRankingNotice === true,
+  set: (v: boolean) => {
+    if (!v) app.model.data.balancedRankingNotice = false;
+  },
+});
+
 // Special value for "No diversification" option
 const NO_DIVERSIFICATION_VALUE = "__no_diversification__";
 
@@ -185,8 +194,12 @@ const selectedPresetValue = computed<string>({
 });
 
 // Reset preset when the input (dataset or its filter) or the modality changes: a preset chosen
-// for one input is not assumed to fit another.
-watch([inputKey, () => app.model.outputs.modality], () => {
+// for one input is not assumed to fit another. `modality` is undefined while the outputs
+// resolve, on mount and again whenever the pack is updated; those transitions are not a change
+// of modality, and resetting on them wipes the preset and with it the ranking and filter lists.
+watch([inputKey, () => app.model.outputs.modality], ([key, modality], [prevKey, prevModality]) => {
+  const hydrating = modality === undefined || prevModality === undefined;
+  if (key === prevKey && hydrating) return;
   app.model.data.preset = undefined;
 });
 
@@ -256,6 +269,18 @@ watch(
       column using it has been removed from this project. The score is now produced by the
       Repertoire Score block — add it upstream and rank by its Repertoire Score column instead.
     </PlAlert>
+    <PlAlert
+      v-model="balancedRankingNoticeVisible"
+      type="warn"
+      label="Ranking now combines every criterion"
+      closeable
+    >
+      Before Lead Selection v5.0.0 ranking used to apply each criterion in order, the second ranking
+      criterion separating only the sequences that tied exactly on the first. It now computes one
+      combined score per sequence, in which each criterion counts in proportion to its weight.
+      Re-running this updated block might result in a different selection of leads as compared to
+      the previous version.
+    </PlAlert>
     <PlAlert v-if="app.model.outputs.kabatWarning" type="warn">
       {{ app.model.outputs.kabatWarning }}
     </PlAlert>
@@ -268,19 +293,18 @@ watch(
       show-export-button
       disable-filters-panel
     />
-    <PlSlideModal v-model="settingsOpen" :close-on-outside-click="true">
+    <PlSlideModal v-model="settingsOpen" :close-on-outside-click="true" width="40%">
       <template #title>Settings</template>
 
       <!-- First element: Select dataset (with optional filter dropdown) -->
       <PlDatasetSelector
         v-model="app.model.data.input"
         :options="app.model.outputs.datasetOptions"
-        :style="{ width: '320px' }"
         label="Select dataset"
         clearable
         required
       />
-      <PlAlert v-if="defaultsPending" type="info" :style="{ width: '320px' }">
+      <PlAlert v-if="defaultsPending" type="info">
         Computing the preset defaults for this dataset. Please wait a moment before editing filters
         or ranking.
       </PlAlert>
@@ -288,7 +312,6 @@ watch(
       <!-- Number of leads to select -->
       <PlNumberField
         v-model="app.model.data.topClonotypes"
-        :style="{ width: '320px' }"
         label="Number of sequences to select"
         :step="1"
         :error-message="validateTopClonotypes(app.model.data.topClonotypes)"
@@ -297,12 +320,7 @@ watch(
       </PlNumberField>
 
       <!-- Workflow preset selector -->
-      <PlDropdown
-        v-model="selectedPresetValue"
-        :options="presetOptions"
-        :style="{ width: '320px' }"
-        label="Workflow preset"
-      >
+      <PlDropdown v-model="selectedPresetValue" :options="presetOptions" label="Workflow preset">
         <template #tooltip>
           Pre-configured ranking for common discovery workflows.
           <br /><br />
@@ -327,23 +345,24 @@ watch(
           app.model.outputs.clusterColumnOptions.length > 0
         "
       >
-        <PlRow>
-          Diversify by:
-          <PlTooltip>
-            <PlIcon16 name="info" />
-            <template #tooltip
-              >Defines how sequences are grouped to ensure diversity in the selected
-              panel.</template
-            >
-          </PlTooltip>
-        </PlRow>
+        <div class="diversify-group d-flex flex-column gap-24">
+          <PlRow>
+            Diversify by:
+            <PlTooltip>
+              <PlIcon16 name="info" />
+              <template #tooltip
+                >Defines how sequences are grouped to ensure diversity in the selected
+                panel.</template
+              >
+            </PlTooltip>
+          </PlRow>
 
-        <PlDropdown
-          v-model="selectedClusterColumnValue"
-          :options="clusterColumnOptionsWithNone"
-          :style="{ width: '320px' }"
-          label="Cluster for diversification"
-        />
+          <PlDropdown
+            v-model="selectedClusterColumnValue"
+            :options="clusterColumnOptionsWithNone"
+            label="Cluster for diversification"
+          />
+        </div>
       </template>
 
       <RankList />
@@ -364,7 +383,6 @@ watch(
       <PlAlert
         v-if="app.model.data.rankingOrder.some((order) => order.value === undefined)"
         type="warn"
-        :style="{ width: '320px' }"
       >
         {{ "Warning: Please remove or assign values to empty ranking columns" }}
       </PlAlert>
@@ -384,3 +402,17 @@ watch(
     </PlSlideModal>
   </PlBlockPage>
 </template>
+
+<style scoped>
+/*
+ * Rules around the diversification block. Borders on the group rather than two
+ * `PlSectionSeparator`s, which as separate flex children would each add the modal's 24px gap.
+ * The padding matches that gap, so each rule sits the same distance from the content on either
+ * side of it.
+ */
+.diversify-group {
+  padding-block: 24px;
+  border-top: 1px solid var(--border-color-div-grey);
+  border-bottom: 1px solid var(--border-color-div-grey);
+}
+</style>
