@@ -113,7 +113,6 @@ describe("the chain survives the shapes stored data really has", () => {
     "Ver_2026_07_28",
     "Ver_2026_08_20",
     "Ver_2026_09_28",
-    "Ver_2026_10_02",
   ];
   const SHAPES: [string, unknown][] = [
     ["no ranking key", {}],
@@ -137,11 +136,11 @@ describe("balanced ranking notice", () => {
 
   test("a project with a stored ranking is told its results will change", () => {
     expect(
-      notice("Ver_2026_10_02", { rankingOrder: [{ rankingOrder: "decreasing", weight: 1 }] }),
+      notice("Ver_2026_09_28", { rankingOrder: [{ rankingOrder: "decreasing", weight: 1 }] }),
     ).toBe(true);
   });
 
   test("a project that never ranked anything is not", () => {
-    expect(notice("Ver_2026_10_02", { rankingOrder: [] })).toBeUndefined();
+    expect(notice("Ver_2026_09_28", { rankingOrder: [] })).toBeUndefined();
   });
 });

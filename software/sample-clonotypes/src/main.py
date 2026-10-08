@@ -203,7 +203,8 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
 
     Every ranking column counts, in proportion to its weight. A clonotype with no
     value in a ranking column stays in the result and scores worst on that column,
-    keeping whatever the other columns give it. A clonotype with no
+    keeping whatever the other columns give it; where that leaves it level with a
+    clonotype that holds a value, the measured one is drawn first. A clonotype with no
     diversification group is dropped. See composite_score.
     """
     df = coerce_ranking_columns(df, all_ranking_cols)
@@ -232,30 +233,29 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
 
     # Score once, then sort by that one column. The weights decide how much each
     # ranking column moves the result; the order they were added in does not.
+    #
+    # `_missing` breaks ties ahead of the key. Having been measured wins a tie.
     if all_ranking_cols:
         df = df.with_columns(
-            composite_score(df, ranking_map, all_ranking_cols).alias("_composite")
+            composite_score(df, ranking_map, all_ranking_cols).alias("_composite"),
+            pl.sum_horizontal(
+                [pl.col(col).is_null() for col in all_ranking_cols]
+            ).alias("_missing"),
         )
-        sort_columns = ["_composite", "clonotypeKey"]
-        sort_descending = [True, False]
+        sort_columns = ["_composite", "_missing", "clonotypeKey"]
+        sort_descending = [True, False, False]
         print(f"Sorting by weighted composite of: {', '.join(all_ranking_cols)}")
     else:
         sort_columns = ['clonotypeKey']
         sort_descending = [False]
         print("No ranking columns, sorting by clonotypeKey only")
 
-    # The composite already scores a missing value worst in its own column, so
-    # nothing here depends on null ordering. Report how many clonotypes that
-    # affects.
     if all_ranking_cols:
-        missing = int(
-            df.select(
-                pl.any_horizontal([pl.col(col).is_null() for col in all_ranking_cols])
-            ).to_series().sum()
-        )
-        if missing:
-            print(f"{missing} clonotypes have no value in at least one ranking "
-                  f"column. They rank last in that column only.")
+        affected = int(df.select((pl.col("_missing") > 0).sum()).item())
+        if affected:
+            print(f"{affected} clonotypes have no value in at least one ranking "
+                  f"column. They score worst in that column, and lose a tie to a "
+                  f"clonotype measured everywhere.")
 
     # Step 1: Sort by the composite
     df = df.sort(sort_columns, descending=sort_descending, nulls_last=True)
@@ -287,7 +287,7 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
     # Drop the helper columns. The composite stays internal: a weighting is a
     # setting, not a measurement of the clonotype.
     result = result.drop(
-        [col for col in ("_local_rank", "_composite") if col in result.columns]
+        [col for col in ("_local_rank", "_composite", "_missing") if col in result.columns]
     )
 
     # Add ranked_order column

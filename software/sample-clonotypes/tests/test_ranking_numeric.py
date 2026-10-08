@@ -7,8 +7,9 @@ proportion to its weight. No criterion is a tiebreaker for another.
 Numeric columns must be treated as numbers even when the clone table delivers
 them as strings with "" in the gaps. inf and -inf parse to real floats and keep
 the two ends of the scale. "" and NaN have no place on it and score 0, level with
-the worst value present. A clonotype holding one is kept, not dropped, and keeps
-whatever the other criteria give it.
+the worst value present — and lose the resulting tie, so they still come last. A
+clonotype holding one is kept, not dropped, and keeps whatever the other criteria
+give it.
 """
 
 import polars as pl
@@ -60,15 +61,15 @@ def test_empty_value_row_scores_worst_and_is_still_selectable():
     assert result["clonotypeKey"].to_list() == ["c3", "c1", "c0", "c2"]
 
 
-def test_empty_value_row_scores_worst_when_increasing():
-    """Worst in either direction — never "smallest, therefore first". c2 holds no
-    value and scores 0; c3 holds 100.7, the worst value present, and scores 0 too,
-    so clonotypeKey settles which of the two comes last."""
+def test_empty_value_row_ranks_last_when_increasing():
+    """Last in either direction — never "smallest, therefore first". c2 holds no
+    value and c3 holds 100.7, the worst value present; both score 0, and the
+    missing-value tiebreaker puts the measured one first."""
     df = clone_table(["9.5", "10.2", "", "100.7"])
 
     result = diversified_rank_and_select(df, 4, rmap({"Col0": "increasing"}), ["Col0"])
 
-    assert result["clonotypeKey"].to_list() == ["c0", "c1", "c2", "c3"]
+    assert result["clonotypeKey"].to_list() == ["c0", "c1", "c3", "c2"]
 
 
 def test_inf_is_the_largest_and_minus_inf_the_smallest():
@@ -89,24 +90,24 @@ def test_inf_ends_swap_when_the_direction_is_increasing():
     assert result["clonotypeKey"].to_list() == ["c3", "c0", "c2", "c1"]
 
 
-def test_nan_and_empty_score_worst_alongside_minus_inf():
+def test_nan_and_empty_rank_behind_minus_inf():
     """NaN has no place on the scale, so it scores with "". -inf does have a place
-    and keeps the bottom of the scale — which is also a score of 0, so the three
-    tie and clonotypeKey orders them."""
+    and keeps the bottom of the scale — the same score of 0 — but it is a measured
+    value, so it wins the tie and the two unmeasured rows fall behind it."""
     df = clone_table(["9.5", "NaN", "inf", "100.7", "-inf", ""])
 
     result = diversified_rank_and_select(df, 6, rmap({"Col0": "decreasing"}), ["Col0"])
 
-    assert result["clonotypeKey"].to_list() == ["c2", "c3", "c0", "c1", "c4", "c5"]
+    assert result["clonotypeKey"].to_list() == ["c2", "c3", "c0", "c4", "c1", "c5"]
 
 
-def test_nan_and_empty_still_score_worst_when_increasing():
+def test_nan_and_empty_still_rank_last_when_increasing():
     """The same, with inf now the worst value present."""
     df = clone_table(["9.5", "NaN", "inf", "100.7", "-inf", ""])
 
     result = diversified_rank_and_select(df, 6, rmap({"Col0": "increasing"}), ["Col0"])
 
-    assert result["clonotypeKey"].to_list() == ["c4", "c0", "c3", "c1", "c2", "c5"]
+    assert result["clonotypeKey"].to_list() == ["c4", "c0", "c3", "c2", "c1", "c5"]
 
 
 def test_nan_and_inf_floats_get_the_same_treatment():
@@ -136,7 +137,7 @@ def test_increasing_direction_respected_on_coerced_column():
 
     result = diversified_rank_and_select(df, 3, rmap({"Col0": "increasing"}), ["Col0"])
 
-    assert result["clonotypeKey"].to_list() == ["c0", "c1", "c2"]
+    assert result["clonotypeKey"].to_list() == ["c0", "c1", "c3"]
 
 
 def test_cluster_and_linker_columns_are_coerced_too():
@@ -334,3 +335,4 @@ def test_helper_columns_are_not_in_the_output():
 
     assert "_local_rank" not in result.columns
     assert "_composite" not in result.columns
+    assert "_missing" not in result.columns

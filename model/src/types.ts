@@ -110,21 +110,18 @@ export type BlockData_Ver_2026_08_20 = Omit<
   rankingsInitializedForAnchor?: InitializedForAnchor;
 };
 
-export type BlockData_Ver_2026_10_02 = Omit<BlockData_Ver_2026_08_20, "rankingOrder"> & {
-  /** Ranking rows, every one carrying a weight — `.init` and `Ver_2026_10_02` fill it in. */
+export type BlockData_Ver_2026_10_08 = Omit<BlockData_Ver_2026_08_20, "rankingOrder"> & {
+  /** Ranking rows, every one carrying a weight — `.init` and `Ver_2026_10_08` fill it in. */
   rankingOrder: WeightedRankingOrderUI[];
-};
-
-export type BlockData_Ver_2026_10_05 = BlockData_Ver_2026_10_02 & {
   /**
-   * Set by the `Ver_2026_10_05` migration for a project that already had a
+   * Set by the `Ver_2026_10_08` migration for a project that already had a
    * ranking when ranking stopped being lexicographic. Drives a one-time notice
    * on the main page; cleared when the user dismisses it.
    */
   balancedRankingNotice?: boolean;
 };
 
-export type BlockData = BlockData_Ver_2026_10_05;
+export type BlockData = BlockData_Ver_2026_10_08;
 
 export type BlockArgs = {
   defaultBlockLabel: string;
