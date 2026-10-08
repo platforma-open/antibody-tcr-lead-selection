@@ -345,7 +345,7 @@ watch(
           app.model.outputs.clusterColumnOptions.length > 0
         "
       >
-        <div class="diversify-group d-flex flex-column gap-6">
+        <div class="diversify-group d-flex flex-column gap-24">
           <PlRow>
             Diversify by:
             <PlTooltip>
