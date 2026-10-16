@@ -320,8 +320,9 @@ export function isUsableRankingWeight(weight: number): boolean {
 /**
  * Fills in the weight of every ranking row that has none.
  *
- * A list where no row has one predates weights, so its order was its priority: it gets
- * descending weights `n, n - 1, …, 1`. Rows beside already-weighted ones get the default.
+ * Every row gets the same weight. A list arriving without weights was a priority order and stays
+ * one — the block migrates into `priority` mode, where weights go unused — so they carry no
+ * ordering of their own and start level for the balanced score.
  */
 export function withRankingWeights(
   rows: readonly RankingOrderUI[] | undefined,
@@ -848,17 +849,9 @@ function computePresets(
     filters: inVivoFilters,
   };
 
-  // Peptide defaults: all numeric score columns; no SHM exclusions.
+  // Peptide defaults: every numeric score column
   const inPeptideDefaults = {
-    rankingOrder: scores
-      .filter((s) => s.getSpec().valueType !== "String")
-      .map((s) => ({
-        value: matchToColumnId(s, anchorRef),
-        rankingOrder:
-          (s.getSpec().annotations?.[Annotation.Score.RankingOrder] as
-            | "increasing"
-            | "decreasing") ?? "decreasing",
-      })),
+    rankingOrder: defaultRankingOrder,
     filters: defaultFilters,
   };
 

@@ -180,8 +180,8 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
           <div class="tooltip-detail">
             Ranking columns apply in order; the first one ranks the {{ recordWord }}s, and each
             ranking column after it separates only those that tied exactly on every column before
-            it. Cluster metrics apply before {{ recordWord }} metrics whatever the list shows. Drag
-            a row to change its priority within its group.
+            it. Cluster metrics apply always before {{ recordWord }} metrics. Drag a row to change
+            its priority within its group.
           </div>
           <b>Balanced:</b>
           <div class="tooltip-detail">
@@ -220,12 +220,15 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
           <PlNumberField
             v-model="rows[index].weight"
             :validate="rankingWeightError"
-            :step="0.1"
             disable-steps
             required
           />
         </div>
-        <span v-if="isBalanced" class="rank-weight-norm flex-shrink-0 align-self-center">
+        <span
+          v-if="isBalanced"
+          class="rank-weight-norm flex-shrink-0 align-self-center"
+          @click.stop
+        >
           {{ formatWeightNorm(weightNorms[index]) }}
         </span>
         <span class="align-self-center">
@@ -297,8 +300,10 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
    * is right when that is a card. These headings are not content though — they name the columns
    * under them — so they take that 12px back and sit 24px below the prose instead.
    *
-   * Below them the gap closes to zero, because a row then spends 18px on its own border, padding
-   * and the field's centring before the first weight field appears.
+   * Below them the gap closes to zero, because `PlElementList` already opens with 8px of its own:
+   * it renders its pinned container unconditionally (`PlElementList.vue:301`, no `v-if` unlike the
+   * unpinned one), and although that container is empty here it is still a flex item of a
+   * `gap: 8px` column. So the headings sit 8px above the first card, not flush against it.
    */
   margin-top: 12px;
   margin-bottom: -12px;

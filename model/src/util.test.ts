@@ -385,7 +385,7 @@ describe("normalizeWeights", () => {
     expect(normalizeWeights([])).toEqual([]);
   });
 
-  test("the linear descending weights a migrated config gets are the brief's numbers", () => {
+  test("a descending series normalizes to the brief's numbers", () => {
     const [a, b, c] = normalizeWeights([3, 2, 1]);
     expect([a, b, c].map((s) => Math.round(s * 100) / 100)).toEqual([0.5, 0.33, 0.17]);
   });
@@ -431,7 +431,8 @@ describe("withRankingWeights", () => {
   });
 
   test("a missing list reads as an empty one", () => {
-    // Stored data need not hold every declared field, and a throwing migration resets it all.
+    // Stored data need not hold every declared field, and a throwing migration leaves the block
+    // unable to take the new pack at all.
     expect(withRankingWeights(undefined)).toEqual([]);
   });
 
