@@ -11,6 +11,7 @@ import type {
   Filter,
   InitializedForAnchor,
   PlTableFilter,
+  RankingMode,
   RankingOrder,
   ScopedColumnId,
   WorkflowPreset,
@@ -114,11 +115,10 @@ export type BlockData_Ver_2026_10_08 = Omit<BlockData_Ver_2026_08_20, "rankingOr
   /** Ranking rows, every one carrying a weight — `.init` and `Ver_2026_10_08` fill it in. */
   rankingOrder: WeightedRankingOrderUI[];
   /**
-   * Set by the `Ver_2026_10_08` migration for a project that already had a
-   * ranking when ranking stopped being lexicographic. Drives a one-time notice
-   * on the main page; cleared when the user dismisses it.
+   * How the criteria combine. `priority` — the original behaviour — is the default
+   * everywhere.
    */
-  balancedRankingNotice?: boolean;
+  rankingMode: RankingMode;
 };
 
 export type BlockData = BlockData_Ver_2026_10_08;
@@ -134,6 +134,7 @@ export type BlockArgs = {
    */
   inputFilter?: PlRef;
   topClonotypes: number;
+  rankingMode: RankingMode;
   rankingOrder: RankingOrderArg[];
   filters: Filter[];
   kabatNumbering?: boolean;
@@ -149,7 +150,10 @@ export type BlockArgs = {
 export type RankingOrderArg = {
   value?: ScopedColumnId;
   rankingOrder: "increasing" | "decreasing";
-  weightNorm: number;
+  /**
+   * The row's weight as a fraction of all of them, present only in `balanced` mode.
+   */
+  weightNorm?: number;
 };
 
 export type RankingOrderUI = RankingOrder & {

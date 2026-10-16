@@ -327,11 +327,7 @@ export function withRankingWeights(
   rows: readonly RankingOrderUI[] | undefined,
 ): WeightedRankingOrderUI[] {
   if (!Array.isArray(rows)) return [];
-  const noneWeighted = rows.every((row) => row.weight === undefined);
-  return rows.map((row, i) => ({
-    ...row,
-    weight: row.weight ?? (noneWeighted ? rows.length - i : DEFAULT_RANKING_WEIGHT),
-  }));
+  return rows.map((row) => ({ ...row, weight: row.weight ?? DEFAULT_RANKING_WEIGHT }));
 }
 
 /** Each weight as a fraction of all of them: `w / Σw`. Zero-sum lists read as equal. */
@@ -778,8 +774,8 @@ function computePresets(
       isExpanded: false,
     }));
 
-  // Equal weights. The Repertoire Score keeps the front row below, but row order no
-  // longer affects the score.
+  // Equal weights. The Repertoire Score takes the front row, which is its priority in
+  // `priority` mode and makes no difference to the `balanced` score.
   if (repertoireScore) {
     defaultRankingOrder.unshift({
       value: matchToColumnId(repertoireScore, anchorRef),

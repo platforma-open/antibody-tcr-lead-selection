@@ -398,8 +398,10 @@ describe("withRankingWeights", () => {
     ...over,
   });
 
-  test("a list written before weights existed gets its order read as its priority", () => {
-    expect(withRankingWeights([rank(), rank(), rank()]).map((r) => r.weight)).toEqual([3, 2, 1]);
+  test("a list written before weights existed gets equal weights", () => {
+    // Its order is still its priority, and `priority` mode is where it lands; the
+    // weights only come into play if the user switches to the balanced score.
+    expect(withRankingWeights([rank(), rank(), rank()]).map((r) => r.weight)).toEqual([1, 1, 1]);
   });
 
   test("one metric takes the whole score", () => {

@@ -14,6 +14,13 @@ def parse_arguments():
     parser.add_argument("--n", type=int, required=True, help="Number of top rows to output")
     parser.add_argument("--out", required=True, help="Path to output Parquet file")
     parser.add_argument("--ranking-map", type=str, help='JSON string specifying ranking direction for each column, e.g., {"Col0":"decreasing","Col1":"increasing","Col_linker.0.0":"decreasing"}')
+    parser.add_argument("--ranking-mode", type=str, default="priority",
+                        choices=["priority", "balanced"],
+                        help='How the ranking criteria combine. "priority" (the default) applies '
+                             'them in order, each one separating only the clonotypes that tied '
+                             'exactly on every earlier one. "balanced" sums them into one '
+                             'weighted score where every criterion counts in proportion to its '
+                             'weight.')
     parser.add_argument("--diversification-column", type=str,
                         help="Column header name to use for diversified ranking (e.g., 'cluster_0')")
     parser.add_argument("--selection-in", type=str, required=False,
@@ -27,9 +34,9 @@ def parse_ranking_map(ranking_map_str, all_col_columns):
     """Parse the ranking map JSON into {column: {"direction", "weight"}}.
 
     The workflow writes one entry per ranking column, holding the sort direction
-    and the weight the user gave that column, already divided by the sum of all
-    weights. A column with no entry gets a decreasing direction and an equal
-    share, which is also the whole map when --ranking-map is absent.
+    and, in "balanced" mode, the weight the user gave that column already divided
+    by the sum of all weights. A column with no entry gets a decreasing direction
+    and an equal share, which is also the whole map when --ranking-map is absent.
     """
     equal_share = 1.0 / len(all_col_columns) if all_col_columns else 0.0
     complete_map = {col: {"direction": "decreasing", "weight": equal_share}
@@ -49,8 +56,9 @@ def parse_ranking_map(ranking_map_str, all_col_columns):
 
     for col, cfg in ranking_map.items():
         if col in complete_map:
-            complete_map[col] = {"direction": cfg["direction"],
-                                 "weight": float(cfg["weight"])}
+            complete_map[col]["direction"] = cfg["direction"]
+            if "weight" in cfg:
+                complete_map[col]["weight"] = float(cfg["weight"])
 
     print(f"Using ranking directions and weights: {complete_map}")
     return complete_map
@@ -188,24 +196,30 @@ def composite_score(df, ranking_map, ranking_cols):
     return pl.sum_horizontal(terms)
 
 
-def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversification_column=None):
+def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols,
+                                diversification_column=None, ranking_mode="priority"):
     """
     Rank and select top N rows using diversified ranking.
 
+    Two orderings, chosen by `ranking_mode`:
+
+    - "priority" — the block's original behaviour and the default. One multi-key sort
+      over the ranking columns in order, so a column separates only the clonotypes that
+      tied exactly on every column before it.
+    - "balanced" — one weighted composite score over all the columns, so every column
+      counts in proportion to its weight. See composite_score.
+
     Algorithm:
-    1. Score every clonotype with one weighted composite over all ranking
-       columns, then sort by it, clonotypeKey breaking ties
+    1. Order the clonotypes by the chosen mode, clonotypeKey breaking ties
     2. If diversification_column is set:
        a. Compute _local_rank = cumulative count within each group (preserves sort order)
-       b. Re-sort by (_local_rank ASC, composite DESC)
+       b. Re-sort by (_local_rank ASC, then the same ordering)
     3. Take top N
     4. Add ranked_order column
 
-    Every ranking column counts, in proportion to its weight. A clonotype with no
-    value in a ranking column stays in the result and scores worst on that column,
-    keeping whatever the other columns give it; where that leaves it level with a
-    clonotype that holds a value, the measured one is drawn first. A clonotype with no
-    diversification group is dropped. See composite_score.
+    A clonotype with no value in a ranking column stays in the result either way and
+    goes last in that column alone, keeping whatever the other columns give it. A
+    clonotype with no diversification group is dropped.
     """
     df = coerce_ranking_columns(df, all_ranking_cols)
 
@@ -231,11 +245,15 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
             print(f"Dropped rows with unassigned '{diversification_column}': "
                   f"{before_empty_drop} -> {df.height}")
 
-    # Score once, then sort by that one column. The weights decide how much each
-    # ranking column moves the result; the order they were added in does not.
-    #
-    # `_missing` breaks ties ahead of the key. Having been measured wins a tie.
-    if all_ranking_cols:
+    if not all_ranking_cols:
+        sort_columns = ['clonotypeKey']
+        sort_descending = [False]
+        print("No ranking columns, sorting by clonotypeKey only")
+    elif ranking_mode == "balanced":
+        # Score once, then sort by that one column. The weights decide how much each
+        # ranking column moves the result; the order they were added in does not.
+        #
+        # `_missing` breaks ties ahead of the key. Having been measured wins a tie.
         df = df.with_columns(
             composite_score(df, ranking_map, all_ranking_cols).alias("_composite"),
             pl.sum_horizontal(
@@ -246,18 +264,23 @@ def diversified_rank_and_select(df, n, ranking_map, all_ranking_cols, diversific
         sort_descending = [True, False, False]
         print(f"Sorting by weighted composite of: {', '.join(all_ranking_cols)}")
     else:
-        sort_columns = ['clonotypeKey']
-        sort_descending = [False]
-        print("No ranking columns, sorting by clonotypeKey only")
+        sort_columns = all_ranking_cols + ['clonotypeKey']
+        sort_descending = [
+            ranking_map[col]["direction"] == "decreasing" for col in all_ranking_cols
+        ] + [False]
+        print(f"Sorting by priority: {' -> '.join(sort_columns)}")
 
     if all_ranking_cols:
-        affected = int(df.select((pl.col("_missing") > 0).sum()).item())
-        if affected:
-            print(f"{affected} clonotypes have no value in at least one ranking "
-                  f"column. They score worst in that column, and lose a tie to a "
-                  f"clonotype measured everywhere.")
+        missing = int(
+            df.select(
+                pl.any_horizontal([pl.col(col).is_null() for col in all_ranking_cols])
+            ).to_series().sum()
+        )
+        if missing:
+            print(f"{missing} clonotypes have no value in at least one ranking "
+                  f"column. They go last in that column only.")
 
-    # Step 1: Sort by the composite
+    # Step 1: Order the clonotypes
     df = df.sort(sort_columns, descending=sort_descending, nulls_last=True)
 
     # Step 2: If diversification_column is set, compute local rank and re-sort
@@ -345,7 +368,8 @@ def main():
     if not all_ranking_cols:
         print("WARNING: No ranking columns provided, selection will be done in table order")
 
-    result = diversified_rank_and_select(df, args.n, ranking_map, all_ranking_cols, diversification_column)
+    result = diversified_rank_and_select(df, args.n, ranking_map, all_ranking_cols,
+                                        diversification_column, args.ranking_mode)
     ranking_time = time.time() - ranking_start
     print(f"Ranking + selection: {ranking_time:.3f}s (selected {result.height} clonotypes)")
 

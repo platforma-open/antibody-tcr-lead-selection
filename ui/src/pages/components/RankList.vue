@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type {
+  RankingMode,
   RankingOrder,
   ScopedColumnId,
 } from "@platforma-open/milaboratories.top-antibodies.model";
@@ -16,8 +17,10 @@ import {
   PlIcon16,
   PlNumberField,
   PlRow,
+  PlTabs,
   PlTooltip,
 } from "@platforma-sdk/ui-vue";
+import type { TabOption } from "@platforma-sdk/ui-vue";
 import { computed, ref, toRaw } from "vue";
 import { useApp } from "../../app";
 import { useAnchorSyncedDefaults } from "../../composables/useAnchorSyncedDefaults";
@@ -25,6 +28,14 @@ import { formatWeightNorm } from "../../util";
 import RankCard from "./RankCard.vue";
 
 const app = useApp();
+
+// The two ways ranking columns combine.
+const RANKING_MODE_TABS: TabOption<RankingMode>[] = [
+  { label: "Priority", value: "priority" },
+  { label: "Balanced", value: "balanced" },
+];
+
+const isBalanced = computed(() => app.model.data.rankingMode === "balanced");
 
 // Counter for generating unique IDs
 const idCounter = ref(0);
@@ -157,28 +168,38 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
 </script>
 
 <template>
-  <div class="rank-list d-flex flex-column gap-6">
-    <PlRow>
+  <div class="rank-list d-flex flex-column gap-12">
+    <PlRow align-center class="rank-heading">
       Choose the best sequences by:
       <PlTooltip>
         <PlIcon16 name="info" />
         <template #tooltip>
-          Select the criteria used to prioritize lead sequences during selection.
+          Select the ranking columns used to prioritize lead sequences during selection.
           <br /><br />
-          One <b>combined score</b> is computed per {{ recordWord }}: each ranking selection counts
-          in proportion to its weight. Candidates are then selected from that ranking. The
-          <b>%</b> column shows each weight as a fraction of all the weights together, rounded for
-          display; the score uses the exact fraction: <br /><br />
-          <code>score = Σ ( % × ranked value )</code>
-          <br /><br />
-          Each selection's values are replaced by their rank before weighting, so columns in
-          different units can be combined.
+          <b>Priority:</b>
+          <div class="tooltip-detail">
+            Ranking columns apply in order; the first one ranks the {{ recordWord }}s, and each
+            ranking column after it separates only those that tied exactly on every column before
+            it. Cluster metrics apply before {{ recordWord }} metrics whatever the list shows. Drag
+            a row to change its priority within its group.
+          </div>
+          <b>Balanced:</b>
+          <div class="tooltip-detail">
+            One combined score per {{ recordWord }}, every ranking column counting in proportion to
+            its weight. The <b>%</b> column shows each weight as a fraction of all the weights
+            together, rounded for display; the score uses the exact fraction: <br /><br />
+            <code>score = Σ ( % × ranked value )</code>
+            <br /><br />
+            Values are replaced by their rank before weighting, so ranking columns in different
+            units can be combined.
+          </div>
         </template>
       </PlTooltip>
+      <PlTabs v-model="app.model.data.rankingMode" :options="RANKING_MODE_TABS" class="ml-auto" />
     </PlRow>
 
     <div
-      v-if="(app.model.data.rankingOrder ?? []).length > 0"
+      v-if="isBalanced && (app.model.data.rankingOrder ?? []).length > 0"
       class="rank-columns text-caps11 d-flex gap-8"
     >
       <span class="rank-columns__weight">Weight</span>
@@ -192,9 +213,10 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
       :on-expand="(item) => (item.isExpanded = !item.isExpanded)"
     >
       <!-- Weight and percentage lead the row so the list can be balanced without expanding
-           anything. `@click.stop` keeps the field from toggling the card. -->
+           anything. `@click.stop` keeps the field from toggling the card. In priority mode
+           they are hidden. -->
       <template #item-title="{ item, index }">
-        <div class="rank-weight flex-shrink-0 align-self-center" @click.stop>
+        <div v-if="isBalanced" class="rank-weight flex-shrink-0 align-self-center" @click.stop>
           <PlNumberField
             v-model="rows[index].weight"
             :validate="rankingWeightError"
@@ -203,7 +225,7 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
             required
           />
         </div>
-        <span class="rank-weight-norm flex-shrink-0 align-self-center">
+        <span v-if="isBalanced" class="rank-weight-norm flex-shrink-0 align-self-center">
           {{ formatWeightNorm(weightNorms[index]) }}
         </span>
         <span class="align-self-center">
@@ -215,7 +237,7 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
       </template>
     </PlElementList>
 
-    <div class="d-flex flex-column gap-6 mt-6">
+    <div class="d-flex flex-column gap-6 mt-3">
       <PlBtnSecondary icon="add" @click="addRankColumn"> Add Ranking Column </PlBtnSecondary>
 
       <PlBtnSecondary icon="reverse" :disabled="!configIsCurrent" @click="resetToDefaults">
@@ -245,13 +267,41 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
   --rank-row-lead-width: 53px;
 }
 
+/*
+ * Each mode's explanation is indented under its own label in the tooltip, so the two read as 
+ * separate blocks rather than one run of prose.
+ */
+.tooltip-detail {
+  margin: 4px 0 12px 12px;
+}
+
+.tooltip-detail:last-child {
+  margin-bottom: 0;
+}
+
+/*
+ * Cancelling the gap puts the text 12px from what follows, matching them. Recompute if the tab
+ * strip's height or the base line-height moves.
+ */
+.rank-heading {
+  margin-bottom: -12px;
+}
+
 /* One heading row, naming the two numeric columns. The metric column needs no heading. */
 .rank-columns {
   padding-left: var(--rank-row-lead-width);
   /* "WEIGHT" nearly fills its column, so a heading overflows rather than wrapping. */
   white-space: nowrap;
-  margin-top: 18px;
-  margin-bottom: -6px;
+  /*
+   * `.rank-heading` cancels the section gap so the prose sits 12px from whatever follows it, which
+   * is right when that is a card. These headings are not content though — they name the columns
+   * under them — so they take that 12px back and sit 24px below the prose instead.
+   *
+   * Below them the gap closes to zero, because a row then spends 18px on its own border, padding
+   * and the field's centring before the first weight field appears.
+   */
+  margin-top: 12px;
+  margin-bottom: -12px;
 }
 
 /*

@@ -7,6 +7,7 @@ import type {
   DiscreteFilter,
   Filter,
   InitializedForAnchor,
+  RankingMode,
   RankingOrder,
   ScopedColumnId,
   WorkflowPreset,
@@ -136,6 +137,7 @@ const CONTRACT = {
   ),
   topClonotypes: check(isNumber, "a number"),
   kabatNumbering: check(isBoolean, "a boolean"),
+  rankingMode: check(oneOf<RankingMode>("priority", "balanced"), "one of: priority, balanced"),
   rankingOrder: check(
     arrayOf(isRankingOrder),
     "an array of { value?, rankingOrder: 'increasing' | 'decreasing', weight? } entries",

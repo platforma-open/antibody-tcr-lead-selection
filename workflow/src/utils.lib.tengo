@@ -480,10 +480,15 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec, inputFilterCol
                 cloneTable.add(columns.getColumn(col.value.column), {header: header})
                 addedCols = true
 
-                if is_undefined(col.weightNorm) {
-                    ll.panic("ranking column %v arrived without a weight", header)
+                // The weight joins the map only where the score reads it in balanced mode
+                entry := {direction: col.rankingOrder}
+                if args.rankingMode == "balanced" {
+                    if is_undefined(col.weightNorm) {
+                        ll.panic("ranking column %v arrived without a weight", header)
+                    }
+                    entry.weight = col.weightNorm
                 }
-                rankingMap[header] = {direction: col.rankingOrder, weight: col.weightNorm}
+                rankingMap[header] = entry
             }
         }
     }

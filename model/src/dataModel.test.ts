@@ -67,9 +67,10 @@ describe("ranking weight migration", () => {
     { value: column("c"), rankingOrder: "decreasing" },
   ];
 
-  test("a stored list from before weights gets descending weights in its own order", () => {
-    // The order was the priority; descending weights keep it.
-    expect(migrateRanking("Ver_2026_09_28", weightless).map((r) => r.weight)).toEqual([3, 2, 1]);
+  test("a stored list from before weights gets equal weights", () => {
+    // The order is still the priority — the block migrates into `priority` mode — so the
+    // weights carry no ordering of their own and start level for the balanced score.
+    expect(migrateRanking("Ver_2026_09_28", weightless).map((r) => r.weight)).toEqual([1, 1, 1]);
   });
 
   test("directions and columns come through untouched", () => {
@@ -78,11 +79,11 @@ describe("ranking weight migration", () => {
     expect(migrated.map((r) => r.value)).toEqual(weightless.map((r) => r.value));
   });
 
-  test("four metrics come out at 0.4 / 0.3 / 0.2 / 0.1 of the score", () => {
+  test("four metrics each take a quarter of the balanced score", () => {
     const weights = migrateRanking("Ver_2026_09_28", [...weightless, weightless[0]]).map(
       (r) => r.weight,
     );
-    expect(weights).toEqual([4, 3, 2, 1]);
+    expect(weights).toEqual([1, 1, 1, 1]);
   });
 
   test("stored data holding no ranking list at all still migrates", () => {
@@ -124,23 +125,33 @@ describe("the chain survives the shapes stored data really has", () => {
     for (const [label, data] of SHAPES) {
       test(`${version} + ${label}`, () => {
         expect(() => blockDataModel.migrate({ version, data })).not.toThrow();
+        // Whatever the stored shape, the block lands on the behaviour it already had.
+        expect(blockDataModel.migrate({ version, data }).data.rankingMode).toBe("priority");
       });
     }
   }
 });
 
-describe("balanced ranking notice", () => {
+describe("ranking mode default", () => {
   /** Runs stored data through the chain from the version it was left at. */
-  const notice = (version: string, data: unknown) =>
-    blockDataModel.migrate({ version, data }).data.balancedRankingNotice;
+  const mode = (version: string, data: unknown) =>
+    blockDataModel.migrate({ version, data }).data.rankingMode;
 
-  test("a project with a stored ranking is told its results will change", () => {
-    expect(
-      notice("Ver_2026_09_28", { rankingOrder: [{ rankingOrder: "decreasing", weight: 1 }] }),
-    ).toBe(true);
+  test("a migrated project keeps the behaviour it already had", () => {
+    expect(mode("Ver_2026_09_28", { rankingOrder: [{ rankingOrder: "decreasing" }] })).toBe(
+      "priority",
+    );
   });
 
-  test("a project that never ranked anything is not", () => {
-    expect(notice("Ver_2026_09_28", { rankingOrder: [] })).toBeUndefined();
+  test("so does one that never ranked anything", () => {
+    expect(mode("Ver_2026_09_28", {})).toBe("priority");
+  });
+
+  test("migrated rows carry equal weights, not a descending priority", () => {
+    const rows = blockDataModel.migrate({
+      version: "Ver_2026_09_28",
+      data: { rankingOrder: [{ rankingOrder: "decreasing" }, { rankingOrder: "increasing" }] },
+    }).data.rankingOrder;
+    expect(rows.map((r) => r.weight)).toEqual([1, 1]);
   });
 });

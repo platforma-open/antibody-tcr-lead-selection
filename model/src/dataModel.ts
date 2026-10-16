@@ -111,8 +111,9 @@ export const blockDataModel = new DataModelBuilder({ kind })
     filtersInitializedForAnchor: readInitializedForAnchor(prev.filtersInitializedForAnchor),
     rankingsInitializedForAnchor: readInitializedForAnchor(prev.rankingsInitializedForAnchor),
   }))
-  // Every stored ranking row gains a weight; a list with none is read as a priority
-  // order and gets descending weights (see `withRankingWeights`).
+  // Every stored ranking row gains a weight, and the block lands in `priority` mode —
+  // the behaviour it already had — so a migrated project selects exactly the leads it
+  // selected before. The weights sit unused until the user opts into `balanced`.
   //
   // `prev` is raw stored JSON — its TypeScript type is what the old version claimed,
   // not a guarantee, so `rankingOrder` can be absent. Throwing here would leave the
@@ -120,7 +121,7 @@ export const blockDataModel = new DataModelBuilder({ kind })
   .migrate<BlockData>("Ver_2026_10_08", (prev) => ({
     ...prev,
     rankingOrder: withRankingWeights(prev.rankingOrder),
-    balancedRankingNotice: (prev.rankingOrder?.length ?? 0) > 0 ? true : undefined,
+    rankingMode: "priority",
   }))
   // `params` is absent when a block is created by hand rather than from a
   // template, so every field the contract carries keeps its own default.
@@ -132,6 +133,8 @@ export const blockDataModel = new DataModelBuilder({ kind })
     kabatNumbering: params?.kabatNumbering,
     // A template's rows may predate weights, so fill them as the migration does.
     rankingOrder: withRankingWeights(params?.rankingOrder ?? []),
+    // A new block behaves as the block always has; `balanced` is opted into.
+    rankingMode: params?.rankingMode ?? "priority",
     filters: params?.filters ?? [],
     diversificationColumn: params?.diversificationColumn,
     tableState: createPlDataTableStateV2(),
@@ -162,5 +165,4 @@ export const blockDataModel = new DataModelBuilder({ kind })
     rankingsInitializedForAnchor: params?.rankingsInitializedForAnchor,
     preset: params?.preset,
     inVivoScoreRemovedNotice: undefined,
-    balancedRankingNotice: undefined,
   }));

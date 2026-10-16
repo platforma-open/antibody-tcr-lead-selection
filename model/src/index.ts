@@ -236,8 +236,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
   // `isExpanded`) stay behind.
   //
   // View state — the table, the four graphs, the alignment model — never
-  // crosses, nor do the two one-time notice flags, which migrations set for the
-  // stored projects they affected and not for a project built here. The two
+  // crosses, nor does `inVivoScoreRemovedNotice`, which a migration sets for the
+  // stored projects it affected and not for a project built here. The two
   // `…InitializedForAnchor` slots do cross, and they carry their weight: each
   // holds a bare stringified anchor beside the preset it was applied under, so
   // relocation rewrites the anchor while leaving the preset alone, and the
@@ -251,6 +251,7 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     preset: data.preset,
     topClonotypes: data.topClonotypes,
     kabatNumbering: data.kabatNumbering,
+    rankingMode: data.rankingMode,
     rankingOrder: convertRankingOrderUIForParams(data.rankingOrder),
     filters: convertFilterUI(data.filters),
     diversificationColumn: data.diversificationColumn,
@@ -266,11 +267,15 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     if (inputAnchor === undefined) throw new Error("No input anchor");
     if (data.topClonotypes === undefined) throw new Error("No top clonotypes");
 
-    const rankingOrder = convertRankingOrderUI(data.rankingOrder);
+    const rankingOrder = convertRankingOrderUI(data.rankingOrder, data.rankingMode);
     if (rankingOrder.some((order) => order.value === undefined))
       throw new Error("Incomplete ranking order");
-    // Throwing here is what disables Run: the field's own bounds are advisory.
-    if (!data.rankingOrder.every((row) => isUsableRankingWeight(row.weight)))
+    // Throwing here is what disables Run: the field's own bounds are advisory. Only in
+    // `balanced` mode, where weights are shown and used.
+    if (
+      data.rankingMode === "balanced" &&
+      !data.rankingOrder.every((row) => isUsableRankingWeight(row.weight))
+    )
       throw new Error(
         `Ranking weights must be above ${MIN_RANKING_WEIGHT} and at most ${MAX_RANKING_WEIGHT}`,
       );
@@ -283,6 +288,7 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       inputAnchor,
       inputFilter: getInputFilterRef(data),
       topClonotypes: data.topClonotypes,
+      rankingMode: data.rankingMode,
       rankingOrder,
       filters,
       kabatNumbering: data.kabatNumbering,

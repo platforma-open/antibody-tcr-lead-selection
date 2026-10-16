@@ -21,6 +21,10 @@ self.body(func(inputs) {
     datasetSpec := inputs.datasetSpec
     filterMap := inputs.filterMap
     rankingMap := inputs.rankingMap
+    rankingMode := inputs.rankingMode
+    if is_undefined(rankingMode) {
+        rankingMode = "priority"
+    }
     topClonotypes := inputs.topClonotypes
     preconditionMap := inputs.preconditionMap
     hasPrecondition := !is_undefined(preconditionMap) && len(preconditionMap) > 0
@@ -87,6 +91,7 @@ self.body(func(inputs) {
 			arg("--parquet").arg("filteredClonotypes.parquet").
 			arg("--n").arg(string(topClonotypes)).
 			arg("--ranking-map").arg(string(canonical.encode(rankingMap))).
+			arg("--ranking-mode").arg(rankingMode).
 			arg("--selection-in").arg("selection_in.parquet").
 			arg("--selection-out").arg("selection_out.parquet")
 
