@@ -11,6 +11,7 @@ import type {
   PTableSorting,
   RelaxedColumnSelector,
   RenderCtx,
+  TraceEntry,
   TreeNodeAccessor,
 } from "@platforma-sdk/model";
 import {
@@ -85,16 +86,6 @@ export type { RankingLevel } from "./util";
 export { blockDataModel } from "./dataModel";
 export type Href = InferHrefType<typeof platforma>;
 export type BlockOutputs = InferOutputsType<typeof platforma>;
-
-// Trace element types emitted by upstream clustering blocks. Lead-selection
-// pulls each linker's clustering label from these types when populating the
-// cluster-column dropdown; any new clustering producer must be added here.
-const CLUSTERING_TRACE_TYPES = [
-  "milaboratories.clonotype-clustering.clustering",
-  "milaboratories.3d-structure-clustering.clustering",
-  "milaboratories.embedding-clustering.clustering",
-  "milaboratories.lineage-trees.clustering",
-];
 
 // Display selectors for the main table (host-side `ColumnSelector`s — the V3
 // replacement for the old `(spec) => boolean` display lambdas).
@@ -782,19 +773,12 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       // `addAnchor("selectedCluster", ...)`, which needs the `PlRef` wire shape.
       // `deriveColumnOptions` yields `ColumnUniversalId`s instead, so moving to
       // it means changing the workflow and migrating stored data together.
-      const linkers = ctx.resultPool.getOptions(
-        [
-          {
-            axes: axesToMatch,
-            annotations: { [Annotation.IsLinkerColumn]: "true" },
-          },
-        ],
+      const linkers = ctx.resultPool.getOptions([
         {
-          label: {
-            forceTraceElements: CLUSTERING_TRACE_TYPES,
-          },
+          axes: axesToMatch,
+          annotations: { [Annotation.IsLinkerColumn]: "true" },
         },
-      );
+      ]);
 
       for (const link of linkers) {
         const linkerSpec = getSpecByRef(link.ref);
@@ -812,21 +796,11 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
         ) {
           continue;
         }
-        // Extract clustering trace element label directly to avoid verbose
-        // disambiguation when vdj-integration linkers are present in the pool.
-        let label = "Cluster";
-        try {
-          const trace = JSON.parse(linkerSpec.annotations?.[Annotation.Trace] ?? "[]") as {
-            type?: string;
-            label?: string;
-          }[];
-          const clusteringElement = trace.find((t) =>
-            CLUSTERING_TRACE_TYPES.includes(t.type ?? ""),
-          );
-          if (clusteringElement?.label) label = clusteringElement.label;
-        } catch {
-          /* use default */
-        }
+        // Name the option after the clustering block that produced the linker, which is
+        // the last step of its trace
+        const trace =
+          parseJsonSafely<TraceEntry[]>(linkerSpec.annotations?.[Annotation.Trace] ?? "") ?? [];
+        let label = trace.at(-1)?.label || "Cluster";
         // A clustering run on a subset says which: two clusterings with the same settings
         // otherwise read the same.
         const clusterSubset = inputSubsetOf(clusterAxis.domain);
