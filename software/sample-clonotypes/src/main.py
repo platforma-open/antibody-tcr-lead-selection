@@ -31,16 +31,18 @@ def parse_arguments():
 
 
 def parse_ranking_map(ranking_map_str, all_col_columns):
-    """Parse the ranking map JSON into {column: {"direction", "weight"}}.
+    """Parse the ranking map JSON into {column: {"direction", "weight", "priority"}}.
 
     The workflow writes one entry per ranking column, holding the sort direction
-    and, in "balanced" mode, the weight the user gave that column already divided
-    by the sum of all weights. A column with no entry gets a decreasing direction
-    and an equal share, which is also the whole map when --ranking-map is absent.
+    plus whatever the chosen mode reads: the weight the user gave that column
+    already divided by the sum of all weights in "balanced" mode, its position in
+    the user's list in "priority" mode. A column with no entry gets a decreasing
+    direction, an equal share and its position among the columns given here, which
+    is also the whole map when --ranking-map is absent.
     """
     equal_share = 1.0 / len(all_col_columns) if all_col_columns else 0.0
-    complete_map = {col: {"direction": "decreasing", "weight": equal_share}
-                    for col in all_col_columns}
+    complete_map = {col: {"direction": "decreasing", "weight": equal_share, "priority": i}
+                    for i, col in enumerate(all_col_columns)}
 
     # Safety-check. Not reachable with healthy UI
     if not ranking_map_str:
@@ -59,6 +61,8 @@ def parse_ranking_map(ranking_map_str, all_col_columns):
             complete_map[col]["direction"] = cfg["direction"]
             if "weight" in cfg:
                 complete_map[col]["weight"] = float(cfg["weight"])
+            if "priority" in cfg:
+                complete_map[col]["priority"] = int(cfg["priority"])
 
     print(f"Using ranking directions and weights: {complete_map}")
     return complete_map
@@ -362,6 +366,11 @@ def main():
     if ranking_map is None:
         print("Error: Invalid ranking-map provided. Exiting.")
         return
+
+    # The column headers group the criteria by what they act on, which says nothing about
+    # how the user ordered them. The priority the workflow sent is the order to apply them
+    # in; without one the grouped order stands, which is all "balanced" needs.
+    all_ranking_cols.sort(key=lambda col: ranking_map[col]["priority"])
 
     # Rank and select
     ranking_start = time.time()

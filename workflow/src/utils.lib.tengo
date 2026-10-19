@@ -437,6 +437,8 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec, inputFilterCol
     clusterPropertyIdx := 0
     clonotypePropertyIdx := 0
     linkerColumnCounters := {}  // Track column count per linker index
+    // Position in the user's list
+    rankingPriority := 0
     
     if len(args.rankingOrder) > 0 {
         for i, col in args.rankingOrder {
@@ -480,13 +482,18 @@ initializeCloneTable := func(pframes, columns, args, datasetSpec, inputFilterCol
                 cloneTable.add(columns.getColumn(col.value.column), {header: header})
                 addedCols = true
 
-                // The weight joins the map only where the score reads it in balanced mode
+                // Each mode's map carries exactly what that mode's algorithm reads: the
+                // weight for the balanced score, the position in the list for the priority
+                // sort.
                 entry := {direction: col.rankingOrder}
                 if args.rankingMode == "balanced" {
                     if is_undefined(col.weightNorm) {
                         ll.panic("ranking column %v arrived without a weight", header)
                     }
                     entry.weight = col.weightNorm
+                } else {
+                    entry.priority = rankingPriority
+                    rankingPriority = rankingPriority + 1
                 }
                 rankingMap[header] = entry
             }

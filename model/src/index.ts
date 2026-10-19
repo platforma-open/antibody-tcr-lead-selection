@@ -11,7 +11,6 @@ import type {
   PTableSorting,
   RelaxedColumnSelector,
   RenderCtx,
-  TraceEntry,
   TreeNodeAccessor,
 } from "@platforma-sdk/model";
 import {
@@ -29,6 +28,7 @@ import {
   isPColumnSpec,
   isPlRef,
   parseJsonSafely,
+  readAnnotationJson,
   type PObjectId,
 } from "@platforma-sdk/model";
 import {
@@ -798,9 +798,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
         }
         // Name the option after the clustering block that produced the linker, which is
         // the last step of its trace
-        const trace =
-          parseJsonSafely<TraceEntry[]>(linkerSpec.annotations?.[Annotation.Trace] ?? "") ?? [];
-        let label = trace.at(-1)?.label || "Cluster";
+        const trace = readAnnotationJson(linkerSpec, Annotation.Trace);
+        let label = (Array.isArray(trace) ? trace.at(-1)?.label : undefined) || "Cluster";
         // A clustering run on a subset says which: two clusterings with the same settings
         // otherwise read the same.
         const clusterSubset = inputSubsetOf(clusterAxis.domain);

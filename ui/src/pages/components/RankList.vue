@@ -180,8 +180,7 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
           <div class="tooltip-detail">
             Ranking columns apply in order; the first one ranks the {{ recordWord }}s, and each
             ranking column after it separates only those that tied exactly on every column before
-            it. Cluster metrics apply always before {{ recordWord }} metrics. Drag a row to change
-            its priority within its group.
+            it. Drag a row to change its priority.
           </div>
           <b>Balanced:</b>
           <div class="tooltip-detail">
