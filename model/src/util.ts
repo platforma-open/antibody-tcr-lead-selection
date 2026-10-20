@@ -2,6 +2,7 @@ import {
   Annotation,
   Column,
   ColumnsCollection,
+  collectLinkerColumns,
   createGlobalPObjectId,
   DataColumn,
   extractPObjectId,
@@ -265,6 +266,71 @@ export function isPresenceOnlyColumn(spec: PColumnSpec, anchorSpec: PColumnSpec)
 export function isOnAnchorAxes(spec: PColumnSpec, anchorSpec: PColumnSpec): boolean {
   const anchorAxes = new Set(anchorSpec.axesSpec.map(canonicalizeAxisId));
   return spec.axesSpec.every((axis) => anchorAxes.has(canonicalizeAxisId(axis)));
+}
+
+/** Axis names that key a dataset's records. See {@link recordSource} for the producers. */
+const RECORD_AXIS_NAMES: ReadonlySet<string> = new Set([
+  "pl7.app/vdj/clonotypeKey",
+  "pl7.app/vdj/scClonotypeKey",
+  "pl7.app/variantKey",
+]);
+
+/** The anchor's record axis, found by name, not by position. */
+export function findRecordAxis(anchorSpec: PColumnSpec): AxisSpec | undefined {
+  return anchorSpec.axesSpec.find((axis) => RECORD_AXIS_NAMES.has(axis.name));
+}
+
+/**
+ * True when the axis keys the records of a dataset other than the anchor's.
+ *
+ * The anchor's record axis domain is its dataset identity (run id, chain, key structure); a
+ * record axis of the same dataset carries all of it, a narrower one (e.g. per chain) adds
+ * keys. A record axis without that identity belongs to another dataset. An undomained
+ * anchor record axis gives no identity to compare, so only that exact axis counts as own.
+ * An anchor with no record axis has no identity at all, and nothing counts as foreign.
+ */
+function isOtherDatasetRecordAxis(axis: AxisSpec, anchorSpec: PColumnSpec): boolean {
+  if (!RECORD_AXIS_NAMES.has(axis.name)) return false;
+  const anchorRecordAxis = findRecordAxis(anchorSpec);
+  if (anchorRecordAxis === undefined) return false;
+  const identity = Object.entries(anchorRecordAxis.domain ?? {});
+  if (identity.length === 0) {
+    return canonicalizeAxisId(axis) !== canonicalizeAxisId(anchorRecordAxis);
+  }
+  return !identity.every(([key, value]) => axis.domain?.[key] === value);
+}
+
+/**
+ * True when the column, or a linker it was reached through, is keyed by another dataset's
+ * records — e.g. a single-cell reference joined to the anchor by VDJ Integration.
+ *
+ * Links inside the anchor's own dataset (clusters, lineages) never cross a foreign record
+ * axis and do not count.
+ */
+export function isFromAnotherDataset(
+  spec: PColumnSpec,
+  linkerSpecs: PColumnSpec[],
+  anchorSpec: PColumnSpec,
+): boolean {
+  return [spec, ...linkerSpecs].some((s) =>
+    s.axesSpec.some((axis) => isOtherDatasetRecordAxis(axis, anchorSpec)),
+  );
+}
+
+/**
+ * True when every axis of the column is one of the anchor's axes or an axis a linker on its
+ * path maps the anchor's records to (a cluster, a lineage). Such a column resolves to one
+ * value per anchor record; a column with an unlinked extra axis (e.g. a contrast) does not.
+ */
+export function isKeyedByAnchorRecords(
+  spec: PColumnSpec,
+  linkerSpecs: PColumnSpec[],
+  anchorSpec: PColumnSpec,
+): boolean {
+  const reachable = new Set(
+    [anchorSpec, ...linkerSpecs].flatMap((s) => s.axesSpec.map(canonicalizeAxisId)),
+  );
+  return spec.axesSpec.every((axis) => reachable.has(canonicalizeAxisId(axis)));
 }
 
 /** Traversal scope shared by every anchored discovery in the model: filter and ranking
@@ -575,11 +641,25 @@ export function buildCollection(
       .getColumns(),
   ).filter(isSelectableMatch);
 
-  // Scores seed the default filters and every preset. Only columns on the anchor's own
-  // axes qualify; linker-reached columns never do.
+  // Scores seed the default filters and every preset. A score qualifies when it resolves to
+  // one value per anchor record, directly or through the anchor's own links (clusters,
+  // lineages). Columns of another dataset never do: its records are absent from part of the
+  // anchor, and a default filter on them drops that part at the first selection stage.
   const scores = allMatches.filter((c) => {
     const spec = c.getSpec();
-    return spec.annotations?.[Annotation.IsScore] === "true" && isOnAnchorAxes(spec, anchorSpec);
+    if (spec.annotations?.[Annotation.IsScore] !== "true") return false;
+    // A linker whose spec is still arriving cannot be classified: leave the score out for now
+    // rather than fail the whole output; it qualifies once the linker resolves.
+    let linkerSpecs: PColumnSpec[];
+    try {
+      linkerSpecs = collectLinkerColumns(c).map((l) => l.getSpec());
+    } catch {
+      return false;
+    }
+    return (
+      isKeyedByAnchorRecords(spec, linkerSpecs, anchorSpec) &&
+      !isFromAnotherDataset(spec, linkerSpecs, anchorSpec)
+    );
   });
 
   // Compute defaults and presets, from the scores this run may default to (see defaultsForSubset).
