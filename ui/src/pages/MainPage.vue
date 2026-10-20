@@ -40,10 +40,18 @@ const inputKey = computed(() =>
   inputKeyOf(inputAnchorRef.value, getInputFilterRef(app.model.data)),
 );
 // After a dataset or filter change the filter/ranking defaults take a moment to recompute, and
-// arriving they replace whatever was added to the lists meanwhile.
+// arriving they replace whatever was added to the lists meanwhile. Not while the dataset itself is
+// still being produced upstream: nothing is computing then, and the dataset dropdown shows the
+// wait. Only a verdict about the current input hides it, since the status lags a switch too.
+const datasetNotReady = computed(
+  () =>
+    app.model.outputs.inputStatus?.inputKey === inputKey.value &&
+    app.model.outputs.inputStatus?.ready === false,
+);
 const defaultsPending = computed(
   () =>
     inputKey.value !== undefined &&
+    !datasetNotReady.value &&
     (app.model.outputs.filterConfig?.inputKey !== inputKey.value ||
       app.model.outputs.rankingConfig?.inputKey !== inputKey.value),
 );

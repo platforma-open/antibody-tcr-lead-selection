@@ -343,6 +343,17 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     { retentive: true },
   )
 
+  // Whether the input's (see inputKeyOf) dataset spec is in the pool yet; not ready while the
+  // dataset is still being produced upstream. Carries the input it was computed for: like every
+  // output it lags a dataset switch, and only a verdict about the current input counts. Live,
+  // unlike inputAnchorSpec, whose retained value would be the previous dataset's.
+  .output("inputStatus", (ctx) => {
+    const inputAnchor = getInputAnchorRef(ctx.data);
+    const inputKey = inputKeyOf(inputAnchor, getInputFilterRef(ctx.data));
+    if (inputKey === undefined) return undefined;
+    return { inputKey, ready: getSpecByRef(inputAnchor) !== undefined };
+  })
+
   .output(
     "isPeptide",
     (ctx): boolean => {
