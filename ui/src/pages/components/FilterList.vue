@@ -30,7 +30,7 @@ const getColumnLabel = (columnId: ScopedColumnId | undefined) => {
     (option: { value: ScopedColumnId; label: string }) =>
       option && option.value.column === columnId?.column,
   );
-  return column?.label ?? "Set filter";
+  return column?.label ?? "Column not available";
 };
 
 const addFilter = () => {
