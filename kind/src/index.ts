@@ -8,6 +8,7 @@ export type {
   DiscreteFilter,
   Filter,
   InitializedForAnchor,
+  RankingMode,
   RankingOrder,
   ScopedColumnId,
   StringInFilter,

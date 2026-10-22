@@ -1,6 +1,18 @@
 import type { PlTableFilter } from "@platforma-open/milaboratories.top-antibodies.model";
 import type { PColumnIdAndSpec, PTableColumnSpec } from "@platforma-sdk/model";
 
+/**
+ * A normalized ranking weight as a percentage. Rounding never claims a metric contributes
+ * nothing, nor that it contributes everything.
+ */
+export const formatWeightNorm = (weightNorm: number) => {
+  if (!Number.isFinite(weightNorm)) return "—";
+  const percent = weightNorm * 100;
+  if (percent > 0 && percent < 1) return "<1%";
+  if (percent > 99 && percent < 100) return ">99%";
+  return `${Math.round(percent)}%`;
+};
+
 export const isSequenceColumn = (column: PColumnIdAndSpec) => {
   const spec = column.spec;
 

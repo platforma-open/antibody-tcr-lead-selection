@@ -23,7 +23,9 @@ import type {
   InitializedForAnchor,
   PlTableFiltersDefault,
   RankingOrder,
+  RankingOrderUI,
   ScopedColumnId,
+  WeightedRankingOrderUI,
   WorkflowPreset,
 } from "./types";
 
@@ -292,6 +294,85 @@ export function isRankableMatch(
   if (!isSelectableMatch(c)) return false;
   if (rankedColumnIds.has(extractPObjectId(c.id))) return true;
   return !isPresenceOnlyColumn(c.getSpec(), anchorSpec);
+}
+
+/** Weight a ranking row gets when nothing has set one. */
+export const DEFAULT_RANKING_WEIGHT = 1;
+
+// Bounds of the ranking weight
+export const MIN_RANKING_WEIGHT = 0;
+export const MAX_RANKING_WEIGHT = 1000;
+
+/**
+ * Whether a stored weight is one the score can use.
+ */
+export function rankingWeightError(weight: number): string | undefined {
+  if (!Number.isFinite(weight)) return "Not a number";
+  if (weight <= MIN_RANKING_WEIGHT) return `Above ${MIN_RANKING_WEIGHT}`;
+  if (weight > MAX_RANKING_WEIGHT) return `Max ${MAX_RANKING_WEIGHT}`;
+  return undefined;
+}
+
+export function isUsableRankingWeight(weight: number): boolean {
+  return rankingWeightError(weight) === undefined;
+}
+
+/**
+ * Fills in the weight of every ranking row that has none.
+ *
+ * Every row gets the same weight. A list arriving without weights was a priority order and stays
+ * one — the block migrates into `priority` mode, where weights go unused — so they carry no
+ * ordering of their own and start level for the balanced score.
+ */
+export function withRankingWeights(
+  rows: readonly RankingOrderUI[] | undefined,
+): WeightedRankingOrderUI[] {
+  if (!Array.isArray(rows)) return [];
+  return rows.map((row) => ({ ...row, weight: row.weight ?? DEFAULT_RANKING_WEIGHT }));
+}
+
+/** Each weight as a fraction of all of them: `w / Σw`. Zero-sum lists read as equal. */
+export function normalizeWeights(weights: readonly number[]): number[] {
+  const total = weights.reduce((sum, w) => sum + w, 0);
+  if (!(total > 0)) return weights.map(() => 1 / weights.length);
+  return weights.map((w) => w / total);
+}
+
+/** Whether a ranking metric describes one record or a whole cluster of them.
+ * The record label comes from the detected modality: Peptide, Variant, Clonotype, or Sequence.
+ */
+export type RankingLevel = "clonotype" | "cluster";
+
+/**
+ * Which level a ranking metric acts on: cluster-level when its axes do not include the
+ * anchor's record axis.
+ */
+export function rankingLevelOf(spec: PColumnSpec, anchorSpec: PColumnSpec): RankingLevel {
+  const recordAxisName = anchorSpec.axesSpec[1]?.name;
+  if (recordAxisName === undefined) return "clonotype";
+  return spec.axesSpec.some((axis) => axis.name === recordAxisName) ? "clonotype" : "cluster";
+}
+
+/** What one record is called: Clonotype, Peptide, Variant, or Sequence when unplaceable. */
+export function recordLabel(anchorSpec: PColumnSpec): string {
+  switch (recordSource(anchorSpec)) {
+    case "peptide":
+      return "Peptide";
+    case "amplicon":
+      return "Variant";
+    case "vdj":
+      return "Clonotype";
+    default:
+      return "Sequence";
+  }
+}
+
+/**
+ * What each level is called, for this dataset. Model-side because `PlDropdown` reads its
+ * `group` off the option itself.
+ */
+export function rankingLevelLabels(anchorSpec: PColumnSpec): Record<RankingLevel, string> {
+  return { cluster: "Cluster", clonotype: recordLabel(anchorSpec) };
 }
 
 /**
@@ -690,9 +771,12 @@ function computePresets(
       rankingOrder:
         (s.getSpec().annotations?.[Annotation.Score.RankingOrder] as "increasing" | "decreasing") ??
         "decreasing",
+      weight: DEFAULT_RANKING_WEIGHT,
       isExpanded: false,
     }));
 
+  // Equal weights. The Repertoire Score takes the front row, which is its priority in
+  // `priority` mode and makes no difference to the `balanced` score.
   if (repertoireScore) {
     defaultRankingOrder.unshift({
       value: matchToColumnId(repertoireScore, anchorRef),
@@ -700,6 +784,7 @@ function computePresets(
         (repertoireScore.getSpec().annotations?.["pl7.app/score/rankingOrder"] as
           | "increasing"
           | "decreasing") ?? "decreasing",
+      weight: DEFAULT_RANKING_WEIGHT,
     });
   }
 
@@ -764,17 +849,9 @@ function computePresets(
     filters: inVivoFilters,
   };
 
-  // Peptide defaults: all numeric score columns; no SHM exclusions.
+  // Peptide defaults: every numeric score column
   const inPeptideDefaults = {
-    rankingOrder: scores
-      .filter((s) => s.getSpec().valueType !== "String")
-      .map((s) => ({
-        value: matchToColumnId(s, anchorRef),
-        rankingOrder:
-          (s.getSpec().annotations?.[Annotation.Score.RankingOrder] as
-            | "increasing"
-            | "decreasing") ?? "decreasing",
-      })),
+    rankingOrder: defaultRankingOrder,
     filters: defaultFilters,
   };
 

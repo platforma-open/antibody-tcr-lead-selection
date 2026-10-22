@@ -7,6 +7,7 @@ import type {
   DiscreteFilter,
   Filter,
   InitializedForAnchor,
+  RankingMode,
   RankingOrder,
   ScopedColumnId,
   WorkflowPreset,
@@ -86,7 +87,8 @@ const isFilterPredicate: Guard<PlTableFilter | DiscreteFilter> = (
 const isRankingOrder: Guard<RankingOrder> = (v): v is RankingOrder =>
   isPlainObject(v) &&
   optional(isScopedColumnId)(v.value) &&
-  oneOf("increasing", "decreasing")(v.rankingOrder);
+  oneOf("increasing", "decreasing")(v.rankingOrder) &&
+  optional(isNumber)(v.weight);
 
 const isFilter: Guard<Filter> = (v): v is Filter =>
   isPlainObject(v) && optional(isScopedColumnId)(v.value) && optional(isFilterPredicate)(v.filter);
@@ -135,9 +137,10 @@ const CONTRACT = {
   ),
   topClonotypes: check(isNumber, "a number"),
   kabatNumbering: check(isBoolean, "a boolean"),
+  rankingMode: check(oneOf<RankingMode>("priority", "balanced"), "one of: priority, balanced"),
   rankingOrder: check(
     arrayOf(isRankingOrder),
-    "an array of { value?, rankingOrder: 'increasing' | 'decreasing' } entries",
+    "an array of { value?, rankingOrder: 'increasing' | 'decreasing', weight? } entries",
   ),
   filters: check(arrayOf(isFilter), "an array of { value?, filter? } entries"),
   diversificationColumn: check(isPlRef, REF),
