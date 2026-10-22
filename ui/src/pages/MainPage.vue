@@ -48,10 +48,21 @@ const datasetNotReady = computed(
     app.model.outputs.inputStatus?.inputKey === inputKey.value &&
     app.model.outputs.inputStatus?.ready === false,
 );
+// Nor when these outputs failed: an errored output reads as undefined, which is no computation,
+// and the outputs-error banner already reports it.
+const defaultsFailed = computed(() => {
+  const errors = app.model.outputErrors;
+  return (
+    errors.inputStatus !== undefined ||
+    errors.filterConfig !== undefined ||
+    errors.rankingConfig !== undefined
+  );
+});
 const defaultsPending = computed(
   () =>
     inputKey.value !== undefined &&
     !datasetNotReady.value &&
+    !defaultsFailed.value &&
     (app.model.outputs.filterConfig?.inputKey !== inputKey.value ||
       app.model.outputs.rankingConfig?.inputKey !== inputKey.value),
 );
