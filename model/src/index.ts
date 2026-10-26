@@ -22,7 +22,7 @@ import {
   createPFrameForGraphs,
   createPlDataTableV3,
   dedupColumns,
-  deriveDistinctLabels,
+  deriveRecipeOptions,
   extractPObjectId,
   isDataColumn,
   isPColumnSpec,
@@ -370,21 +370,20 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
 
     const filterableMatches = result.meta.allMatches.filter((c) => !isDatasetFilter(c));
 
-    const labels = deriveDistinctLabels(
-      filterableMatches.map((c) => c.getSpec()),
-      { includeNativeLabel: true },
+    const options = deriveRecipeOptions(filterableMatches, { includeNativeLabel: true }).map(
+      ({ recipe: c, label, linkHint }) => {
+        const spec = c.getSpec();
+        return {
+          label,
+          linkHint,
+          value: matchToColumnId(c, inputAnchor!),
+          // FilterCard reads `option.column.spec` to pick the filter control.
+          column: { id: c.id, spec },
+          // The card has no anchor spec, so the model decides.
+          presenceOnly: isPresenceOnlyColumn(spec, result.anchorSpec),
+        };
+      },
     );
-    const options = filterableMatches.map((c, i) => {
-      const spec = c.getSpec();
-      return {
-        label: labels[i],
-        value: matchToColumnId(c, inputAnchor!),
-        // FilterCard reads `option.column.spec` to pick the filter control.
-        column: { id: c.id, spec },
-        // The card has no anchor spec, so the model decides.
-        presenceOnly: isPresenceOnlyColumn(spec, result.anchorSpec),
-      };
-    });
 
     return {
       options,
@@ -415,14 +414,13 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       .filter((c) => c.getSpec().valueType !== "String")
       .filter((c) => isRankableMatch(c, result.anchorSpec, rankedColumnIds));
 
-    const labels = deriveDistinctLabels(
-      rankableMatches.map((c) => c.getSpec()),
-      { includeNativeLabel: true },
+    const options = deriveRecipeOptions(rankableMatches, { includeNativeLabel: true }).map(
+      ({ recipe: c, label, linkHint }) => ({
+        label,
+        linkHint,
+        value: matchToColumnId(c, inputAnchor!),
+      }),
     );
-    const options = rankableMatches.map((c, i) => ({
-      label: labels[i],
-      value: matchToColumnId(c, inputAnchor!),
-    }));
 
     return {
       options,

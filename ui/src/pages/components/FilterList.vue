@@ -9,7 +9,14 @@ import {
   getInputAnchorRef,
   getInputFilterRef,
 } from "@platforma-open/milaboratories.top-antibodies.model";
-import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from "@platforma-sdk/ui-vue";
+import {
+  PlBtnSecondary,
+  PlColumnLabel,
+  PlElementList,
+  PlIcon16,
+  PlRow,
+  PlTooltip,
+} from "@platforma-sdk/ui-vue";
 import { ref, toRaw } from "vue";
 import { useApp } from "../../app";
 import { useAnchorSyncedDefaults } from "../../composables/useAnchorSyncedDefaults";
@@ -25,13 +32,14 @@ const generateUniqueId = () => {
   return `filter-${idCounter.value}-${Date.now()}`;
 };
 
-const getColumnLabel = (columnId: ScopedColumnId | undefined) => {
-  const column = app.model.outputs.filterConfig?.options?.find(
-    (option: { value: ScopedColumnId; label: string }) =>
-      option && option.value.column === columnId?.column,
+const findOption = (columnId: ScopedColumnId | undefined) =>
+  app.model.outputs.filterConfig?.options?.find(
+    (option) => option && option.value.column === columnId?.column,
   );
-  return column?.label ?? "Set filter";
-};
+
+/** The card title: the column's option, so it shows the option's link icon too. */
+const cardTitle = (columnId: ScopedColumnId | undefined) =>
+  findOption(columnId) ?? { label: columnId ? "Set filter" : "Add Filter" };
 
 const addFilter = () => {
   const ui = app.model.data;
@@ -143,7 +151,7 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
       :on-expand="(item: FilterUI) => (item.isExpanded = !item.isExpanded)"
     >
       <template #item-title="{ item }">
-        {{ (item as FilterUI).value ? getColumnLabel((item as FilterUI).value) : "Add Filter" }}
+        <PlColumnLabel :option="cardTitle((item as FilterUI).value)" />
       </template>
       <template #item-content="{ index }">
         <FilterCard
