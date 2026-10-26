@@ -4,7 +4,14 @@ import {
   getInputAnchorRef,
   getInputFilterRef,
 } from "@platforma-open/milaboratories.top-antibodies.model";
-import { PlBtnSecondary, PlElementList, PlIcon16, PlRow, PlTooltip } from "@platforma-sdk/ui-vue";
+import {
+  PlBtnSecondary,
+  PlColumnLabel,
+  PlElementList,
+  PlIcon16,
+  PlRow,
+  PlTooltip,
+} from "@platforma-sdk/ui-vue";
 import { ref, toRaw } from "vue";
 import { useApp } from "../../app";
 import { useAnchorSyncedDefaults } from "../../composables/useAnchorSyncedDefaults";
@@ -20,12 +27,14 @@ const generateUniqueId = () => {
   return `rank-${idCounter.value}-${Date.now()}`;
 };
 
-const getMetricLabel = (value: ScopedColumnId | undefined) => {
-  const column = app.model.outputs.rankingConfig?.options?.find(
+const findOption = (value: ScopedColumnId | undefined) =>
+  app.model.outputs.rankingConfig?.options?.find(
     (option) => option && option.value.column === value?.column,
   );
-  return column?.label ?? "Set rank";
-};
+
+/** The card title: the column's option, so it shows the option's link icon too. */
+const cardTitle = (value: ScopedColumnId | undefined) =>
+  findOption(value) ?? { label: value ? "Set rank" : "Add Rank" };
 
 const addRankColumn = () => {
   const ui = app.model.data;
@@ -137,7 +146,7 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
       :on-expand="(item) => (item.isExpanded = !item.isExpanded)"
     >
       <template #item-title="{ item }">
-        {{ item.value ? getMetricLabel(item.value) : "Add Rank" }}
+        <PlColumnLabel :option="cardTitle(item.value)" />
       </template>
       <template #item-content="{ index }">
         <RankCard
