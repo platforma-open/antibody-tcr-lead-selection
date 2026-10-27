@@ -1,6 +1,7 @@
 import {
   Annotation,
   Column,
+  ColumnAbsentError,
   ColumnsCollection,
   collectLinkerColumns,
   createGlobalPObjectId,
@@ -612,6 +613,12 @@ export function buildCollection(
       anchorSpec: PColumnSpec;
       meta: ColumnsMeta;
       sampleAxisName: string;
+      /**
+       * A score's linker is still resolving, so the defaults and presets in `meta` may lack it.
+       * Outputs that publish them withhold until it settles: defaults are applied once, and a
+       * score arriving later would never reach them.
+       */
+      scoresPending: boolean;
     }
   | undefined {
   if (!inputAnchor) return undefined;
@@ -645,15 +652,17 @@ export function buildCollection(
   // one value per anchor record, directly or through the anchor's own links (clusters,
   // lineages). Columns of another dataset never do: its records are absent from part of the
   // anchor, and a default filter on them drops that part at the first selection stage.
+  let scoresPending = false;
   const scores = allMatches.filter((c) => {
     const spec = c.getSpec();
     if (spec.annotations?.[Annotation.IsScore] !== "true") return false;
-    // A linker whose spec is still arriving cannot be classified: leave the score out for now
-    // rather than fail the whole output; it qualifies once the linker resolves.
+    // A linker still resolving cannot be classified yet, and the whole set waits for it (see
+    // `scoresPending`). One that is gone for good drops its score.
     let linkerSpecs: PColumnSpec[];
     try {
       linkerSpecs = collectLinkerColumns(c).map((l) => l.getSpec());
-    } catch {
+    } catch (e) {
+      if (!(e instanceof ColumnAbsentError)) scoresPending = true;
       return false;
     }
     return (
@@ -674,6 +683,7 @@ export function buildCollection(
     collection,
     anchorSpec,
     sampleAxisName,
+    scoresPending,
     meta: {
       allMatches,
       scores,

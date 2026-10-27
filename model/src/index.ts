@@ -389,7 +389,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     const inputAnchor = getInputAnchorRef(ctx.data);
     const inputFilter = getInputFilterRef(ctx.data);
     const result = buildCollection(inputAnchor, inputFilter);
-    if (!result) return undefined;
+    // Withheld while a score's linker resolves: its defaults would be applied without it.
+    if (!result || result.scoresPending) return undefined;
 
     // The subset picked as the dataset filter already scopes the whole run, so it is not offered
     // again as a filter here.
@@ -431,7 +432,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     const inputAnchor = getInputAnchorRef(ctx.data);
     const inputFilter = getInputFilterRef(ctx.data);
     const result = buildCollection(inputAnchor, inputFilter);
-    if (!result) return undefined;
+    // Withheld while a score's linker resolves: its defaults would be applied without it.
+    if (!result || result.scoresPending) return undefined;
 
     // The filterable matches minus String columns, which cannot be ranked.
     // `isRankableMatch` excludes presence-only columns. The test needs the anchor, so it
