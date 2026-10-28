@@ -19,10 +19,10 @@ Max Frequency sits ahead of Developability cost because it is the first criterio
 - **In Vivo** — Fraction CDR mutations, nMutations, Developability risk, Is Productive.
 - **In Vitro** and **Peptide** — Binding Specificity, Enrichment Quality, Max Log2FC, per-comparison Log2FC, Developability risk, Is Productive.
 
-The two mutation filters keep the stricter cutoffs the In Vivo preset has always applied, and they now lead the list instead of being appended after it. A project selects the same sequences as before from the same filters; only the order they are listed in has changed.
+The two mutation filters keep the stricter cutoffs the In Vivo preset has always applied, and they now lead the list instead of being appended after it.
 
-Criteria or filters sharing a position — a per-comparison Log2FC for each comparison, say — are ordered by name, so related columns stay together.
+Criteria or filters sharing a position are ordered by the label they show, so related columns stay together — the per-comparison fold changes, for instance. Two columns that share a position *and* a label, as happens when a project runs two Enrichment Analysis blocks, keep a stable order between runs rather than following whichever was discovered first.
 
-A filter whose column appears more than once, such as a mutation count reported per chain in single-cell data, now contributes one filter per column. Previously only the first was kept.
+Saved projects keep the lists they already have; the new order applies when a preset seeds its defaults, so to a newly added block or after **Reset to defaults**.
 
-The peptide preset previously started with every numeric score column rather than a chosen set; it now starts with the same criteria and filters as In Vitro, which are the ones peptide projects carry. Any score column left out of a preset's defaults is still available to add by hand.
+The peptide preset previously started with every numeric score column rather than a chosen set; it now starts with the same criteria and filters as In Vitro. A peptide project carrying none of those metrics gets no pre-filled criteria, where before it got whatever scores it had — and a project whose filter set changes selects a different set of sequences. Any score column left out of a preset's defaults is still available to add by hand.

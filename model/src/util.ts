@@ -506,7 +506,8 @@ export const IN_VIVO_RANKING_PRIORITY: readonly PresetPriorityEntry[] = [
   { names: ["pl7.app/developabilityScore", "pl7.app/vdj/developabilityScore"] },
 ];
 
-// In Vivo preset filters. The mutation cutoffs are stricter than the columns' own
+// In Vivo preset filters. The two mutation columns carry no cutoff of their own, so the
+// entries supply the preset's.
 export const IN_VIVO_FILTER_PRIORITY: readonly PresetPriorityEntry[] = [
   {
     names: ["pl7.app/vdj/sequence/fractionCDRMutations"],
@@ -936,14 +937,21 @@ function computePresets(
   ): T[] =>
     rows
       .flatMap((row) => {
-        const spec = specByColumnId.get(columnIdOf(row));
+        const id = columnIdOf(row);
+        const spec = specByColumnId.get(id);
         if (spec === undefined) return [];
         const rank = presetPriorityOf(spec, index);
         return rank === undefined
           ? []
-          : [{ row, rank, label: readAnnotation(spec, Annotation.Label) ?? "" }];
+          : [{ row, rank, label: readAnnotation(spec, Annotation.Label) ?? "", id: id ?? "" }];
       })
-      .sort((a, b) => a.rank - b.rank || a.label.localeCompare(b.label))
+      // The id settles rows that match on both.
+      .sort(
+        (a, b) =>
+          a.rank - b.rank ||
+          a.label.localeCompare(b.label) ||
+          (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+      )
       .map(({ row }) => row);
 
   const rankingOrderFor = (priority: PresetPriorityIndex) =>
