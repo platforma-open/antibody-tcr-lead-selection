@@ -183,8 +183,6 @@ export type ColumnsMeta = {
   allMatches: ColumnRecipe[];
   /** Score columns: the subset of allMatches with pl7.app/isScore that lie on the anchor's own axes */
   scores: ColumnRecipe[];
-  defaultFilters: PlTableFiltersDefault[];
-  defaultRankingOrder: RankingOrder[];
   /** True when the Repertoire Score column is present upstream; it becomes the primary In Vivo ranking */
   hasRepertoireScore: boolean;
   /** True when enrichment score columns are present */

@@ -731,7 +731,6 @@ export function buildCollection(
     meta: {
       allMatches,
       scores,
-      defaultFilters,
       ...presets,
     },
   };
@@ -868,15 +867,14 @@ function computePresets(
   defaultFilters: PlTableFiltersDefault[],
   anchorRef: PlRef,
   anchorSpec: PColumnSpec,
-): Omit<ColumnsMeta, "allMatches" | "scores" | "defaultFilters"> {
+): Omit<ColumnsMeta, "allMatches" | "scores"> {
   // Named for the preset, not the data: the preset is called "peptide" and amplicon datasets use
   // it too. A variable called isPeptide here would claim something false about amplicon.
   const usesPeptidePreset = isPeptideOrAmplicon(anchorSpec);
 
   // The Repertoire Score (repertoire-score block), when present upstream, is the
-  // In Vivo preset's primary ranking.
-  const repertoireScore = scores.find((s) => s.getSpec().name === REPERTOIRE_SCORE_COLUMN_NAME);
-  const hasRepertoireScore = repertoireScore !== undefined;
+  // In Vivo preset's primary ranking — rank 0 of IN_VIVO_RANKING_PRIORITY.
+  const hasRepertoireScore = scores.some((s) => s.getSpec().name === REPERTOIRE_SCORE_COLUMN_NAME);
 
   const isEnrichmentColumn = (name: string) =>
     name.startsWith("pl7.app/enrichment") || name.startsWith("pl7.app/vdj/enrichment");
@@ -892,12 +890,11 @@ function computePresets(
         ? "in-vitro"
         : undefined;
 
-  // Default ranking: all non-String scores. When the Repertoire Score is present
-  // it is pulled to the front (below) as the primary ranking, and the raw SHM
-  // mutation columns it subsumes are dropped.
+  // Every non-String score, in discovery order. Each preset's list then decides which of
+  // these it starts with and in what order. The raw SHM mutation columns drop out when the
+  // Repertoire Score is present, since it subsumes them.
   const defaultRankingOrder: RankingOrder[] = scores
     .filter((s) => s.getSpec().valueType !== "String")
-    .filter((s) => !hasRepertoireScore || s.getSpec().name !== REPERTOIRE_SCORE_COLUMN_NAME)
     .filter((s) => !hasRepertoireScore || !IN_VIVO_MUTATION_COLUMNS.has(s.getSpec().name))
     .map((s) => ({
       id: `default-rank-${s.id}`,
@@ -908,19 +905,6 @@ function computePresets(
       weight: DEFAULT_RANKING_WEIGHT,
       isExpanded: false,
     }));
-
-  // Equal weights. The Repertoire Score takes the front row, which is its priority in
-  // `priority` mode and makes no difference to the `balanced` score.
-  if (repertoireScore) {
-    defaultRankingOrder.unshift({
-      value: matchToColumnId(repertoireScore, anchorRef),
-      rankingOrder:
-        (repertoireScore.getSpec().annotations?.["pl7.app/score/rankingOrder"] as
-          | "increasing"
-          | "decreasing") ?? "decreasing",
-      weight: DEFAULT_RANKING_WEIGHT,
-    });
-  }
 
   // Each preset intersects discovery-driven defaults with its own priority list, which fixes
   // both which criteria it starts with and their order.
@@ -989,7 +973,6 @@ function computePresets(
   };
 
   return {
-    defaultRankingOrder,
     hasRepertoireScore,
     hasEnrichmentScores,
     detectedPreset,

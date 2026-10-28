@@ -407,7 +407,6 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       options,
       // The input these defaults were computed for (see inputKeyOf).
       inputKey: inputKeyOf(inputAnchor, inputFilter),
-      defaults: result.meta.defaultFilters,
       inVivoDefaults: result.meta.inVivoDefaults.filters,
       inVitroDefaults: result.meta.inVitroDefaults.filters,
       inPeptideDefaults: result.meta.inPeptideDefaults.filters,
@@ -458,7 +457,6 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       levelLabels,
       // See filterConfig.
       inputKey: inputKeyOf(inputAnchor, inputFilter),
-      defaults: result.meta.defaultRankingOrder,
       inVivoDefaults: result.meta.inVivoDefaults.rankingOrder,
       inVitroDefaults: result.meta.inVitroDefaults.rankingOrder,
       inPeptideDefaults: result.meta.inPeptideDefaults.rankingOrder,
