@@ -335,50 +335,49 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     });
   })
 
-  .output(
-    "inputAnchorSpec",
-    (ctx) => {
-      return getSpecByRef(getInputAnchorRef(ctx.data));
-    },
-    { retentive: true },
-  )
+  .output("inputAnchorSpec", (ctx) => {
+    return getSpecByRef(getInputAnchorRef(ctx.data));
+  })
 
-  .output(
-    "isPeptide",
-    (ctx): boolean => {
-      const keyAxis = getSpecByRef(getInputAnchorRef(ctx.data))?.axesSpec[1];
-      if (keyAxis?.name !== "pl7.app/variantKey") return false;
-      const domain = keyAxis.domain ?? {};
-      const declared = domain["pl7.app/modality"];
-      if (declared === "vdj" || declared === "amplicon") return false;
-      if (domain["pl7.app/peptide/extractionRunId"] !== undefined) return true;
-      if (domain["pl7.app/repertoire/extractionRunId"] !== undefined) return false;
-      if (domain["pl7.app/vdj/clonotypingRunId"] !== undefined) return false;
-      return true;
-    },
-    { retentive: true },
-  )
+  // Whether the input's (see inputKeyOf) dataset spec is in the pool yet; not ready while the
+  // dataset is still being produced upstream. Carries the input it was computed for: like every
+  // output it lags a dataset switch, and only a verdict about the current input counts.
+  .output("inputStatus", (ctx) => {
+    const inputAnchor = getInputAnchorRef(ctx.data);
+    const inputKey = inputKeyOf(inputAnchor, getInputFilterRef(ctx.data));
+    if (inputKey === undefined) return undefined;
+    return { inputKey, ready: getSpecByRef(inputAnchor) !== undefined };
+  })
 
-  .output(
-    "modality",
-    (ctx) => {
-      const spec = getSpecByRef(getInputAnchorRef(ctx.data));
-      if (!spec) return undefined;
-      // Two values only, so "peptide" is the umbrella for both non-receptor producers —
-      // synthetic-repertoire-profiler included. The UI reads the axis domain separately when it
-      // needs to say "Variant" rather than "Peptide". Everything else, imported sets included,
-      // is a receptor dataset.
-      return isPeptideOrAmplicon(spec) ? "peptide" : "antibody_tcr";
-    },
-    { retentive: true },
-  )
+  .output("isPeptide", (ctx): boolean => {
+    const keyAxis = getSpecByRef(getInputAnchorRef(ctx.data))?.axesSpec[1];
+    if (keyAxis?.name !== "pl7.app/variantKey") return false;
+    const domain = keyAxis.domain ?? {};
+    const declared = domain["pl7.app/modality"];
+    if (declared === "vdj" || declared === "amplicon") return false;
+    if (domain["pl7.app/peptide/extractionRunId"] !== undefined) return true;
+    if (domain["pl7.app/repertoire/extractionRunId"] !== undefined) return false;
+    if (domain["pl7.app/vdj/clonotypingRunId"] !== undefined) return false;
+    return true;
+  })
+
+  .output("modality", (ctx) => {
+    const spec = getSpecByRef(getInputAnchorRef(ctx.data));
+    if (!spec) return undefined;
+    // Two values only, so "peptide" is the umbrella for both non-receptor producers —
+    // synthetic-repertoire-profiler included. The UI reads the axis domain separately when it
+    // needs to say "Variant" rather than "Peptide". Everything else, imported sets included,
+    // is a receptor dataset.
+    return isPeptideOrAmplicon(spec) ? "peptide" : "antibody_tcr";
+  })
 
   // Combined filter config - options and defaults together for atomic updates
   .output("filterConfig", (ctx) => {
     const inputAnchor = getInputAnchorRef(ctx.data);
     const inputFilter = getInputFilterRef(ctx.data);
     const result = buildCollection(inputAnchor, inputFilter);
-    if (!result) return undefined;
+    // Withheld while a score's linker resolves: its defaults would be applied without it.
+    if (!result || result.scoresPending) return undefined;
 
     // The subset picked as the dataset filter already scopes the whole run, so it is not offered
     // again as a filter here.
@@ -420,7 +419,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     const inputAnchor = getInputAnchorRef(ctx.data);
     const inputFilter = getInputFilterRef(ctx.data);
     const result = buildCollection(inputAnchor, inputFilter);
-    if (!result) return undefined;
+    // Withheld while a score's linker resolves: its defaults would be applied without it.
+    if (!result || result.scoresPending) return undefined;
 
     // The filterable matches minus String columns, which cannot be ranked.
     // `isRankableMatch` excludes presence-only columns. The test needs the anchor, so it

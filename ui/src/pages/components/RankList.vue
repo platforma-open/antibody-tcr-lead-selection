@@ -53,7 +53,7 @@ const optionByColumn = computed(
 );
 
 const getMetricLabel = (value: ScopedColumnId | undefined) =>
-  (value ? optionByColumn.value.get(value.column)?.label : undefined) ?? "Set rank";
+  (value ? optionByColumn.value.get(value.column)?.label : undefined) ?? "Column not available";
 
 /**
  * The stored list, in the user's own order — dragging a row writes the new order straight back.

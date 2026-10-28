@@ -5,6 +5,9 @@ import {
   defaultsForSubset,
   defaultClusteringSubset,
   isOnAnchorAxes,
+  findRecordAxis,
+  isFromAnotherDataset,
+  isKeyedByAnchorRecords,
   isPresenceOnlyColumn,
   isRankableMatch,
   rankingLevelOf,
@@ -439,5 +442,159 @@ describe("withRankingWeights", () => {
   test("everything else on the row survives", () => {
     const rows = [rank({ id: "rank-1" })];
     expect(withRankingWeights(rows)[0]).toEqual({ ...rows[0], weight: 1 });
+  });
+});
+
+describe("dataset boundary of score defaults", () => {
+  /** Cluster axis of a clustering over the anchor's records. */
+  const ownClusterAxis: AxisSpec = {
+    type: "String",
+    name: "pl7.app/clusterId",
+    domain: { "pl7.app/vdj/clonotypingRunId": "run1", "pl7.app/clustering/blockId": "c1" },
+  };
+  /** Lineage axis: deliberately carries no clonotype domain, a lineage may span datasets. */
+  const lineageAxis: AxisSpec = {
+    type: "String",
+    name: "pl7.app/clusterId",
+    domain: { "pl7.app/clustering/blockId": "lineage1" },
+  };
+  /** Record axis of a single-cell reference joined by VDJ Integration. */
+  const referenceAxis: AxisSpec = {
+    type: "String",
+    name: "pl7.app/vdj/scClonotypeKey",
+    domain: { "pl7.app/vdj/clonotypingRunId": "run2" },
+  };
+  /** Bulk record axis of another clonotyping run. */
+  const otherRunAxis: AxisSpec = {
+    ...clonotypeAxis,
+    domain: { "pl7.app/vdj/clonotypingRunId": "run2" },
+  };
+  /** Cluster axis of a clustering over the reference's records. */
+  const referenceClusterAxis: AxisSpec = {
+    type: "String",
+    name: "pl7.app/clusterId",
+    domain: { "pl7.app/vdj/clonotypingRunId": "run2", "pl7.app/clustering/blockId": "c2" },
+  };
+
+  const linker = (axesSpec: AxisSpec[]) => col({ axesSpec, name: "test/linker" });
+  const clusteringLinker = linker([clonotypeAxis, ownClusterAxis]);
+  const lineageLinker = linker([clonotypeAxis, lineageAxis]);
+  const integrationLinker = linker([clonotypeAxis, referenceAxis]);
+  const referenceClusteringLinker = linker([referenceAxis, referenceClusterAxis]);
+
+  describe("isFromAnotherDataset", () => {
+    test.each([
+      {
+        why: "the anchor's own column",
+        axesSpec: [sampleAxis, clonotypeAxis],
+        path: [],
+        expected: false,
+      },
+      {
+        why: "a narrower record axis of the anchor's run",
+        axesSpec: [narrowerClonotypeAxis],
+        path: [],
+        expected: false,
+      },
+      {
+        why: "cluster-level score via the anchor's clustering",
+        axesSpec: [ownClusterAxis],
+        path: [clusteringLinker],
+        expected: false,
+      },
+      {
+        why: "lineage-level score via the anchor's lineages",
+        axesSpec: [lineageAxis],
+        path: [lineageLinker],
+        expected: false,
+      },
+      {
+        why: "column of an unlinked extra axis",
+        axesSpec: [sampleAxis, contrastAxis],
+        path: [],
+        expected: false,
+      },
+      {
+        why: "reference column via VDJ Integration",
+        axesSpec: [referenceAxis],
+        path: [integrationLinker],
+        expected: true,
+      },
+      {
+        why: "reference cluster score, foreign only on the path",
+        axesSpec: [referenceClusterAxis],
+        path: [integrationLinker, referenceClusteringLinker],
+        expected: true,
+      },
+      { why: "a record axis of another run", axesSpec: [otherRunAxis], path: [], expected: true },
+    ])("$why", ({ axesSpec, path, expected }) => {
+      expect(isFromAnotherDataset(col({ axesSpec }), path, anchor)).toBe(expected);
+    });
+
+    test("the anchor's record axis is found by name, whatever its position", () => {
+      const reversedAnchor = { ...anchor, axesSpec: [clonotypeAxis, sampleAxis] };
+      expect(findRecordAxis(reversedAnchor)).toBe(clonotypeAxis);
+      expect(isFromAnotherDataset(col({ axesSpec: [otherRunAxis] }), [], reversedAnchor)).toBe(
+        true,
+      );
+      expect(
+        isFromAnotherDataset(col({ axesSpec: [narrowerClonotypeAxis] }), [], reversedAnchor),
+      ).toBe(false);
+    });
+
+    test("an anchor without a record axis treats nothing as foreign", () => {
+      const sampleOnlyAnchor = { ...anchor, axesSpec: [sampleAxis] };
+      expect(findRecordAxis(sampleOnlyAnchor)).toBeUndefined();
+      expect(isFromAnotherDataset(col({ axesSpec: [referenceAxis] }), [], sampleOnlyAnchor)).toBe(
+        false,
+      );
+    });
+
+    test("an undomained anchor record axis counts only itself as own", () => {
+      const undomainedAnchor = { ...anchor, axesSpec: [sampleAxis, undomainedClonotypeAxis] };
+      expect(
+        isFromAnotherDataset(col({ axesSpec: [undomainedClonotypeAxis] }), [], undomainedAnchor),
+      ).toBe(false);
+      expect(isFromAnotherDataset(col({ axesSpec: [referenceAxis] }), [], undomainedAnchor)).toBe(
+        true,
+      );
+    });
+  });
+
+  describe("isKeyedByAnchorRecords", () => {
+    test.each([
+      {
+        why: "the anchor's own axes",
+        axesSpec: [sampleAxis, clonotypeAxis],
+        path: [],
+        expected: true,
+      },
+      {
+        why: "cluster axis reached through its linker",
+        axesSpec: [ownClusterAxis],
+        path: [clusteringLinker],
+        expected: true,
+      },
+      {
+        why: "lineage axis reached through its linker",
+        axesSpec: [lineageAxis],
+        path: [lineageLinker],
+        expected: true,
+      },
+      {
+        why: "cluster axis with no linker on the path",
+        axesSpec: [ownClusterAxis],
+        path: [],
+        expected: false,
+      },
+      {
+        why: "an unlinked extra axis",
+        axesSpec: [sampleAxis, contrastAxis],
+        path: [],
+        expected: false,
+      },
+    ])("$why", ({ axesSpec, path, expected }) => {
+      expect(isKeyedByAnchorRecords(col({ axesSpec }), path, anchor)).toBe(expected);
+    });
   });
 });
