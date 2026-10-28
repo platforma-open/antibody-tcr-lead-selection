@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.umap
 
+## 1.2.10
+
+### Patch Changes
+
+- 9ef39b5: Bump all packages
+
 ## 1.2.9
 
 ### Patch Changes

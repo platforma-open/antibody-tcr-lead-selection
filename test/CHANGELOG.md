@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.test
 
+## 1.2.6
+
+### Patch Changes
+
+- 9ef39b5: Bump all packages
+
 ## 1.2.5
 
 ### Patch Changes

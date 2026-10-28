@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.anarci-kabat
 
+## 1.4.10
+
+### Patch Changes
+
+- 9ef39b5: Bump all packages
+
 ## 1.4.9
 
 ### Patch Changes

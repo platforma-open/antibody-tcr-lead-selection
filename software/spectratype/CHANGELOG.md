@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.spectratype
 
+## 1.8.10
+
+### Patch Changes
+
+- 9ef39b5: Bump all packages
+
 ## 1.8.9
 
 ### Patch Changes

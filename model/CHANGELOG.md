@@ -1,5 +1,82 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 5.4.0
+
+### Minor Changes
+
+- 04a7d27: Balanced ranking, alongside the ranking the block already had
+
+  Ranking criteria have always applied in priority order, the second one separating only the sequences that tied exactly on the first. For continuous values exact ties are vanishingly rare, so every criterion after the first was effectively inert. **Balanced score** is a second way to rank: each criterion carries a weight and leads are selected by one combined score, so every criterion has a say.
+
+  **Priority stays the default**, for saved projects and for newly added blocks alike, so no project moves to the new ranking on its own. A **Priority** / **Balanced** tab beside "Choose the best sequences by" picks between the two; the criteria list is shared, so switching back and forth costs nothing.
+
+  In **Priority**, criteria apply in sequence and a row's position is its priority — drag a row to change it. **This release makes that true.** Until now a row's position was overridden by what the criterion measured: criteria on whole clusters ran before criteria carried over a linker, which ran before criteria on single sequences, and criteria from different clusterings ran in the order the clusterings happened to be found. Criteria now apply in exactly the order they appear. A saved project whose criteria were not already in that old order can select different leads after this upgrade; one ranking on a single criterion is unaffected.
+
+  In **Balanced**:
+
+  - Every ranking row gains an editable weight, with a read-only percentage beside it showing that weight as a fraction of all the weights together — which is what the score multiplies by. Weights start equal, so a ranking left untouched is a balanced average of its criteria.
+  - Values are replaced by their rank before weighting, so criteria measured in different units combine meaningfully and a weight means the same thing whatever a criterion's raw scale. Equal values score equally. A missing value scores level with the worst value present and loses the resulting tie to a sequence that was measured, so it still ranks last without being dropped from selection.
+  - Scaling every weight by the same factor changes nothing — only the balance between them counts. A weight must be above 0 and at most 1000; to stop a criterion counting, remove its row rather than zeroing it.
+  - Diversification is unchanged; the combined score is simply what it ranks and interleaves by.
+
+  Also in this release, in both modes: the "Rank by" dropdown groups columns by whether they act on whole clusters or on single sequences, and the Settings panel is wider to better display compound labels.
+
+  "Diversify by" now names every clustering it offers after the block that produced it. It previously recognised clustering blocks from a fixed list, so GLIPH2 Clustering and clusTCR Clustering were offered as a bare "Cluster", and a clustering run on top of another clustering was labelled with the name of the one underneath.
+
+### Patch Changes
+
+- c9705dd: Restore cluster-level enrichment scores in preset defaults
+
+  Restricting default seeding to the selected dataset's own axes excluded every column reached
+  through a link, not only columns of another dataset. When Enrichment Analysis ran on clusters,
+  Max Log2FC and Enrichment Quality dropped out of the In Vitro default filters and rankings, and
+  In Vitro was no longer auto-detected.
+
+  A score now seeds defaults when it resolves to one value per record of the selected dataset,
+  directly or through that dataset's own links (clusters, lineages), and neither the score nor
+  any link on its path is keyed by another dataset's records. Columns of a dataset joined by VDJ
+  Integration still stay out of the defaults and remain available in the dropdowns.
+
+- b9c60fa: Update the workflow preset list as soon as a dataset is selected
+
+  The list of presets follows the dataset's modality, which was a retentive output: it published
+  only once every output of the block had settled, seconds after the filter and ranking defaults
+  were already shown. The modality, the peptide flag and the dataset spec are now live and update
+  together with the defaults.
+
+- 9b21f68: Give each preset's default rankings and filters a fixed order
+
+  A preset's starting criteria and filters were listed in whatever order they were discovered upstream. For rankings that order decided their priority, and it could shift as a project gained blocks. Each preset now declares both lists in the order they apply.
+
+  **Rankings**
+
+  - **In Vivo** — Repertoire score, then Developability cost.
+  - **In Vitro** and **Peptide** — Max Log2FC, then Max Frequency, then Developability cost, with a per-comparison Log2FC after those for each comparison Enrichment Analysis was asked to export.
+
+  Max Frequency sits ahead of Developability cost because it is the first criterion measured per sequence. When Enrichment Analysis runs on clusters, every sequence in a cluster carries the same Max Log2FC, so the criterion after it is what orders sequences inside a cluster — and only a per-sequence value can do that, which is what keeps a barely-present member of an enriched cluster away from the top.
+
+  **Filters**
+
+  - **In Vivo** — Fraction CDR mutations, nMutations, Developability risk, Is Productive.
+  - **In Vitro** and **Peptide** — Binding Specificity, Enrichment Quality, Max Log2FC, per-comparison Log2FC, Developability risk, Is Productive.
+
+  The two mutation filters keep the stricter cutoffs the In Vivo preset has always applied, and they now lead the list instead of being appended after it.
+
+  Criteria or filters sharing a position are ordered by the label they show, so related columns stay together — the per-comparison fold changes, for instance. Two columns that share a position _and_ a label, as happens when a project runs two Enrichment Analysis blocks, keep a stable order between runs rather than following whichever was discovered first.
+
+  Saved projects keep the lists they already have; the new order applies when a preset seeds its defaults, so to a newly added block or after **Reset to defaults**.
+
+  The peptide preset previously started with every numeric score column rather than a chosen set; it now starts with the same criteria and filters as In Vitro. A peptide project carrying none of those metrics gets no pre-filled criteria, where before it got whatever scores it had — and a project whose filter set changes selects a different set of sequences. Any score column left out of a preset's defaults is still available to add by hand.
+
+- 05aba62: Show the "Computing the preset defaults" message only while presets are computing
+
+  While the selected dataset was still being produced upstream, the message stayed up for as long
+  as that block ran, often minutes, though nothing was being computed. It now appears only once the
+  dataset is available; until then the dataset dropdown's spinner shows the wait.
+
+- Updated dependencies [04a7d27]
+  - @platforma-open/milaboratories.top-antibodies.kind@1.2.0
+
 ## 5.3.1
 
 ### Patch Changes
