@@ -8,7 +8,7 @@ pSpec := import("@platforma-sdk/workflow-tengo:pframes.spec")
 sampledColsConv := import(":sampled-cols-conv")
 sampledExportConv := import(":sampled-export-conv")
 selectionStageConv := import(":selection-stage-conv")
-json := import("json")
+canonical := import("@platforma-sdk/workflow-tengo:canonical")
 
 f := exec.formula
 
@@ -20,6 +20,10 @@ self.body(func(inputs) {
     datasetSpec := inputs.datasetSpec
     filterMap := inputs.filterMap
     rankingMap := inputs.rankingMap
+    rankingMode := inputs.rankingMode
+    if is_undefined(rankingMode) {
+        rankingMode = "priority"
+    }
     topClonotypes := inputs.topClonotypes
     preconditionMap := inputs.preconditionMap
     hasPrecondition := !is_undefined(preconditionMap) && len(preconditionMap) > 0
@@ -41,7 +45,7 @@ self.body(func(inputs) {
         addFile("clonotypes.parquet", cloneTable, { tag: "cloneTable" }).
         arg("--parquet").arg("clonotypes.parquet").
         arg("--out").arg("filteredClonotypes.parquet").
-        arg("--filter-map").arg(string(json.encode(filterMap))).
+        arg("--filter-map").arg(string(canonical.encode(filterMap))).
         arg("--emit-selection").arg("selection.parquet")
 
     // Target-presence precondition, passed separately from the user filters so it
@@ -50,7 +54,7 @@ self.body(func(inputs) {
     // truthfully means the check did not run.
     if hasPrecondition {
         filterBuilder = filterBuilder.
-            arg("--precondition-map").arg(string(json.encode(preconditionMap)))
+            arg("--precondition-map").arg(string(canonical.encode(preconditionMap)))
     }
 
     filterResult := filterBuilder.
@@ -85,7 +89,8 @@ self.body(func(inputs) {
 			addFile("selection_in.parquet", selectionParquet).
 			arg("--parquet").arg("filteredClonotypes.parquet").
 			arg("--n").arg(string(topClonotypes)).
-			arg("--ranking-map").arg(string(json.encode(rankingMap))).
+			arg("--ranking-map").arg(string(canonical.encode(rankingMap))).
+			arg("--ranking-mode").arg(rankingMode).
 			arg("--selection-in").arg("selection_in.parquet").
 			arg("--selection-out").arg("selection_out.parquet")
 

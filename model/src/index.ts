@@ -28,6 +28,7 @@ import {
   isPColumnSpec,
   isPlRef,
   parseJsonSafely,
+  readAnnotationJson,
   type PObjectId,
 } from "@platforma-sdk/model";
 import {
@@ -48,12 +49,21 @@ import {
   ANCHORED_DISCOVERY,
   isProducedByLeadSelection,
   isRankableMatch,
+  isUsableRankingWeight,
+  MAX_RANKING_WEIGHT,
+  MIN_RANKING_WEIGHT,
+  rankingLevelLabels,
+  rankingLevelOf,
   readInitializedForAnchor,
   recordSource,
   matchToColumnId,
 } from "./util";
 import { kind } from "@platforma-open/milaboratories.top-antibodies.kind";
-import { convertFilterUI, convertRankingOrderUI } from "./converters";
+import {
+  convertFilterUI,
+  convertRankingOrderUI,
+  convertRankingOrderUIForParams,
+} from "./converters";
 import { blockDataModel } from "./dataModel";
 import type { BlockArgs, BlockData } from "./types";
 
@@ -61,24 +71,21 @@ export * from "./types";
 export * from "./converters";
 export {
   anchorInitializedId,
+  DEFAULT_RANKING_WEIGHT,
   getDefaultBlockLabel,
   getInputAnchorRef,
   getInputFilterRef,
   inputKeyOf,
+  isUsableRankingWeight,
+  MAX_RANKING_WEIGHT,
+  MIN_RANKING_WEIGHT,
+  normalizeWeights,
+  rankingWeightError,
 } from "./util";
+export type { RankingLevel } from "./util";
 export { blockDataModel } from "./dataModel";
 export type Href = InferHrefType<typeof platforma>;
 export type BlockOutputs = InferOutputsType<typeof platforma>;
-
-// Trace element types emitted by upstream clustering blocks. Lead-selection
-// pulls each linker's clustering label from these types when populating the
-// cluster-column dropdown; any new clustering producer must be added here.
-const CLUSTERING_TRACE_TYPES = [
-  "milaboratories.clonotype-clustering.clustering",
-  "milaboratories.3d-structure-clustering.clustering",
-  "milaboratories.embedding-clustering.clustering",
-  "milaboratories.lineage-trees.clustering",
-];
 
 // Display selectors for the main table (host-side `ColumnSelector`s — the V3
 // replacement for the old `(spec) => boolean` display lambdas).
@@ -220,8 +227,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
   // `isExpanded`) stay behind.
   //
   // View state — the table, the four graphs, the alignment model — never
-  // crosses, nor does `inVivoScoreRemovedNotice`, which a migration sets for a
-  // project that lost the built-in in-vivo score. The two
+  // crosses, nor does `inVivoScoreRemovedNotice`, which a migration sets for the
+  // stored projects it affected and not for a project built here. The two
   // `…InitializedForAnchor` slots do cross, and they carry their weight: each
   // holds a bare stringified anchor beside the preset it was applied under, so
   // relocation rewrites the anchor while leaving the preset alone, and the
@@ -235,7 +242,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     preset: data.preset,
     topClonotypes: data.topClonotypes,
     kabatNumbering: data.kabatNumbering,
-    rankingOrder: convertRankingOrderUI(data.rankingOrder),
+    rankingMode: data.rankingMode,
+    rankingOrder: convertRankingOrderUIForParams(data.rankingOrder),
     filters: convertFilterUI(data.filters),
     diversificationColumn: data.diversificationColumn,
     filtersInitializedForAnchor: readInitializedForAnchor(data.filtersInitializedForAnchor),
@@ -250,9 +258,18 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     if (inputAnchor === undefined) throw new Error("No input anchor");
     if (data.topClonotypes === undefined) throw new Error("No top clonotypes");
 
-    const rankingOrder = convertRankingOrderUI(data.rankingOrder);
+    const rankingOrder = convertRankingOrderUI(data.rankingOrder, data.rankingMode);
     if (rankingOrder.some((order) => order.value === undefined))
       throw new Error("Incomplete ranking order");
+    // Throwing here is what disables Run: the field's own bounds are advisory. Only in
+    // `balanced` mode, where weights are shown and used.
+    if (
+      data.rankingMode === "balanced" &&
+      !data.rankingOrder.every((row) => isUsableRankingWeight(row.weight))
+    )
+      throw new Error(
+        `Ranking weights must be above ${MIN_RANKING_WEIGHT} and at most ${MAX_RANKING_WEIGHT}`,
+      );
     const filters = convertFilterUI(data.filters);
     if (filters.some((filter) => filter.value === undefined)) throw new Error("Incomplete filters");
 
@@ -262,6 +279,7 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       inputAnchor,
       inputFilter: getInputFilterRef(data),
       topClonotypes: data.topClonotypes,
+      rankingMode: data.rankingMode,
       rankingOrder,
       filters,
       kabatNumbering: data.kabatNumbering,
@@ -317,50 +335,49 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     });
   })
 
-  .output(
-    "inputAnchorSpec",
-    (ctx) => {
-      return getSpecByRef(getInputAnchorRef(ctx.data));
-    },
-    { retentive: true },
-  )
+  .output("inputAnchorSpec", (ctx) => {
+    return getSpecByRef(getInputAnchorRef(ctx.data));
+  })
 
-  .output(
-    "isPeptide",
-    (ctx): boolean => {
-      const keyAxis = getSpecByRef(getInputAnchorRef(ctx.data))?.axesSpec[1];
-      if (keyAxis?.name !== "pl7.app/variantKey") return false;
-      const domain = keyAxis.domain ?? {};
-      const declared = domain["pl7.app/modality"];
-      if (declared === "vdj" || declared === "amplicon") return false;
-      if (domain["pl7.app/peptide/extractionRunId"] !== undefined) return true;
-      if (domain["pl7.app/repertoire/extractionRunId"] !== undefined) return false;
-      if (domain["pl7.app/vdj/clonotypingRunId"] !== undefined) return false;
-      return true;
-    },
-    { retentive: true },
-  )
+  // Whether the input's (see inputKeyOf) dataset spec is in the pool yet; not ready while the
+  // dataset is still being produced upstream. Carries the input it was computed for: like every
+  // output it lags a dataset switch, and only a verdict about the current input counts.
+  .output("inputStatus", (ctx) => {
+    const inputAnchor = getInputAnchorRef(ctx.data);
+    const inputKey = inputKeyOf(inputAnchor, getInputFilterRef(ctx.data));
+    if (inputKey === undefined) return undefined;
+    return { inputKey, ready: getSpecByRef(inputAnchor) !== undefined };
+  })
 
-  .output(
-    "modality",
-    (ctx) => {
-      const spec = getSpecByRef(getInputAnchorRef(ctx.data));
-      if (!spec) return undefined;
-      // Two values only, so "peptide" is the umbrella for both non-receptor producers —
-      // synthetic-repertoire-profiler included. The UI reads the axis domain separately when it
-      // needs to say "Variant" rather than "Peptide". Everything else, imported sets included,
-      // is a receptor dataset.
-      return isPeptideOrAmplicon(spec) ? "peptide" : "antibody_tcr";
-    },
-    { retentive: true },
-  )
+  .output("isPeptide", (ctx): boolean => {
+    const keyAxis = getSpecByRef(getInputAnchorRef(ctx.data))?.axesSpec[1];
+    if (keyAxis?.name !== "pl7.app/variantKey") return false;
+    const domain = keyAxis.domain ?? {};
+    const declared = domain["pl7.app/modality"];
+    if (declared === "vdj" || declared === "amplicon") return false;
+    if (domain["pl7.app/peptide/extractionRunId"] !== undefined) return true;
+    if (domain["pl7.app/repertoire/extractionRunId"] !== undefined) return false;
+    if (domain["pl7.app/vdj/clonotypingRunId"] !== undefined) return false;
+    return true;
+  })
+
+  .output("modality", (ctx) => {
+    const spec = getSpecByRef(getInputAnchorRef(ctx.data));
+    if (!spec) return undefined;
+    // Two values only, so "peptide" is the umbrella for both non-receptor producers —
+    // synthetic-repertoire-profiler included. The UI reads the axis domain separately when it
+    // needs to say "Variant" rather than "Peptide". Everything else, imported sets included,
+    // is a receptor dataset.
+    return isPeptideOrAmplicon(spec) ? "peptide" : "antibody_tcr";
+  })
 
   // Combined filter config - options and defaults together for atomic updates
   .output("filterConfig", (ctx) => {
     const inputAnchor = getInputAnchorRef(ctx.data);
     const inputFilter = getInputFilterRef(ctx.data);
     const result = buildCollection(inputAnchor, inputFilter);
-    if (!result) return undefined;
+    // Withheld while a score's linker resolves: its defaults would be applied without it.
+    if (!result || result.scoresPending) return undefined;
 
     // The subset picked as the dataset filter already scopes the whole run, so it is not offered
     // again as a filter here.
@@ -390,7 +407,6 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       options,
       // The input these defaults were computed for (see inputKeyOf).
       inputKey: inputKeyOf(inputAnchor, inputFilter),
-      defaults: result.meta.defaultFilters,
       inVivoDefaults: result.meta.inVivoDefaults.filters,
       inVitroDefaults: result.meta.inVitroDefaults.filters,
       inPeptideDefaults: result.meta.inPeptideDefaults.filters,
@@ -402,7 +418,8 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     const inputAnchor = getInputAnchorRef(ctx.data);
     const inputFilter = getInputFilterRef(ctx.data);
     const result = buildCollection(inputAnchor, inputFilter);
-    if (!result) return undefined;
+    // Withheld while a score's linker resolves: its defaults would be applied without it.
+    if (!result || result.scoresPending) return undefined;
 
     // The filterable matches minus String columns, which cannot be ranked.
     // `isRankableMatch` excludes presence-only columns. The test needs the anchor, so it
@@ -419,16 +436,27 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       rankableMatches.map((c) => c.getSpec()),
       { includeNativeLabel: true },
     );
+    // Which metrics move whole clusters and which reorder within one, and what each level is
+    // called for this dataset. The card has no anchor spec, so the model decides.
+    const levelLabels = rankingLevelLabels(result.anchorSpec);
+    const levelGroups = {
+      cluster: `${levelLabels.cluster} metrics`,
+      clonotype: `${levelLabels.clonotype} metrics`,
+    };
+
     const options = rankableMatches.map((c, i) => ({
       label: labels[i],
       value: matchToColumnId(c, inputAnchor!),
+      // What PlDropdown buckets the option list by, so picking a column shows which metrics act
+      // on whole clusters and which reorder within one.
+      group: levelGroups[rankingLevelOf(c.getSpec(), result.anchorSpec)],
     }));
 
     return {
       options,
+      levelLabels,
       // See filterConfig.
       inputKey: inputKeyOf(inputAnchor, inputFilter),
-      defaults: result.meta.defaultRankingOrder,
       inVivoDefaults: result.meta.inVivoDefaults.rankingOrder,
       inVitroDefaults: result.meta.inVitroDefaults.rankingOrder,
       inPeptideDefaults: result.meta.inPeptideDefaults.rankingOrder,
@@ -743,19 +771,12 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
       // `addAnchor("selectedCluster", ...)`, which needs the `PlRef` wire shape.
       // `deriveColumnOptions` yields `ColumnUniversalId`s instead, so moving to
       // it means changing the workflow and migrating stored data together.
-      const linkers = ctx.resultPool.getOptions(
-        [
-          {
-            axes: axesToMatch,
-            annotations: { [Annotation.IsLinkerColumn]: "true" },
-          },
-        ],
+      const linkers = ctx.resultPool.getOptions([
         {
-          label: {
-            forceTraceElements: CLUSTERING_TRACE_TYPES,
-          },
+          axes: axesToMatch,
+          annotations: { [Annotation.IsLinkerColumn]: "true" },
         },
-      );
+      ]);
 
       for (const link of linkers) {
         const linkerSpec = getSpecByRef(link.ref);
@@ -773,21 +794,10 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
         ) {
           continue;
         }
-        // Extract clustering trace element label directly to avoid verbose
-        // disambiguation when vdj-integration linkers are present in the pool.
-        let label = "Cluster";
-        try {
-          const trace = JSON.parse(linkerSpec.annotations?.[Annotation.Trace] ?? "[]") as {
-            type?: string;
-            label?: string;
-          }[];
-          const clusteringElement = trace.find((t) =>
-            CLUSTERING_TRACE_TYPES.includes(t.type ?? ""),
-          );
-          if (clusteringElement?.label) label = clusteringElement.label;
-        } catch {
-          /* use default */
-        }
+        // Name the option after the clustering block that produced the linker, which is
+        // the last step of its trace
+        const trace = readAnnotationJson(linkerSpec, Annotation.Trace);
+        let label = (Array.isArray(trace) ? trace.at(-1)?.label : undefined) || "Cluster";
         // A clustering run on a subset says which: two clusterings with the same settings
         // otherwise read the same.
         const clusterSubset = inputSubsetOf(clusterAxis.domain);

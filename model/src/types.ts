@@ -11,6 +11,7 @@ import type {
   Filter,
   InitializedForAnchor,
   PlTableFilter,
+  RankingMode,
   RankingOrder,
   ScopedColumnId,
   WorkflowPreset,
@@ -110,7 +111,17 @@ export type BlockData_Ver_2026_08_20 = Omit<
   rankingsInitializedForAnchor?: InitializedForAnchor;
 };
 
-export type BlockData = BlockData_Ver_2026_08_20;
+export type BlockData_Ver_2026_10_08 = Omit<BlockData_Ver_2026_08_20, "rankingOrder"> & {
+  /** Ranking rows, every one carrying a weight — `.init` and `Ver_2026_10_08` fill it in. */
+  rankingOrder: WeightedRankingOrderUI[];
+  /**
+   * How the criteria combine. `priority` — the original behaviour — is the default
+   * everywhere.
+   */
+  rankingMode: RankingMode;
+};
+
+export type BlockData = BlockData_Ver_2026_10_08;
 
 export type BlockArgs = {
   defaultBlockLabel: string;
@@ -123,17 +134,34 @@ export type BlockArgs = {
    */
   inputFilter?: PlRef;
   topClonotypes: number;
-  rankingOrder: RankingOrder[];
+  rankingMode: RankingMode;
+  rankingOrder: RankingOrderArg[];
   filters: Filter[];
   kabatNumbering?: boolean;
   /** Selected linker column for diversified ranking (grouping by cluster). undefined = no diversification */
   diversificationColumn?: PlRef;
 };
 
+/**
+ * A ranking row as the workflow receives it. `weightNorm` is the normalized weight, not the
+ * raw one: scaling every weight means the same ranking, so sending raw values would restale
+ * the block for an edit that changes nothing.
+ */
+export type RankingOrderArg = {
+  value?: ScopedColumnId;
+  rankingOrder: "increasing" | "decreasing";
+  /**
+   * The row's weight as a fraction of all of them, present only in `balanced` mode.
+   */
+  weightNorm?: number;
+};
+
 export type RankingOrderUI = RankingOrder & {
   id?: string;
   isExpanded?: boolean;
 };
+
+export type WeightedRankingOrderUI = RankingOrderUI & { weight: number };
 
 export type FilterUI = Filter & {
   id?: string;
@@ -155,8 +183,6 @@ export type ColumnsMeta = {
   allMatches: ColumnRecipe[];
   /** Score columns: the subset of allMatches with pl7.app/isScore that lie on the anchor's own axes */
   scores: ColumnRecipe[];
-  defaultFilters: PlTableFiltersDefault[];
-  defaultRankingOrder: RankingOrder[];
   /** True when the Repertoire Score column is present upstream; it becomes the primary In Vivo ranking */
   hasRepertoireScore: boolean;
   /** True when enrichment score columns are present */

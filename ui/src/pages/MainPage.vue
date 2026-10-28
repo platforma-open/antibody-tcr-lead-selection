@@ -40,10 +40,29 @@ const inputKey = computed(() =>
   inputKeyOf(inputAnchorRef.value, getInputFilterRef(app.model.data)),
 );
 // After a dataset or filter change the filter/ranking defaults take a moment to recompute, and
-// arriving they replace whatever was added to the lists meanwhile.
+// arriving they replace whatever was added to the lists meanwhile. Not while the dataset itself is
+// still being produced upstream: nothing is computing then, and the dataset dropdown shows the
+// wait. Only a verdict about the current input hides it, since the status lags a switch too.
+const datasetNotReady = computed(
+  () =>
+    app.model.outputs.inputStatus?.inputKey === inputKey.value &&
+    app.model.outputs.inputStatus?.ready === false,
+);
+// Nor when these outputs failed: an errored output reads as undefined, which is no computation,
+// and the outputs-error banner already reports it.
+const defaultsFailed = computed(() => {
+  const errors = app.model.outputErrors;
+  return (
+    errors.inputStatus !== undefined ||
+    errors.filterConfig !== undefined ||
+    errors.rankingConfig !== undefined
+  );
+});
 const defaultsPending = computed(
   () =>
     inputKey.value !== undefined &&
+    !datasetNotReady.value &&
+    !defaultsFailed.value &&
     (app.model.outputs.filterConfig?.inputKey !== inputKey.value ||
       app.model.outputs.rankingConfig?.inputKey !== inputKey.value),
 );
@@ -185,8 +204,12 @@ const selectedPresetValue = computed<string>({
 });
 
 // Reset preset when the input (dataset or its filter) or the modality changes: a preset chosen
-// for one input is not assumed to fit another.
-watch([inputKey, () => app.model.outputs.modality], () => {
+// for one input is not assumed to fit another. `modality` is undefined while the outputs
+// resolve, on mount and again whenever the pack is updated; those transitions are not a change
+// of modality, and resetting on them wipes the preset and with it the ranking and filter lists.
+watch([inputKey, () => app.model.outputs.modality], ([key, modality], [prevKey, prevModality]) => {
+  const hydrating = modality === undefined || prevModality === undefined;
+  if (key === prevKey && hydrating) return;
   app.model.data.preset = undefined;
 });
 
@@ -268,19 +291,18 @@ watch(
       show-export-button
       disable-filters-panel
     />
-    <PlSlideModal v-model="settingsOpen" :close-on-outside-click="true">
+    <PlSlideModal v-model="settingsOpen" :close-on-outside-click="true" width="40%">
       <template #title>Settings</template>
 
       <!-- First element: Select dataset (with optional filter dropdown) -->
       <PlDatasetSelector
         v-model="app.model.data.input"
         :options="app.model.outputs.datasetOptions"
-        :style="{ width: '320px' }"
         label="Select dataset"
         clearable
         required
       />
-      <PlAlert v-if="defaultsPending" type="info" :style="{ width: '320px' }">
+      <PlAlert v-if="defaultsPending" type="info">
         Computing the preset defaults for this dataset. Please wait a moment before editing filters
         or ranking.
       </PlAlert>
@@ -288,7 +310,6 @@ watch(
       <!-- Number of leads to select -->
       <PlNumberField
         v-model="app.model.data.topClonotypes"
-        :style="{ width: '320px' }"
         label="Number of sequences to select"
         :step="1"
         :error-message="validateTopClonotypes(app.model.data.topClonotypes)"
@@ -297,12 +318,7 @@ watch(
       </PlNumberField>
 
       <!-- Workflow preset selector -->
-      <PlDropdown
-        v-model="selectedPresetValue"
-        :options="presetOptions"
-        :style="{ width: '320px' }"
-        label="Workflow preset"
-      >
+      <PlDropdown v-model="selectedPresetValue" :options="presetOptions" label="Workflow preset">
         <template #tooltip>
           Pre-configured ranking for common discovery workflows.
           <br /><br />
@@ -327,23 +343,24 @@ watch(
           app.model.outputs.clusterColumnOptions.length > 0
         "
       >
-        <PlRow>
-          Diversify by:
-          <PlTooltip>
-            <PlIcon16 name="info" />
-            <template #tooltip
-              >Defines how sequences are grouped to ensure diversity in the selected
-              panel.</template
-            >
-          </PlTooltip>
-        </PlRow>
+        <div class="diversify-group d-flex flex-column gap-24">
+          <PlRow>
+            Diversify by:
+            <PlTooltip>
+              <PlIcon16 name="info" />
+              <template #tooltip
+                >Defines how sequences are grouped to ensure diversity in the selected
+                panel.</template
+              >
+            </PlTooltip>
+          </PlRow>
 
-        <PlDropdown
-          v-model="selectedClusterColumnValue"
-          :options="clusterColumnOptionsWithNone"
-          :style="{ width: '320px' }"
-          label="Cluster for diversification"
-        />
+          <PlDropdown
+            v-model="selectedClusterColumnValue"
+            :options="clusterColumnOptionsWithNone"
+            label="Cluster for diversification"
+          />
+        </div>
       </template>
 
       <RankList />
@@ -364,7 +381,6 @@ watch(
       <PlAlert
         v-if="app.model.data.rankingOrder.some((order) => order.value === undefined)"
         type="warn"
-        :style="{ width: '320px' }"
       >
         {{ "Warning: Please remove or assign values to empty ranking columns" }}
       </PlAlert>
@@ -384,3 +400,17 @@ watch(
     </PlSlideModal>
   </PlBlockPage>
 </template>
+
+<style scoped>
+/*
+ * Rules around the diversification block. Borders on the group rather than two
+ * `PlSectionSeparator`s, which as separate flex children would each add the modal's 24px gap.
+ * The padding matches that gap, so each rule sits the same distance from the content on either
+ * side of it.
+ */
+.diversify-group {
+  padding-block: 24px;
+  border-top: 1px solid var(--border-color-div-grey);
+  border-bottom: 1px solid var(--border-color-div-grey);
+}
+</style>

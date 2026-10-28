@@ -30,7 +30,7 @@ const getColumnLabel = (columnId: ScopedColumnId | undefined) => {
     (option: { value: ScopedColumnId; label: string }) =>
       option && option.value.column === columnId?.column,
   );
-  return column?.label ?? "Set filter";
+  return column?.label ?? "Column not available";
 };
 
 const addFilter = () => {
@@ -125,7 +125,7 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
 </script>
 
 <template>
-  <div class="d-flex flex-column gap-6">
+  <div class="d-flex flex-column gap-12">
     <PlRow>
       Keep sequences that:
       <PlTooltip>
@@ -153,7 +153,7 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
       </template>
     </PlElementList>
 
-    <div class="d-flex flex-column gap-6">
+    <div class="d-flex flex-column gap-6 mt-3">
       <PlBtnSecondary icon="add" @click="addFilter"> Add Filter </PlBtnSecondary>
 
       <PlBtnSecondary icon="reverse" :disabled="!configIsCurrent" @click="resetToDefaults">

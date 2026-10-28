@@ -1,7 +1,9 @@
 import {
   Annotation,
   Column,
+  ColumnAbsentError,
   ColumnsCollection,
+  collectLinkerColumns,
   createGlobalPObjectId,
   DataColumn,
   extractPObjectId,
@@ -9,6 +11,7 @@ import {
   isGlobalPObjectId,
   isPlRef,
   parseJsonSafely,
+  readAnnotation,
   readAnnotationJson,
   type AxisSpec,
   type ColumnRecipe,
@@ -23,7 +26,9 @@ import type {
   InitializedForAnchor,
   PlTableFiltersDefault,
   RankingOrder,
+  RankingOrderUI,
   ScopedColumnId,
+  WeightedRankingOrderUI,
   WorkflowPreset,
 } from "./types";
 
@@ -265,6 +270,71 @@ export function isOnAnchorAxes(spec: PColumnSpec, anchorSpec: PColumnSpec): bool
   return spec.axesSpec.every((axis) => anchorAxes.has(canonicalizeAxisId(axis)));
 }
 
+/** Axis names that key a dataset's records. See {@link recordSource} for the producers. */
+const RECORD_AXIS_NAMES: ReadonlySet<string> = new Set([
+  "pl7.app/vdj/clonotypeKey",
+  "pl7.app/vdj/scClonotypeKey",
+  "pl7.app/variantKey",
+]);
+
+/** The anchor's record axis, found by name, not by position. */
+export function findRecordAxis(anchorSpec: PColumnSpec): AxisSpec | undefined {
+  return anchorSpec.axesSpec.find((axis) => RECORD_AXIS_NAMES.has(axis.name));
+}
+
+/**
+ * True when the axis keys the records of a dataset other than the anchor's.
+ *
+ * The anchor's record axis domain is its dataset identity (run id, chain, key structure); a
+ * record axis of the same dataset carries all of it, a narrower one (e.g. per chain) adds
+ * keys. A record axis without that identity belongs to another dataset. An undomained
+ * anchor record axis gives no identity to compare, so only that exact axis counts as own.
+ * An anchor with no record axis has no identity at all, and nothing counts as foreign.
+ */
+function isOtherDatasetRecordAxis(axis: AxisSpec, anchorSpec: PColumnSpec): boolean {
+  if (!RECORD_AXIS_NAMES.has(axis.name)) return false;
+  const anchorRecordAxis = findRecordAxis(anchorSpec);
+  if (anchorRecordAxis === undefined) return false;
+  const identity = Object.entries(anchorRecordAxis.domain ?? {});
+  if (identity.length === 0) {
+    return canonicalizeAxisId(axis) !== canonicalizeAxisId(anchorRecordAxis);
+  }
+  return !identity.every(([key, value]) => axis.domain?.[key] === value);
+}
+
+/**
+ * True when the column, or a linker it was reached through, is keyed by another dataset's
+ * records — e.g. a single-cell reference joined to the anchor by VDJ Integration.
+ *
+ * Links inside the anchor's own dataset (clusters, lineages) never cross a foreign record
+ * axis and do not count.
+ */
+export function isFromAnotherDataset(
+  spec: PColumnSpec,
+  linkerSpecs: PColumnSpec[],
+  anchorSpec: PColumnSpec,
+): boolean {
+  return [spec, ...linkerSpecs].some((s) =>
+    s.axesSpec.some((axis) => isOtherDatasetRecordAxis(axis, anchorSpec)),
+  );
+}
+
+/**
+ * True when every axis of the column is one of the anchor's axes or an axis a linker on its
+ * path maps the anchor's records to (a cluster, a lineage). Such a column resolves to one
+ * value per anchor record; a column with an unlinked extra axis (e.g. a contrast) does not.
+ */
+export function isKeyedByAnchorRecords(
+  spec: PColumnSpec,
+  linkerSpecs: PColumnSpec[],
+  anchorSpec: PColumnSpec,
+): boolean {
+  const reachable = new Set(
+    [anchorSpec, ...linkerSpecs].flatMap((s) => s.axesSpec.map(canonicalizeAxisId)),
+  );
+  return spec.axesSpec.every((axis) => reachable.has(canonicalizeAxisId(axis)));
+}
+
 /** Traversal scope shared by every anchored discovery in the model: filter and ranking
  *  options, defaults, the MSA frame and the results table. */
 export const ANCHORED_DISCOVERY = { mode: "enrichment", maxHops: 4 } as const;
@@ -292,6 +362,85 @@ export function isRankableMatch(
   if (!isSelectableMatch(c)) return false;
   if (rankedColumnIds.has(extractPObjectId(c.id))) return true;
   return !isPresenceOnlyColumn(c.getSpec(), anchorSpec);
+}
+
+/** Weight a ranking row gets when nothing has set one. */
+export const DEFAULT_RANKING_WEIGHT = 1;
+
+// Bounds of the ranking weight
+export const MIN_RANKING_WEIGHT = 0;
+export const MAX_RANKING_WEIGHT = 1000;
+
+/**
+ * Whether a stored weight is one the score can use.
+ */
+export function rankingWeightError(weight: number): string | undefined {
+  if (!Number.isFinite(weight)) return "Not a number";
+  if (weight <= MIN_RANKING_WEIGHT) return `Above ${MIN_RANKING_WEIGHT}`;
+  if (weight > MAX_RANKING_WEIGHT) return `Max ${MAX_RANKING_WEIGHT}`;
+  return undefined;
+}
+
+export function isUsableRankingWeight(weight: number): boolean {
+  return rankingWeightError(weight) === undefined;
+}
+
+/**
+ * Fills in the weight of every ranking row that has none.
+ *
+ * Every row gets the same weight. A list arriving without weights was a priority order and stays
+ * one — the block migrates into `priority` mode, where weights go unused — so they carry no
+ * ordering of their own and start level for the balanced score.
+ */
+export function withRankingWeights(
+  rows: readonly RankingOrderUI[] | undefined,
+): WeightedRankingOrderUI[] {
+  if (!Array.isArray(rows)) return [];
+  return rows.map((row) => ({ ...row, weight: row.weight ?? DEFAULT_RANKING_WEIGHT }));
+}
+
+/** Each weight as a fraction of all of them: `w / Σw`. Zero-sum lists read as equal. */
+export function normalizeWeights(weights: readonly number[]): number[] {
+  const total = weights.reduce((sum, w) => sum + w, 0);
+  if (!(total > 0)) return weights.map(() => 1 / weights.length);
+  return weights.map((w) => w / total);
+}
+
+/** Whether a ranking metric describes one record or a whole cluster of them.
+ * The record label comes from the detected modality: Peptide, Variant, Clonotype, or Sequence.
+ */
+export type RankingLevel = "clonotype" | "cluster";
+
+/**
+ * Which level a ranking metric acts on: cluster-level when its axes do not include the
+ * anchor's record axis.
+ */
+export function rankingLevelOf(spec: PColumnSpec, anchorSpec: PColumnSpec): RankingLevel {
+  const recordAxisName = anchorSpec.axesSpec[1]?.name;
+  if (recordAxisName === undefined) return "clonotype";
+  return spec.axesSpec.some((axis) => axis.name === recordAxisName) ? "clonotype" : "cluster";
+}
+
+/** What one record is called: Clonotype, Peptide, Variant, or Sequence when unplaceable. */
+export function recordLabel(anchorSpec: PColumnSpec): string {
+  switch (recordSource(anchorSpec)) {
+    case "peptide":
+      return "Peptide";
+    case "amplicon":
+      return "Variant";
+    case "vdj":
+      return "Clonotype";
+    default:
+      return "Sequence";
+  }
+}
+
+/**
+ * What each level is called, for this dataset. Model-side because `PlDropdown` reads its
+ * `group` off the option itself.
+ */
+export function rankingLevelLabels(anchorSpec: PColumnSpec): Record<RankingLevel, string> {
+  return { cluster: "Cluster", clonotype: recordLabel(anchorSpec) };
 }
 
 /**
@@ -341,55 +490,98 @@ export const IN_VIVO_MUTATION_COLUMNS = new Set([
   "pl7.app/vdj/sequence/nAAMutationsFWR",
 ]);
 
-// In Vivo preset allowlist: only score columns whose spec.name is in this set
-// can contribute discovery-driven defaults to the in-vivo filter list.
-// Mutation cutoffs (fractionCDRMutations, nMutations) are added separately with
-// preset-specific overrides.
-// Both unprefixed (post-peptide-adaptation) and `pl7.app/vdj/` (pre-peptide)
-// spec names are listed so projects using either upstream block version still
-// get defaults.
-export const IN_VIVO_FILTER_SPEC_NAMES = new Set([
-  "pl7.app/vdj/isProductive",
-  "pl7.app/developabilityRisk",
-  "pl7.app/vdj/developabilityRisk",
-]);
+/** One rank of a preset's default rankings or filters. Two entries may share a name and
+ *  differ by domain: `pl7.app/enrichment` is Max Log2FC under `type: "max"` and a
+ *  per-comparison fold change under `type: "comparison"`. `default` overrides the column's
+ *  own cutoff, and supplies one for a column that carries none. */
+export type PresetPriorityEntry = {
+  names: string[];
+  domain?: Record<string, string>;
+  default?: PlTableFiltersDefault["default"];
+};
 
-// In Vivo preset allowlist for ranking. The Repertoire Score (pulled to the front
-// in computePresets when present) is the primary ranking; the entries below are
-// kept as secondary rankings when their columns are present upstream.
-export const IN_VIVO_RANKING_SPEC_NAMES = new Set([
-  "pl7.app/vdj/repertoireScore",
-  "pl7.app/developabilityScore",
-  "pl7.app/vdj/developabilityScore",
-]);
+// In Vivo preset rankings, in the order the criteria apply in `priority` mode.
+export const IN_VIVO_RANKING_PRIORITY: readonly PresetPriorityEntry[] = [
+  { names: ["pl7.app/vdj/repertoireScore"] },
+  { names: ["pl7.app/developabilityScore", "pl7.app/vdj/developabilityScore"] },
+];
 
-// In Vitro preset allowlists. Same intersection-with-discovery approach as
-// in-vivo: only score columns with these spec names contribute defaults, so
-// new upstream score columns can't bloat the preset. Max Log2FC and Overall
-// Log2FC share the spec name `pl7.app/enrichment` — only Max carries
-// isScore=true upstream, so the discovery pipeline already excludes Overall.
-// Both unprefixed (post-peptide-adaptation) and `pl7.app/vdj/` (pre-peptide)
-// spec names are listed so projects using either upstream block version still
-// get defaults.
-export const IN_VITRO_FILTER_SPEC_NAMES = new Set([
-  "pl7.app/vdj/isProductive",
-  "pl7.app/developabilityRisk",
-  "pl7.app/vdj/developabilityRisk",
-  "pl7.app/enrichmentQuality",
-  "pl7.app/vdj/enrichmentQuality",
-  "pl7.app/vdj/bindingSpecificity",
-  "pl7.app/enrichment",
-  "pl7.app/vdj/enrichment",
-]);
+// In Vivo preset filters. The two mutation columns carry no cutoff of their own, so the
+// entries supply the preset's.
+export const IN_VIVO_FILTER_PRIORITY: readonly PresetPriorityEntry[] = [
+  {
+    names: ["pl7.app/vdj/sequence/fractionCDRMutations"],
+    default: { type: "number_greaterThan", reference: 0.5 },
+  },
+  {
+    names: ["pl7.app/vdj/sequence/nMutations"],
+    default: { type: "number_greaterThanOrEqualTo", reference: 3 },
+  },
+  { names: ["pl7.app/developabilityRisk", "pl7.app/vdj/developabilityRisk"] },
+  { names: ["pl7.app/vdj/isProductive"] },
+];
 
-export const IN_VITRO_RANKING_SPEC_NAMES = new Set([
-  "pl7.app/developabilityScore",
-  "pl7.app/vdj/developabilityScore",
-  "pl7.app/enrichment",
-  "pl7.app/vdj/enrichment",
-  // Max frequency across target rounds (clonotype-enrichment) — ranked descending.
-  "pl7.app/maxFrequency",
-]);
+/** In Vitro preset rankings, shared with the peptide preset. Max Frequency precedes
+ *  Developability cost as the first per-element criterion: enrichment run on clusters gives a
+ *  cluster's members one shared Max Log2FC, so only a per-element value orders them. */
+export const IN_VITRO_RANKING_PRIORITY: readonly PresetPriorityEntry[] = [
+  { names: ["pl7.app/enrichment"], domain: { "pl7.app/enrichment/type": "max" } },
+  { names: ["pl7.app/vdj/enrichment"] },
+  // Max clonotype frequency (clonotype-enrichment with clusterd input)
+  { names: ["pl7.app/maxFrequency"] },
+  { names: ["pl7.app/developabilityScore", "pl7.app/vdj/developabilityScore"] },
+  // User defined enrichment exports
+  { names: ["pl7.app/enrichment"], domain: { "pl7.app/enrichment/type": "comparison" } },
+];
+
+// In Vitro preset filters, shared with the peptide preset, where Is Productive never
+// resolves — only the clonotype path produces it.
+export const IN_VITRO_FILTER_PRIORITY: readonly PresetPriorityEntry[] = [
+  { names: ["pl7.app/vdj/bindingSpecificity"] },
+  { names: ["pl7.app/enrichmentQuality", "pl7.app/vdj/enrichmentQuality"] },
+  { names: ["pl7.app/enrichment"], domain: { "pl7.app/enrichment/type": "max" } },
+  { names: ["pl7.app/vdj/enrichment"] },
+  { names: ["pl7.app/enrichment"], domain: { "pl7.app/enrichment/type": "comparison" } },
+  { names: ["pl7.app/developabilityRisk", "pl7.app/vdj/developabilityRisk"] },
+  { names: ["pl7.app/vdj/isProductive"] },
+];
+
+/** A priority list keyed by spec name, so a lookup costs a hash hit rather than a scan of
+ *  every entry. Built once per list; a rank is a position in the authored list. */
+export type PresetPriorityIndex = ReadonlyMap<
+  string,
+  readonly { rank: number; domain?: Record<string, string> }[]
+>;
+
+export function priorityIndex(entries: readonly PresetPriorityEntry[]): PresetPriorityIndex {
+  const index = new Map<string, { rank: number; domain?: Record<string, string> }[]>();
+  entries.forEach((entry, rank) =>
+    entry.names.forEach((name) => {
+      const claims = index.get(name);
+      if (claims) claims.push({ rank, domain: entry.domain });
+      else index.set(name, [{ rank, domain: entry.domain }]);
+    }),
+  );
+  return index;
+}
+
+const IN_VIVO_RANKING_INDEX = priorityIndex(IN_VIVO_RANKING_PRIORITY);
+const IN_VIVO_FILTER_INDEX = priorityIndex(IN_VIVO_FILTER_PRIORITY);
+const IN_VITRO_RANKING_INDEX = priorityIndex(IN_VITRO_RANKING_PRIORITY);
+const IN_VITRO_FILTER_INDEX = priorityIndex(IN_VITRO_FILTER_PRIORITY);
+
+/** The rank `spec` holds, or `undefined` when no entry claims it — so a list is both the
+ *  allowlist and the priority. First match wins: narrower entries come first. */
+export function presetPriorityOf(
+  spec: PColumnSpec,
+  index: PresetPriorityIndex,
+): number | undefined {
+  return index
+    .get(spec.name)
+    ?.find(({ domain }) =>
+      Object.entries(domain ?? {}).every(([key, value]) => spec.domain?.[key] === value),
+    )?.rank;
+}
 
 /**
  * Checks if two cluster axes match by comparing their domains.
@@ -465,6 +657,12 @@ export function buildCollection(
       anchorSpec: PColumnSpec;
       meta: ColumnsMeta;
       sampleAxisName: string;
+      /**
+       * A score's linker is still resolving, so the defaults and presets in `meta` may lack it.
+       * Outputs that publish them withhold until it settles: defaults are applied once, and a
+       * score arriving later would never reach them.
+       */
+      scoresPending: boolean;
     }
   | undefined {
   if (!inputAnchor) return undefined;
@@ -494,11 +692,27 @@ export function buildCollection(
       .getColumns(),
   ).filter(isSelectableMatch);
 
-  // Scores seed the default filters and every preset. Only columns on the anchor's own
-  // axes qualify; linker-reached columns never do.
+  // Scores seed the default filters and every preset. A score qualifies when it resolves to
+  // one value per anchor record, directly or through the anchor's own links (clusters,
+  // lineages). Columns of another dataset never do: its records are absent from part of the
+  // anchor, and a default filter on them drops that part at the first selection stage.
+  let scoresPending = false;
   const scores = allMatches.filter((c) => {
     const spec = c.getSpec();
-    return spec.annotations?.[Annotation.IsScore] === "true" && isOnAnchorAxes(spec, anchorSpec);
+    if (spec.annotations?.[Annotation.IsScore] !== "true") return false;
+    // A linker still resolving cannot be classified yet, and the whole set waits for it (see
+    // `scoresPending`). One that is gone for good drops its score.
+    let linkerSpecs: PColumnSpec[];
+    try {
+      linkerSpecs = collectLinkerColumns(c).map((l) => l.getSpec());
+    } catch (e) {
+      if (!(e instanceof ColumnAbsentError)) scoresPending = true;
+      return false;
+    }
+    return (
+      isKeyedByAnchorRecords(spec, linkerSpecs, anchorSpec) &&
+      !isFromAnotherDataset(spec, linkerSpecs, anchorSpec)
+    );
   });
 
   // Compute defaults and presets, from the scores this run may default to (see defaultsForSubset).
@@ -513,10 +727,10 @@ export function buildCollection(
     collection,
     anchorSpec,
     sampleAxisName,
+    scoresPending,
     meta: {
       allMatches,
       scores,
-      defaultFilters,
       ...presets,
     },
   };
@@ -653,15 +867,14 @@ function computePresets(
   defaultFilters: PlTableFiltersDefault[],
   anchorRef: PlRef,
   anchorSpec: PColumnSpec,
-): Omit<ColumnsMeta, "allMatches" | "scores" | "defaultFilters"> {
+): Omit<ColumnsMeta, "allMatches" | "scores"> {
   // Named for the preset, not the data: the preset is called "peptide" and amplicon datasets use
   // it too. A variable called isPeptide here would claim something false about amplicon.
   const usesPeptidePreset = isPeptideOrAmplicon(anchorSpec);
 
   // The Repertoire Score (repertoire-score block), when present upstream, is the
-  // In Vivo preset's primary ranking.
-  const repertoireScore = scores.find((s) => s.getSpec().name === REPERTOIRE_SCORE_COLUMN_NAME);
-  const hasRepertoireScore = repertoireScore !== undefined;
+  // In Vivo preset's primary ranking — rank 0 of IN_VIVO_RANKING_PRIORITY.
+  const hasRepertoireScore = scores.some((s) => s.getSpec().name === REPERTOIRE_SCORE_COLUMN_NAME);
 
   const isEnrichmentColumn = (name: string) =>
     name.startsWith("pl7.app/enrichment") || name.startsWith("pl7.app/vdj/enrichment");
@@ -677,12 +890,11 @@ function computePresets(
         ? "in-vitro"
         : undefined;
 
-  // Default ranking: all non-String scores. When the Repertoire Score is present
-  // it is pulled to the front (below) as the primary ranking, and the raw SHM
-  // mutation columns it subsumes are dropped.
+  // Every non-String score, in discovery order. Each preset's list then decides which of
+  // these it starts with and in what order. The raw SHM mutation columns drop out when the
+  // Repertoire Score is present, since it subsumes them.
   const defaultRankingOrder: RankingOrder[] = scores
     .filter((s) => s.getSpec().valueType !== "String")
-    .filter((s) => !hasRepertoireScore || s.getSpec().name !== REPERTOIRE_SCORE_COLUMN_NAME)
     .filter((s) => !hasRepertoireScore || !IN_VIVO_MUTATION_COLUMNS.has(s.getSpec().name))
     .map((s) => ({
       id: `default-rank-${s.id}`,
@@ -690,102 +902,84 @@ function computePresets(
       rankingOrder:
         (s.getSpec().annotations?.[Annotation.Score.RankingOrder] as "increasing" | "decreasing") ??
         "decreasing",
+      weight: DEFAULT_RANKING_WEIGHT,
       isExpanded: false,
     }));
 
-  if (repertoireScore) {
-    defaultRankingOrder.unshift({
-      value: matchToColumnId(repertoireScore, anchorRef),
-      rankingOrder:
-        (repertoireScore.getSpec().annotations?.["pl7.app/score/rankingOrder"] as
-          | "increasing"
-          | "decreasing") ?? "decreasing",
-    });
-  }
-
-  // Both presets intersect discovery-driven defaults with a per-preset
-  // allowlist of spec names, so new upstream score columns can't bloat them.
-  const specNameByColumnId = new Map(
-    scores.map((s) => [matchToColumnId(s, anchorRef).column, s.getSpec().name]),
+  // Each preset intersects discovery-driven defaults with its own priority list, which fixes
+  // both which criteria it starts with and their order.
+  const specByColumnId = new Map<PObjectId | undefined, PColumnSpec>(
+    scores.map((s) => [matchToColumnId(s, anchorRef).column, s.getSpec()]),
   );
 
-  // In Vitro defaults
-  const inVitroFilters: PlTableFiltersDefault[] = defaultFilters.filter((f) => {
-    const specName = specNameByColumnId.get(f.column.column);
-    return specName !== undefined && IN_VITRO_FILTER_SPEC_NAMES.has(specName);
-  });
+  /** The rows a preset's list claims, in that list's order. Within one rank, by label —
+   *  several per-comparison fold changes read in label order. */
+  const ordered = <T>(
+    rows: readonly T[],
+    columnIdOf: (row: T) => PObjectId | undefined,
+    index: PresetPriorityIndex,
+  ): T[] =>
+    rows
+      .flatMap((row) => {
+        const id = columnIdOf(row);
+        const spec = specByColumnId.get(id);
+        if (spec === undefined) return [];
+        const rank = presetPriorityOf(spec, index);
+        return rank === undefined
+          ? []
+          : [{ row, rank, label: readAnnotation(spec, Annotation.Label) ?? "", id: id ?? "" }];
+      })
+      // The id settles rows that match on both.
+      .sort(
+        (a, b) =>
+          a.rank - b.rank ||
+          a.label.localeCompare(b.label) ||
+          (a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
+      )
+      .map(({ row }) => row);
 
-  const inVitroRankingOrder: RankingOrder[] = defaultRankingOrder.filter((r) => {
-    const col = r.value?.column;
-    if (col === undefined) return false;
-    const specName = specNameByColumnId.get(col);
-    return specName !== undefined && IN_VITRO_RANKING_SPEC_NAMES.has(specName);
-  });
+  const rankingOrderFor = (priority: PresetPriorityIndex) =>
+    ordered(defaultRankingOrder, (r) => r.value?.column, priority);
+
+  /** A preset's default filters. An entry carrying its own `default` overrides the column's
+   *  cutoff, and reaches columns that have none and so never entered `defaultFilters`. */
+  const filtersFor = (
+    priority: readonly PresetPriorityEntry[],
+    index: PresetPriorityIndex,
+  ): PlTableFiltersDefault[] => {
+    const supplied = priority.flatMap((entry, rank) => {
+      const override = entry.default;
+      if (override === undefined) return [];
+      return scores
+        .filter((score) => presetPriorityOf(score.getSpec(), index) === rank)
+        .map((score) => ({
+          column: matchToColumnId(score, anchorRef),
+          default: { ...override },
+        }));
+    });
+    const overridden = new Set(supplied.map((f) => f.column.column));
+    const fromCutoffs = defaultFilters.filter((f) => !overridden.has(f.column.column));
+    return ordered([...supplied, ...fromCutoffs], (f) => f.column.column, index);
+  };
 
   const inVitroDefaults = {
-    rankingOrder: inVitroRankingOrder,
-    filters: inVitroFilters,
+    rankingOrder: rankingOrderFor(IN_VITRO_RANKING_INDEX),
+    filters: filtersFor(IN_VITRO_FILTER_PRIORITY, IN_VITRO_FILTER_INDEX),
   };
-
-  // In Vivo defaults: allowlist + explicit mutation filters with
-  // preset-specific cutoffs.
-  const inVivoFilters: PlTableFiltersDefault[] = defaultFilters.filter((f) => {
-    const specName = specNameByColumnId.get(f.column.column);
-    return specName !== undefined && IN_VIVO_FILTER_SPEC_NAMES.has(specName);
-  });
-
-  const fractionCDRMutationsCol = scores.find(
-    (s) => s.getSpec().name === "pl7.app/vdj/sequence/fractionCDRMutations",
-  );
-  if (fractionCDRMutationsCol) {
-    inVivoFilters.push({
-      column: matchToColumnId(fractionCDRMutationsCol, anchorRef),
-      default: { type: "number_greaterThan", reference: 0.5 },
-    });
-  }
-
-  const nMutationsCol = scores.find((s) => s.getSpec().name === "pl7.app/vdj/sequence/nMutations");
-  if (nMutationsCol) {
-    inVivoFilters.push({
-      column: matchToColumnId(nMutationsCol, anchorRef),
-      default: { type: "number_greaterThanOrEqualTo", reference: 3 },
-    });
-  }
-
-  const inVivoRankingOrder: RankingOrder[] = defaultRankingOrder.filter((r) => {
-    const col = r.value?.column;
-    if (col === undefined) return false;
-    const specName = specNameByColumnId.get(col);
-    return specName !== undefined && IN_VIVO_RANKING_SPEC_NAMES.has(specName);
-  });
 
   const inVivoDefaults = {
-    rankingOrder: inVivoRankingOrder,
-    filters: inVivoFilters,
-  };
-
-  // Peptide defaults: all numeric score columns; no SHM exclusions.
-  const inPeptideDefaults = {
-    rankingOrder: scores
-      .filter((s) => s.getSpec().valueType !== "String")
-      .map((s) => ({
-        value: matchToColumnId(s, anchorRef),
-        rankingOrder:
-          (s.getSpec().annotations?.[Annotation.Score.RankingOrder] as
-            | "increasing"
-            | "decreasing") ?? "decreasing",
-      })),
-    filters: defaultFilters,
+    rankingOrder: rankingOrderFor(IN_VIVO_RANKING_INDEX),
+    filters: filtersFor(IN_VIVO_FILTER_PRIORITY, IN_VIVO_FILTER_INDEX),
   };
 
   return {
-    defaultRankingOrder,
     hasRepertoireScore,
     hasEnrichmentScores,
     detectedPreset,
     inVivoDefaults,
     inVitroDefaults,
-    inPeptideDefaults,
+    // Peptide carries the same metrics as In Vitro, so it takes the same lists.
+    inPeptideDefaults: inVitroDefaults,
   };
 }
 
