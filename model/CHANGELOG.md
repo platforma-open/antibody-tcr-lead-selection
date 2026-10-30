@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 5.4.1
+
+### Patch Changes
+
+- 562c7c8: Update tools version
+- Updated dependencies [562c7c8]
+  - @platforma-open/milaboratories.top-antibodies.kind@1.2.1
+
 ## 5.4.0
 
 ### Minor Changes

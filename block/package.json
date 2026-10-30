@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "files": [
     "dist",
     "block-pack"

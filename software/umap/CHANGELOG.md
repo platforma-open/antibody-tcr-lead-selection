@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.umap
 
+## 1.2.11
+
+### Patch Changes
+
+- 562c7c8: Update tools version
+
 ## 1.2.10
 
 ### Patch Changes

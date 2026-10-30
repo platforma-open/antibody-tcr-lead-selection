@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.spectratype
 
+## 1.8.11
+
+### Patch Changes
+
+- 562c7c8: Update tools version
+
 ## 1.8.10
 
 ### Patch Changes

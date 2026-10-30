@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 5.0.1
+
+### Patch Changes
+
+- 562c7c8: Update tools version
+
 ## 5.0.0
 
 ### Major Changes

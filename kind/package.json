@@ -1,6 +1,6 @@
 {
   "name": "@platforma-open/milaboratories.top-antibodies.kind",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "private": true,
   "description": "Block kind for the antibody-tcr-lead-selection block",
   "type": "module",

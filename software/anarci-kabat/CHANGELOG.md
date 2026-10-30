@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.anarci-kabat
 
+## 1.4.11
+
+### Patch Changes
+
+- 562c7c8: Update tools version
+
 ## 1.4.10
 
 ### Patch Changes

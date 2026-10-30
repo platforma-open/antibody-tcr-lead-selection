@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.sample-clonotypes
 
+## 3.2.1
+
+### Patch Changes
+
+- 562c7c8: Update tools version
+
 ## 3.2.0
 
 ### Minor Changes

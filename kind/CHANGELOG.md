@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies.kind
 
+## 1.2.1
+
+### Patch Changes
+
+- 562c7c8: Update tools version
+
 ## 1.2.0
 
 ### Minor Changes
