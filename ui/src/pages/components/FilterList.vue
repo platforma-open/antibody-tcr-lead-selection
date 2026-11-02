@@ -39,7 +39,7 @@ const findOption = (columnId: ScopedColumnId | undefined) =>
 
 /** The card title: the column's option, so it shows the option's link icon too. */
 const cardTitle = (columnId: ScopedColumnId | undefined) =>
-  findOption(columnId) ?? { label: columnId ? "Set filter" : "Add Filter" };
+  findOption(columnId) ?? { label: columnId ? "Column not available" : "Add Filter" };
 
 const addFilter = () => {
   const ui = app.model.data;
@@ -133,7 +133,7 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
 </script>
 
 <template>
-  <div class="d-flex flex-column gap-6">
+  <div class="d-flex flex-column gap-12">
     <PlRow>
       Keep sequences that:
       <PlTooltip>
@@ -161,7 +161,7 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
       </template>
     </PlElementList>
 
-    <div class="d-flex flex-column gap-6">
+    <div class="d-flex flex-column gap-6 mt-3">
       <PlBtnSecondary icon="add" @click="addFilter"> Add Filter </PlBtnSecondary>
 
       <PlBtnSecondary icon="reverse" :disabled="!configIsCurrent" @click="resetToDefaults">

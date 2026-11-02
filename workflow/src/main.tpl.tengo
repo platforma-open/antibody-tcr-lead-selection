@@ -223,6 +223,7 @@ wf.body(func(args) {
                 filters: args.filters,
                 filterMap: filterMap,
                 rankingMap: rankingMap,
+                rankingMode: args.rankingMode,
                 preconditionMap: preconditionMap,
                 preconditionStageName: "Observed in rounds",
                 datasetSpec: datasetSpec,

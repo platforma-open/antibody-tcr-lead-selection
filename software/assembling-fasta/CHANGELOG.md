@@ -1,5 +1,17 @@
 # @platforma-open/milaboratories.top-antibodies.assembling-fasta
 
+## 1.3.10
+
+### Patch Changes
+
+- 562c7c8: Update tools version
+
+## 1.3.9
+
+### Patch Changes
+
+- 9ef39b5: Bump all packages
+
 ## 1.3.8
 
 ### Patch Changes

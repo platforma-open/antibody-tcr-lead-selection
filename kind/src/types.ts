@@ -55,9 +55,13 @@ export type ScopedColumnId = {
   column: PObjectId;
 };
 
+// How the ranking criteria combine
+export type RankingMode = "priority" | "balanced";
+
 export type RankingOrder = {
   value?: ScopedColumnId;
   rankingOrder: "increasing" | "decreasing";
+  weight?: number;
 };
 
 /** Filter for matching any of a set of discrete string values */
@@ -115,6 +119,7 @@ export type BlockParams = {
   preset?: WorkflowPreset;
   topClonotypes?: number;
   kabatNumbering?: boolean;
+  rankingMode?: RankingMode;
   rankingOrder?: RankingOrder[];
   filters?: Filter[];
   diversificationColumn?: PlRef;
