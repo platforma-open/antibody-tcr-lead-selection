@@ -1,5 +1,13 @@
 # @platforma-open/milaboratories.top-antibodies.model
 
+## 5.5.0
+
+### Minor Changes
+
+- 407f2a8: Mark columns that describe another clonotype, reached through a link such as the nearest known antibody or VDJ Integration, with a link icon. Hovering it says where the column came from. "Filter by" and "Rank by" list these columns last, and the table, Manage Columns and filters show the icon too. Update to SDK 1.86.0.
+
+  Fix a filter or rank showing a different column after its selected column disappeared upstream.
+
 ## 5.4.1
 
 ### Patch Changes
