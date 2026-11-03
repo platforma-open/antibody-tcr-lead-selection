@@ -7,6 +7,7 @@ import type {
 } from "@platforma-open/milaboratories.top-antibodies.model";
 import { PlDropdown, PlDropdownMulti, PlTextField } from "@platforma-sdk/ui-vue";
 import { computed, watch } from "vue";
+import { copyOptionValue } from "../../util";
 import type { AnyFilter, FilterColumnOption } from "./filterTypes";
 import {
   createFilter,
@@ -253,7 +254,13 @@ watch(
 </script>
 
 <template>
-  <PlDropdown v-model="model.value" :options="props.options" label="Filter by" required />
+  <PlDropdown
+    :model-value="model.value"
+    :options="props.options"
+    label="Filter by"
+    required
+    @update:model-value="(v) => (model.value = copyOptionValue(v))"
+  />
 
   <PlDropdown
     v-model="filterType"

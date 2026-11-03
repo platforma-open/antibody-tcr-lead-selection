@@ -1,5 +1,13 @@
 import type { PlTableFilter } from "@platforma-open/milaboratories.top-antibodies.model";
 import type { PColumnIdAndSpec, PTableColumnSpec } from "@platforma-sdk/model";
+import { toRaw } from "vue";
+
+/**
+ * A copy of a picked option's value. Storing the option's own object would tie the selection to
+ * that slot of the options list, so when an upstream column disappears the slot's next column
+ * would show up as selected.
+ */
+export const copyOptionValue = <T>(value: T): T => structuredClone(toRaw(value));
 
 /**
  * A normalized ranking weight as a percentage. Rounding never claims a metric contributes
