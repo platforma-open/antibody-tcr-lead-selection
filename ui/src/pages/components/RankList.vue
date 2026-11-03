@@ -13,6 +13,7 @@ import {
 } from "@platforma-open/milaboratories.top-antibodies.model";
 import {
   PlBtnSecondary,
+  PlColumnLabel,
   PlElementList,
   PlIcon16,
   PlNumberField,
@@ -52,8 +53,11 @@ const optionByColumn = computed(
   () => new Map((app.model.outputs.rankingConfig?.options ?? []).map((o) => [o.value.column, o])),
 );
 
-const getMetricLabel = (value: ScopedColumnId | undefined) =>
-  (value ? optionByColumn.value.get(value.column)?.label : undefined) ?? "Column not available";
+/** The card title: the column's option, so it shows the option's link icon too. */
+const cardTitle = (value: ScopedColumnId | undefined) =>
+  (value ? optionByColumn.value.get(value.column) : undefined) ?? {
+    label: value ? "Column not available" : "Add Rank",
+  };
 
 /**
  * The stored list, in the user's own order — dragging a row writes the new order straight back.
@@ -231,7 +235,7 @@ const { configIsCurrent } = useAnchorSyncedDefaults({
           {{ formatWeightNorm(weightNorms[index]) }}
         </span>
         <span class="align-self-center">
-          {{ item.value ? getMetricLabel(item.value) : "Add Rank" }}
+          <PlColumnLabel :option="cardTitle(item.value)" />
         </span>
       </template>
       <template #item-content="{ index }">

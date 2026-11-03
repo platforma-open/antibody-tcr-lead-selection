@@ -6,6 +6,7 @@ import type {
 import { DEFAULT_RANKING_WEIGHT } from "@platforma-open/milaboratories.top-antibodies.model";
 import type { ListOption } from "@platforma-sdk/ui-vue";
 import { PlDropdown } from "@platforma-sdk/ui-vue";
+import { copyOptionValue } from "../../util";
 
 const rankingOrderOptions = [
   { value: "increasing", label: "Lowest" },
@@ -25,7 +26,13 @@ const props = defineProps<{
 </script>
 
 <template>
-  <PlDropdown v-model="model.value" :options="props.options" label="Rank by" required />
+  <PlDropdown
+    :model-value="model.value"
+    :options="props.options"
+    label="Rank by"
+    required
+    @update:model-value="(v) => (model.value = copyOptionValue(v))"
+  />
 
   <PlDropdown
     v-model="model.rankingOrder"
