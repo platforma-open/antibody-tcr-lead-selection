@@ -147,6 +147,5 @@ const CONTRACT = {
   filtersInitializedForAnchor: check(isInitializedForAnchor, INITIALIZED_SLOT),
   rankingsInitializedForAnchor: check(isInitializedForAnchor, INITIALIZED_SLOT),
 
-  defaultBlockLabel: check(isString, "a string"),
   customBlockLabel: check(isString, "a string"),
 } satisfies { [K in keyof BlockParams]-?: Check<NonNullable<BlockParams[K]>> };

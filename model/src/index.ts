@@ -34,6 +34,7 @@ import {
 import {
   buildCollection,
   CLUSTER_ID_AXIS_NAMES,
+  defaultSubtitle,
   exactMatch,
   getInputAnchorRef,
   getInputFilterRef,
@@ -72,7 +73,7 @@ export * from "./converters";
 export {
   anchorInitializedId,
   DEFAULT_RANKING_WEIGHT,
-  getDefaultBlockLabel,
+  defaultSubtitle,
   getInputAnchorRef,
   getInputFilterRef,
   inputKeyOf,
@@ -249,7 +250,6 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     filtersInitializedForAnchor: readInitializedForAnchor(data.filtersInitializedForAnchor),
     rankingsInitializedForAnchor: readInitializedForAnchor(data.rankingsInitializedForAnchor),
 
-    defaultBlockLabel: data.defaultBlockLabel,
     customBlockLabel: data.customBlockLabel,
   }))
 
@@ -274,7 +274,6 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     if (filters.some((filter) => filter.value === undefined)) throw new Error("Incomplete filters");
 
     return {
-      defaultBlockLabel: data.defaultBlockLabel,
       customBlockLabel: data.customBlockLabel,
       inputAnchor,
       inputFilter: getInputFilterRef(data),
@@ -848,7 +847,7 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
 
   .title(() => "Lead Selection")
 
-  .subtitle((ctx) => ctx.data.customBlockLabel || ctx.data.defaultBlockLabel)
+  .subtitle((ctx) => ctx.data.customBlockLabel || defaultSubtitle(ctx.data))
 
   .sections((ctx) => {
     const ref = getInputAnchorRef(ctx.data);

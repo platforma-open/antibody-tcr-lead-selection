@@ -13,10 +13,11 @@ import type {
   BlockData_Ver_2026_05_21,
   BlockData_Ver_2026_07_28,
   BlockData_Ver_2026_08_20,
+  BlockData_Ver_2026_10_08,
   LegacyBlockArgs,
   LegacyUiState,
 } from "./types";
-import { getDefaultBlockLabel, readInitializedForAnchor, withRankingWeights } from "./util";
+import { readInitializedForAnchor, withRankingWeights } from "./util";
 
 const defaultSelectionPlotState = (): BlockData["selectionPlotState"] => ({
   title: "Selection Plot",
@@ -118,16 +119,24 @@ export const blockDataModel = new DataModelBuilder({ kind })
   // `prev` is raw stored JSON — its TypeScript type is what the old version claimed,
   // not a guarantee, so `rankingOrder` can be absent. Throwing here would leave the
   // block stuck on its old pack, unable to upgrade at all.
-  .migrate<BlockData>("Ver_2026_10_08", (prev) => ({
+  .migrate<BlockData_Ver_2026_10_08>("Ver_2026_10_08", (prev) => ({
     ...prev,
     rankingOrder: withRankingWeights(prev.rankingOrder),
     rankingMode: "priority",
   }))
+  // The old label was the input dataset's result-pool label alone, or a fixed hint when none
+  // was resolved; the label carries over, the hint is recomputed from data.
+  .migrate<BlockData>("Ver_2026_11_06", ({ defaultBlockLabel, ...rest }) => ({
+    ...rest,
+    subtitleLabel: defaultBlockLabel === "Select dataset" ? "" : (defaultBlockLabel ?? ""),
+  }))
   // `params` is absent when a block is created by hand rather than from a
   // template, so every field the contract carries keeps its own default.
   .init(({ params }) => ({
-    defaultBlockLabel: params?.defaultBlockLabel ?? getDefaultBlockLabel({}),
     customBlockLabel: params?.customBlockLabel ?? "",
+    // The input's label comes from the result pool, which `init` cannot reach; it is written
+    // when the user picks a dataset.
+    subtitleLabel: "",
     input: params?.input,
     topClonotypes: params?.topClonotypes ?? 100,
     kabatNumbering: params?.kabatNumbering,

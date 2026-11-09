@@ -121,10 +121,17 @@ export type BlockData_Ver_2026_10_08 = Omit<BlockData_Ver_2026_08_20, "rankingOr
   rankingMode: RankingMode;
 };
 
-export type BlockData = BlockData_Ver_2026_10_08;
+export type BlockData_Ver_2026_11_06 = Omit<BlockData_Ver_2026_10_08, "defaultBlockLabel"> & {
+  /**
+   * The input dataset's label as the result pool shows it. Written by the dataset picker on a
+   * user pick; feeds the subtitle only, never the workflow.
+   */
+  subtitleLabel?: string;
+};
+
+export type BlockData = BlockData_Ver_2026_11_06;
 
 export type BlockArgs = {
-  defaultBlockLabel: string;
   customBlockLabel: string;
   inputAnchor?: PlRef;
   /**

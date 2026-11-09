@@ -109,6 +109,9 @@ export type Filter = {
  * `inVivoScoreRemovedNotice` is absent: a migration sets it for a stored project
  * that lost the built-in in-vivo score, so carrying it would show that notice to
  * a project which never had the column.
+ *
+ * `subtitleLabel` is absent: it is the input dataset's label as the source
+ * project's result pool shows it, display text rather than configuration.
  */
 export type BlockParams = {
   // Input wiring — the dataset bundle a template engine fills from an earlier
@@ -135,6 +138,5 @@ export type BlockParams = {
   rankingsInitializedForAnchor?: InitializedForAnchor;
 
   // Display naming.
-  defaultBlockLabel?: string;
   customBlockLabel?: string;
 };
