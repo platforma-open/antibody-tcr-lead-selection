@@ -134,8 +134,8 @@ export const blockDataModel = new DataModelBuilder({ kind })
   // template, so every field the contract carries keeps its own default.
   .init(({ params }) => ({
     customBlockLabel: params?.customBlockLabel ?? "",
-    // The input's label comes from the result pool, which `init` cannot reach; it is written
-    // when the user picks a dataset.
+    // The input's label comes from the result pool, which `init` cannot reach; the UI keeps it
+    // in sync.
     subtitleLabel: "",
     input: params?.input,
     topClonotypes: params?.topClonotypes ?? 100,

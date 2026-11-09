@@ -123,8 +123,8 @@ export type BlockData_Ver_2026_10_08 = Omit<BlockData_Ver_2026_08_20, "rankingOr
 
 export type BlockData_Ver_2026_11_06 = Omit<BlockData_Ver_2026_10_08, "defaultBlockLabel"> & {
   /**
-   * The input dataset's label as the result pool shows it. Written by the dataset picker on a
-   * user pick; feeds the subtitle only, never the workflow.
+   * The input dataset's label as the result pool shows it, kept in sync by the UI; feeds the
+   * subtitle only, never the workflow.
    */
   subtitleLabel?: string;
 };

@@ -7,8 +7,8 @@ import {
   getInputFilterRef,
   inputKeyOf,
 } from "@platforma-open/milaboratories.top-antibodies.model";
-import type { DatasetSelection, PlRef, PlSelectionModel } from "@platforma-sdk/model";
-import { createPlDataTableStateV2, plRefsEqual } from "@platforma-sdk/model";
+import type { PlRef, PlSelectionModel } from "@platforma-sdk/model";
+import { createPlDataTableStateV2 } from "@platforma-sdk/model";
 import {
   PlAgDataTableV2,
   PlAlert,
@@ -67,15 +67,6 @@ const defaultsPending = computed(
     (app.model.outputs.filterConfig?.inputKey !== inputKey.value ||
       app.model.outputs.rankingConfig?.inputKey !== inputKey.value),
 );
-
-function setInput(selection: DatasetSelection | undefined) {
-  app.model.data.input = selection;
-  const anchorRef = getInputAnchorRef(app.model.data);
-  const picked = anchorRef
-    ? app.model.outputs.datasetOptions?.find((option) => plRefsEqual(option.primary.ref, anchorRef))
-    : undefined;
-  app.model.data.subtitleLabel = picked?.primary.label ?? "";
-}
 
 const settingsOpen = ref(inputAnchorRef.value === undefined);
 const multipleSequenceAlignmentOpen = ref(false);
@@ -306,8 +297,7 @@ watch(
 
       <!-- First element: Select dataset (with optional filter dropdown) -->
       <PlDatasetSelector
-        :model-value="app.model.data.input"
-        @update:model-value="setInput"
+        v-model="app.model.data.input"
         :options="app.model.outputs.datasetOptions"
         label="Select dataset"
         clearable
