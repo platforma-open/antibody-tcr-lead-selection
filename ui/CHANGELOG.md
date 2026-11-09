@@ -1,5 +1,20 @@
 # @platforma-open/milaboratories.top-antibodies.ui
 
+## 5.4.1
+
+### Patch Changes
+
+- 1e933ba: Keep pool text out of the block arguments
+
+  The subtitle shows the input dataset's label, kept outside the block's arguments, so
+  opening the block no longer changes its arguments and marks it and everything
+  downstream stale. Existing blocks keep their subtitle and show stale once after the
+  update. The init-params contract no longer carries `defaultBlockLabel`; templates that
+  still contain it keep loading.
+
+- Updated dependencies [1e933ba]
+  - @platforma-open/milaboratories.top-antibodies.model@5.5.1
+
 ## 5.4.0
 
 ### Minor Changes
