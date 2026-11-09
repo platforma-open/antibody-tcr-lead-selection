@@ -983,8 +983,10 @@ function computePresets(
   };
 }
 
-export function getDefaultBlockLabel(data: { datasetLabel?: string }) {
-  return data.datasetLabel || "Select dataset";
+/** Subtitle shown when the user has not set a custom block label. */
+export function defaultSubtitle(data: Pick<BlockData, "input" | "subtitleLabel">): string {
+  if (getInputAnchorRef(data) === undefined) return "Select dataset";
+  return data.subtitleLabel ?? "";
 }
 
 /** The anchor and preset halves of a stored defaults-init slot, still unparsed. */

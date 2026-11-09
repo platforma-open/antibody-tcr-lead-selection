@@ -2,6 +2,7 @@
 import { PlMultiSequenceAlignment } from "@milaboratories/multi-sequence-alignment";
 import strings from "@milaboratories/strings";
 import {
+  defaultSubtitle,
   getInputAnchorRef,
   getInputFilterRef,
   inputKeyOf,
@@ -261,7 +262,7 @@ watch(
 <template>
   <PlBlockPage
     v-model:subtitle="app.model.data.customBlockLabel"
-    :subtitle-placeholder="app.model.data.defaultBlockLabel"
+    :subtitle-placeholder="defaultSubtitle(app.model.data)"
     title="Lead Selection"
   >
     <template #append>
