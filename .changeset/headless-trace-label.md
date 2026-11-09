@@ -4,7 +4,7 @@
 "@platforma-open/milaboratories.top-antibodies.ui": patch
 ---
 
-Compute the block subtitle without opening the block
+Keep pool text out of the block arguments
 
 The subtitle shows the input dataset's label, kept outside the block's arguments, so
 opening the block no longer changes its arguments and marks it and everything
