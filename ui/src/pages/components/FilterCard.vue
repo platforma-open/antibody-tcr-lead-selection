@@ -21,9 +21,9 @@ import {
 } from "./filterTypes";
 
 const model = defineModel<FilterUI>({
-  default: {
+  default: () => ({
     filter: { type: "number_greaterThan", reference: 0 },
-  },
+  }),
 });
 
 const props = defineProps<{

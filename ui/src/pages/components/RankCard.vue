@@ -14,10 +14,10 @@ const rankingOrderOptions = [
 ];
 
 const model = defineModel<WeightedRankingOrderUI>({
-  default: {
+  default: () => ({
     rankingOrder: "increasing",
     weight: DEFAULT_RANKING_WEIGHT,
-  },
+  }),
 });
 
 const props = defineProps<{
