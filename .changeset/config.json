@@ -2,7 +2,14 @@
   "$schema": "https://unpkg.com/@changesets/config@3.1.1/schema.json",
   "changelog": "@changesets/cli/changelog",
   "commit": false,
-  "fixed": [],
+  "fixed": [
+    [
+      "@platforma-open/milaboratories.top-antibodies",
+      "@platforma-open/milaboratories.top-antibodies.model",
+      "@platforma-open/milaboratories.top-antibodies.ui",
+      "@platforma-open/milaboratories.top-antibodies.workflow"
+    ]
+  ],
   "linked": [],
   "access": "restricted",
   "baseBranch": "main",
