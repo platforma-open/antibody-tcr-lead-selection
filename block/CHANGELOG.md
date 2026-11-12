@@ -1,5 +1,11 @@
 # @platforma-open/milaboratories.top-antibodies
 
+## 5.1.1
+
+### Patch Changes
+
+- dfb116c: Fix the table failing with a discoverColumns error when filters or ranking use enrichment columns, as the in vitro preset does.
+
 ## 5.1.0
 
 ### Minor Changes
