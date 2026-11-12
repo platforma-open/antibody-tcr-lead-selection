@@ -1,9 +1,8 @@
 import {
   Annotation,
   Column,
-  ColumnAbsentError,
   ColumnsCollection,
-  collectLinkerColumns,
+  collectLinkerIds,
   createGlobalPObjectId,
   DataColumn,
   extractPObjectId,
@@ -120,18 +119,11 @@ export const exactMatch = (value: string) => [{ type: "exact" as const, value }]
  *
  * A missing column is a normal state for this block, not an error: it works with
  * whatever the upstream graph happens to provide and ignores the rest. So all
- * three resolution statuses collapse to "render nothing" here.
- *
- * `Column(ref)` already returns undefined while a column is still resolving; the
- * guard exists only for the `absent` status, where it throws `ColumnAbsentError`
- * instead. Guarding on the status rather than catching keeps exceptions out of
- * the control flow — and note `absent` is not the definitive "gone for good" its
- * name suggests: it shows up in perfectly normal configurations, so it must stay
- * silent rather than drive any user-facing warning.
+ * three resolution statuses collapse to "render nothing" here, which is exactly
+ * what `Column(ref)` returns for a column that is resolving or absent.
  */
 export function getSpecByRef(ref: PlRef | undefined): PColumnSpec | undefined {
-  if (ref === undefined || DataColumn.getStatusByPlRef(ref) === "absent") return undefined;
-  return Column(ref)?.getSpec();
+  return ref === undefined ? undefined : Column(ref)?.getSpec();
 }
 
 /** Common host-side exclude selectors shared across filter/rank/table discovery.
@@ -702,12 +694,14 @@ export function buildCollection(
     if (spec.annotations?.[Annotation.IsScore] !== "true") return false;
     // A linker still resolving cannot be classified yet, and the whole set waits for it (see
     // `scoresPending`). One that is gone for good drops its score.
-    let linkerSpecs: PColumnSpec[];
-    try {
-      linkerSpecs = collectLinkerColumns(c).map((l) => l.getSpec());
-    } catch (e) {
-      if (!(e instanceof ColumnAbsentError)) scoresPending = true;
-      return false;
+    const linkerSpecs: PColumnSpec[] = [];
+    for (const id of collectLinkerIds(c)) {
+      const linker = DataColumn.fromId(id);
+      if (linker === undefined) {
+        if (DataColumn.getStatusById(id) === "resolving") scoresPending = true;
+        return false;
+      }
+      linkerSpecs.push(linker.getSpec());
     }
     return (
       isKeyedByAnchorRecords(spec, linkerSpecs, anchorSpec) &&
