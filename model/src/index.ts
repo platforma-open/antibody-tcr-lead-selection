@@ -622,8 +622,16 @@ export const platforma = BlockModelV3.create({ dataModel: blockDataModel, kind }
     }
     const filterRankSelectors: RelaxedColumnSelector[] = [...filterRankSignatures.values()].map(
       ({ name, domain }) => ({
-        name: [{ type: "exact", value: name }],
-        ...(domain && Object.keys(domain).length > 0 ? { domain } : {}),
+        name: exactMatch(name),
+        // A bare string in a selector is a regex, and domain values are often JSON, which is
+        // not a valid one (enrichment's conditionsOrder, for one). Match them exactly.
+        ...(domain && Object.keys(domain).length > 0
+          ? {
+              domain: Object.fromEntries(
+                Object.entries(domain).map(([k, v]) => [k, exactMatch(v)]),
+              ),
+            }
+          : {}),
       }),
     );
 
